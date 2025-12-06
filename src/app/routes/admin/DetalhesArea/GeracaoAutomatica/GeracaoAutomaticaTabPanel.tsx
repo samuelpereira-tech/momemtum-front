@@ -11,6 +11,8 @@ import { teamService, type TeamResponseDto } from '../../../../../services/basic
 import { personAreaService, type PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
 import { groupMemberService } from '../../../../../services/basic/groupMemberService'
 import { scheduledAbsenceService, type ScheduledAbsenceResponseDto } from '../../../../../services/basic/scheduledAbsenceService'
+import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
+import { addCacheBusting } from '../../../../../utils/fileUtils'
 
 type Step = 1 | 2 | 3 | 4 | 5
 
@@ -29,6 +31,7 @@ export default function GeracaoAutomaticaTabPanel() {
   const [teams, setTeams] = useState<TeamResponseDto[]>([])
   const [persons, setPersons] = useState<PersonAreaResponseDto[]>([])
   const [absences, setAbsences] = useState<ScheduledAbsenceResponseDto[]>([])
+  const [responsibilities, setResponsibilities] = useState<ResponsibilityResponseDto[]>([])
   const [isLoadingData, setIsLoadingData] = useState(true)
   
   const [config, setConfig] = useState<GenerationConfiguration>({
@@ -77,6 +80,10 @@ export default function GeracaoAutomaticaTabPanel() {
       // Carregar ausências (todas, serão filtradas depois)
       const absencesData = await loadAllAbsences()
       setAbsences(absencesData)
+      
+      // Carregar responsabilidades
+      const responsibilitiesData = await loadAllResponsibilities(scheduledAreaId)
+      setResponsibilities(responsibilitiesData)
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error)
       toast.showError('Erro ao carregar dados: ' + (error.message || 'Erro desconhecido'))
@@ -171,6 +178,36 @@ export default function GeracaoAutomaticaTabPanel() {
     }
     
     return allAbsences
+  }
+  
+  const loadAllResponsibilities = async (areaId: string): Promise<ResponsibilityResponseDto[]> => {
+    let allResponsibilities: ResponsibilityResponseDto[] = []
+    let page = 1
+    let hasMore = true
+    const limit = 100
+    
+    while (hasMore) {
+      const response = await responsibilityService.getAllResponsibilities({
+        scheduledAreaId: areaId,
+        page,
+        limit,
+      })
+      allResponsibilities = [...allResponsibilities, ...response.data]
+      
+      if (page >= response.meta.totalPages || response.data.length === 0) {
+        hasMore = false
+      } else {
+        page++
+      }
+    }
+    
+    return allResponsibilities
+  }
+  
+  // Função auxiliar para obter imagem da responsabilidade
+  const getResponsibilityImage = (responsibilityId: string): string | null => {
+    const responsibility = responsibilities.find(r => r.id === responsibilityId)
+    return responsibility?.imageUrl || null
   }
   
   // Função para obter pessoas por grupo
@@ -342,6 +379,8 @@ export default function GeracaoAutomaticaTabPanel() {
                 config={config}
                 groups={groups}
                 teams={teams}
+                responsibilities={responsibilities}
+                getResponsibilityImage={getResponsibilityImage}
                 onUpdate={updateConfig}
                 onBack={handleBack}
                 onNext={handleNext}
@@ -458,10 +497,12 @@ function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfigurat
 }
 
 // Step 2: Configurações
-function Step2Configurations({ config, groups, teams, onUpdate, onBack, onNext, isLoading }: {
+function Step2Configurations({ config, groups, teams, responsibilities, getResponsibilityImage, onUpdate, onBack, onNext, isLoading }: {
   config: GenerationConfiguration
   groups: GroupResponseDto[]
   teams: TeamResponseDto[]
+  responsibilities: ResponsibilityResponseDto[]
+  getResponsibilityImage: (id: string) => string | null
   onUpdate: (updates: Partial<GenerationConfiguration>) => void
   onBack: () => void
   onNext: () => void
@@ -584,6 +625,10 @@ function Step2Configurations({ config, groups, teams, onUpdate, onBack, onNext, 
   }
   
   // Configuração para equipes
+  const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+  const sortedRoles = selectedTeam?.roles ? [...selectedTeam.roles].sort((a, b) => a.priority - b.priority) : []
+  const totalPeopleNeeded = sortedRoles.reduce((sum, role) => sum + role.quantity, 0)
+  
   return (
     <div className="form-card">
       <h4 className="form-section-title">
@@ -617,19 +662,66 @@ function Step2Configurations({ config, groups, teams, onUpdate, onBack, onNext, 
         )}
       </div>
       
-      {config.teamConfig?.teamId && (
-        <div className="team-roles-info">
-          <h5>Papéis da Equipe:</h5>
-          {teams.find(t => t.id === config.teamConfig?.teamId)?.roles.length === 0 ? (
-            <p style={{ color: 'var(--text-light)' }}>Nenhum papel cadastrado nesta equipe</p>
+      {config.teamConfig?.teamId && selectedTeam && (
+        <div className="team-details-section">
+          <div className="team-header-compact">
+            <h5 className="team-title-compact">
+              <i className="fa-solid fa-list-check"></i> Papéis da Equipe
+            </h5>
+            {sortedRoles.length > 0 && (
+              <div className="team-summary-compact">
+                <span className="summary-badge-compact">
+                  <i className="fa-solid fa-users"></i> {totalPeopleNeeded}
+                </span>
+                <span className="summary-badge-compact">
+                  <i className="fa-solid fa-list"></i> {sortedRoles.length}
+                </span>
+              </div>
+            )}
+          </div>
+          
+          {sortedRoles.length === 0 ? (
+            <div className="empty-roles-message">
+              <i className="fa-solid fa-inbox"></i>
+              <p>Nenhum papel cadastrado nesta equipe</p>
+            </div>
           ) : (
-            <ul>
-              {teams.find(t => t.id === config.teamConfig?.teamId)?.roles.map(role => (
-                <li key={role.id}>
-                  <strong>{role.responsibilityName}</strong> - Quantidade: {role.quantity} | Prioridade: {role.priority}
-                </li>
-              ))}
-            </ul>
+            <div className="roles-list-compact">
+              {sortedRoles.map((role) => {
+                const roleImage = getResponsibilityImage(role.responsibilityId)
+                return (
+                  <div key={role.id} className="role-item-compact">
+                    <div className="role-image-container">
+                      {roleImage ? (
+                        <img
+                          src={addCacheBusting(roleImage)}
+                          alt={role.responsibilityName}
+                          className="role-image"
+                        />
+                      ) : (
+                        <div className="role-image-placeholder">
+                          <i className="fa-solid fa-briefcase"></i>
+                        </div>
+                      )}
+                      <div className="role-priority-compact">{role.priority}º</div>
+                    </div>
+                    <div className="role-info-compact">
+                      <div className="role-name-compact">{role.responsibilityName}</div>
+                      <div className="role-meta-compact">
+                        <span className="role-quantity">
+                          <i className="fa-solid fa-user-plus"></i> {role.quantity} {role.quantity === 1 ? 'pessoa' : 'pessoas'}
+                        </span>
+                        {!role.isFree && (
+                          <span className="role-fixed-badge">
+                            <i className="fa-solid fa-lock"></i> Fixa
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       )}
@@ -656,7 +748,7 @@ function Step2Configurations({ config, groups, teams, onUpdate, onBack, onNext, 
         </div>
       )}
       
-      <div className="form-group">
+      <div className="form-group" style={{ marginTop: '16px' }}>
         <label className="checkbox-label">
           <input
             type="checkbox"
