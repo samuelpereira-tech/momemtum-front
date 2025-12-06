@@ -136,7 +136,7 @@ export default function ListarAreas() {
                 {areasFavoritas.map((area) => (
                   <Link 
                     key={area.id} 
-                    to={`/Dashboard/escala/areas/${area.id}`}
+                    to={`/Dashboard/escala/areas/${area.id}/pessoas`}
                     className="favorite-item-inline"
                   >
                     <i className="fa-solid fa-star"></i>

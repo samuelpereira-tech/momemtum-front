@@ -102,6 +102,7 @@
   font-family: 'Poppins', sans-serif;
   border-bottom: 3px solid transparent;
   position: relative;
+  text-decoration: none;
 }
 
 .area-tab:hover {

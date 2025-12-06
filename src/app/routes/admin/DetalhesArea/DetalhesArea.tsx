@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import TopNavbar from '../../../../components/admin/TopNavbar/TopNavbar'
 import Sidebar from '../../../../components/admin/Sidebar/Sidebar'
 import PageHeader from '../../../../components/admin/PageHeader/PageHeader'
@@ -18,9 +18,22 @@ import './DetalhesArea.css'
 
 export default function DetalhesArea() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
   const navigate = useNavigate()
   const toast = useToast()
-  const [activeTab, setActiveTab] = useState<TabType>('pessoas')
+  
+  // Determinar a aba ativa pela URL
+  const getActiveTabFromPath = (): TabType => {
+    const path = location.pathname
+    if (path.includes('/pessoas')) return 'pessoas'
+    if (path.includes('/grupos')) return 'grupos'
+    if (path.includes('/funcoes')) return 'funcoes'
+    if (path.includes('/equipes')) return 'equipes'
+    if (path.includes('/geracao-automatica')) return 'geracao-automatica'
+    return 'pessoas' // padrão
+  }
+  
+  const [activeTab, setActiveTab] = useState<TabType>(getActiveTabFromPath())
   const [area, setArea] = useState<ScheduledAreaResponseDto | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +47,16 @@ export default function DetalhesArea() {
       navigate('/Dashboard/escala/areas')
     }
   }, [id])
+
+  // Atualizar aba ativa quando a rota mudar
+  useEffect(() => {
+    const tab = getActiveTabFromPath()
+    setActiveTab(tab)
+    // Redirecionar para a rota correta se acessar a rota base sem especificar a aba
+    if (id && location.pathname === `/Dashboard/escala/areas/${id}`) {
+      navigate(`/Dashboard/escala/areas/${id}/pessoas`, { replace: true })
+    }
+  }, [location.pathname, id, navigate])
 
   const loadAreaData = async () => {
     if (!id) return
@@ -200,7 +223,7 @@ export default function DetalhesArea() {
                   return (
                     <Link 
                       key={areaFav.id} 
-                      to={`/Dashboard/escala/areas/${areaFav.id}`}
+                      to={`/Dashboard/escala/areas/${areaFav.id}/pessoas`}
                       className={`favorite-item-inline ${isActive ? 'active' : ''}`}
                     >
                       <i className="fa-solid fa-star"></i>
@@ -246,26 +269,31 @@ export default function DetalhesArea() {
             {/* Menu de Abas */}
             <div className="area-tabs-container">
               <div className="area-tabs">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    className={`area-tab ${activeTab === tab.id ? 'active' : ''}`}
-                    onClick={() => setActiveTab(tab.id)}
-                  >
-                    <i className={tab.icon}></i>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+                {tabs.map((tab) => {
+                  const tabPath = tab.id === 'pessoas' 
+                    ? `/Dashboard/escala/areas/${id}` 
+                    : `/Dashboard/escala/areas/${id}/${tab.id}`
+                  return (
+                    <Link
+                      key={tab.id}
+                      to={tabPath}
+                      className={`area-tab ${activeTab === tab.id ? 'active' : ''}`}
+                    >
+                      <i className={tab.icon}></i>
+                      <span>{tab.label}</span>
+                    </Link>
+                  )
+                })}
               </div>
             </div>
 
             {/* Conteúdo das Abas */}
             <div className="area-tab-content">
-              {activeTab === 'pessoas' && <PessoasTabPanel />}
-              {activeTab === 'grupos' && <GruposTabPanel />}
-              {activeTab === 'funcoes' && <FuncoesTabPanel />}
-              {activeTab === 'equipes' && <EquipesTabPanel />}
-              {activeTab === 'geracao-automatica' && <GeracaoAutomaticaTabPanel />}
+              {activeTab === 'pessoas' && <PessoasTabPanel key="pessoas" />}
+              {activeTab === 'grupos' && <GruposTabPanel key="grupos" />}
+              {activeTab === 'funcoes' && <FuncoesTabPanel key="funcoes" />}
+              {activeTab === 'equipes' && <EquipesTabPanel key="equipes" />}
+              {activeTab === 'geracao-automatica' && <GeracaoAutomaticaTabPanel key="geracao-automatica" />}
             </div>
           </div>
         </main>

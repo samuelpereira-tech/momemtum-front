@@ -4,7 +4,6 @@ import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import { personService, type PersonResponseDto } from '../../../../../services/basic/personService'
 import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
 import { personAreaService, type PersonAreaResponseDto, type ResponsibilityInfoDto } from '../../../../../services/basic/personAreaService'
-import { groupMemberService, type GroupMemberResponseDto } from '../../../../../services/basic/groupMemberService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
 import Modal from '../shared/Modal'
 import '../shared/TabPanel.css'
@@ -15,7 +14,6 @@ interface PersonWithRoles {
   personAreaId: string
   person: PersonResponseDto
   roles: ResponsibilityInfoDto[]
-  groups: GroupMemberResponseDto[]
 }
 
 export default function PessoasTabPanel() {
@@ -87,46 +85,32 @@ export default function PessoasTabPanel() {
         }
       }
 
-      // Converter PersonAreaResponseDto para PersonWithRoles e carregar grupos
-      const personsWithRolesData: PersonWithRoles[] = await Promise.all(
-        todasPersonAreas.map(async (personArea) => {
-          // Buscar a pessoa completa na lista de pessoas disponíveis
-          const person = todasPessoas.find(p => p.id === personArea.personId)
-          
-          // Se não encontrar, usar os dados básicos do personArea.person
-          const personData: PersonResponseDto = person || {
-            id: personArea.personId,
-            fullName: personArea.person?.fullName || '',
-            email: personArea.person?.email || '',
-            phone: '',
-            cpf: '',
-            birthDate: '',
-            emergencyContact: '',
-            address: '',
-            photoUrl: personArea.person?.photoUrl || null,
-            createdAt: personArea.createdAt,
-            updatedAt: personArea.updatedAt
-          }
+      // Converter PersonAreaResponseDto para PersonWithRoles
+      const personsWithRolesData: PersonWithRoles[] = todasPersonAreas.map((personArea) => {
+        // Buscar a pessoa completa na lista de pessoas disponíveis
+        const person = todasPessoas.find(p => p.id === personArea.personId)
+        
+        // Se não encontrar, usar os dados básicos do personArea.person
+        const personData: PersonResponseDto = person || {
+          id: personArea.personId,
+          fullName: personArea.person?.fullName || '',
+          email: personArea.person?.email || '',
+          phone: '',
+          cpf: '',
+          birthDate: '',
+          emergencyContact: '',
+          address: '',
+          photoUrl: personArea.person?.photoUrl || null,
+          createdAt: personArea.createdAt,
+          updatedAt: personArea.updatedAt
+        }
 
-          // Carregar grupos da pessoa na área
-          let personGroups: GroupMemberResponseDto[] = []
-          try {
-            personGroups = await groupMemberService.getGroupsByPersonId(
-              scheduledAreaId,
-              personArea.personId
-            )
-          } catch (error) {
-            console.error(`Erro ao carregar grupos da pessoa ${personArea.personId}:`, error)
-          }
-
-          return {
-            personAreaId: personArea.id,
-            person: personData,
-            roles: personArea.responsibilities,
-            groups: personGroups
-          }
-        })
-      )
+        return {
+          personAreaId: personArea.id,
+          person: personData,
+          roles: personArea.responsibilities
+        }
+      })
 
       setPersonsWithRoles(personsWithRolesData)
     } catch (error: any) {
@@ -208,23 +192,11 @@ export default function PessoasTabPanel() {
         // Buscar a pessoa completa
         const person = availablePersons.find(p => p.id === selectedPerson.id) || selectedPerson
 
-        // Carregar grupos da pessoa
-        let personGroups: GroupMemberResponseDto[] = []
-        try {
-          personGroups = await groupMemberService.getGroupsByPersonId(
-            scheduledAreaId,
-            selectedPerson.id
-          )
-        } catch (error) {
-          console.error('Erro ao carregar grupos:', error)
-        }
-
         // Converter para PersonWithRoles
         const updatedPersonWithRoles: PersonWithRoles = {
           personAreaId: updatedPersonArea.id,
           person: person,
-          roles: updatedPersonArea.responsibilities,
-          groups: personGroups
+          roles: updatedPersonArea.responsibilities
         }
 
         setPersonsWithRoles(prev => 
@@ -245,23 +217,11 @@ export default function PessoasTabPanel() {
         // Buscar a pessoa completa
         const person = availablePersons.find(p => p.id === selectedPerson.id) || selectedPerson
 
-        // Carregar grupos da pessoa
-        let personGroups: GroupMemberResponseDto[] = []
-        try {
-          personGroups = await groupMemberService.getGroupsByPersonId(
-            scheduledAreaId,
-            selectedPerson.id
-          )
-        } catch (error) {
-          console.error('Erro ao carregar grupos:', error)
-        }
-
         // Converter para PersonWithRoles
         const newPersonWithRoles: PersonWithRoles = {
           personAreaId: newPersonArea.id,
           person: person,
-          roles: newPersonArea.responsibilities,
-          groups: personGroups
+          roles: newPersonArea.responsibilities
         }
 
         setPersonsWithRoles(prev => [...prev, newPersonWithRoles])
@@ -376,30 +336,6 @@ export default function PessoasTabPanel() {
                         ))
                       )}
                     </div>
-                    
-                    {personWithRoles.groups.length > 0 && (
-                      <div className="area-person-section" style={{ marginTop: '15px' }}>
-                        <div className="area-person-section-title">
-                          <i className="fa-solid fa-users"></i> Grupos
-                        </div>
-                        {personWithRoles.groups.map((groupMember) => (
-                          <div key={groupMember.id} className="area-person-group-item">
-                            <span className="area-person-group-name">
-                              {groupMember.group?.name || 'Grupo sem nome'}
-                            </span>
-                            {groupMember.responsibilities.length > 0 && (
-                              <div className="area-person-group-responsibilities">
-                                {groupMember.responsibilities.map((resp) => (
-                                  <span key={resp.id} className="area-person-group-responsibility-badge">
-                                    {resp.name}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}

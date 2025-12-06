@@ -105,6 +105,46 @@ function App() {
             } 
           />
           <Route 
+            path="/Dashboard/escala/areas/:id/pessoas" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/grupos" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/funcoes" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/equipes" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/geracao-automatica" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/Dashboard/escala/areas/editar/:id" 
             element={
               <ProtectedRoute>
