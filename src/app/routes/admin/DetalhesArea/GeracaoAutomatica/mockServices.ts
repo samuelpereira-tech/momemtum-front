@@ -1,61 +1,32 @@
 // Serviços mockados para geração automática de escalas
 
 import type { GenerationConfiguration, GenerationPreview, SchedulePreview } from './types'
-
-// Mock de grupos
-export const mockGroups = [
-  { id: '1', name: 'Grupo A', memberCount: 5 },
-  { id: '2', name: 'Grupo B', memberCount: 4 },
-  { id: '3', name: 'Grupo C', memberCount: 6 },
-  { id: '4', name: 'Grupo D', memberCount: 3 },
-]
-
-// Mock de equipes
-export const mockTeams = [
-  {
-    id: '1',
-    name: 'Equipe de Louvor Dominical',
-    roles: [
-      { id: 'r1', name: 'Baterista', quantity: 1, priority: 1, responsibilityId: 'resp1' },
-      { id: 'r2', name: 'Tecladista', quantity: 1, priority: 2, responsibilityId: 'resp2' },
-      { id: 'r3', name: 'Vocalista', quantity: 2, priority: 3, responsibilityId: 'resp3' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Equipe de Som',
-    roles: [
-      { id: 'r4', name: 'Operador de Som', quantity: 2, priority: 1, responsibilityId: 'resp4' },
-      { id: 'r5', name: 'Auxiliar', quantity: 1, priority: 2, responsibilityId: 'resp5' },
-    ],
-  },
-]
-
-// Mock de pessoas
-export const mockPersons = [
-  { id: 'p1', fullName: 'João Silva', email: 'joao@example.com', photoUrl: null, groupIds: ['1'], responsibilities: ['resp1', 'resp3'] },
-  { id: 'p2', fullName: 'Maria Santos', email: 'maria@example.com', photoUrl: null, groupIds: ['1'], responsibilities: ['resp2', 'resp3'] },
-  { id: 'p3', fullName: 'Pedro Oliveira', email: 'pedro@example.com', photoUrl: null, groupIds: ['2'], responsibilities: ['resp1', 'resp3'] },
-  { id: 'p4', fullName: 'Ana Costa', email: 'ana@example.com', photoUrl: null, groupIds: ['2'], responsibilities: ['resp3'] },
-  { id: 'p5', fullName: 'Bruno Lima', email: 'bruno@example.com', photoUrl: null, groupIds: ['3'], responsibilities: ['resp2', 'resp3', 'resp4'] },
-  { id: 'p6', fullName: 'Mariana Souza', email: 'mariana@example.com', photoUrl: null, groupIds: ['3'], responsibilities: ['resp3'] },
-  { id: 'p7', fullName: 'Carlos Mendes', email: 'carlos@example.com', photoUrl: null, groupIds: ['4'], responsibilities: ['resp4', 'resp5'] },
-]
-
-// Mock de ausências
-export const mockAbsences = [
-  { personId: 'p1', startDate: '2025-01-15', endDate: '2025-01-20', type: 'Férias' },
-  { personId: 'p3', startDate: '2025-01-10', endDate: '2025-01-12', type: 'Licença' },
-]
+import type { GroupResponseDto } from '../../../../../services/basic/groupService'
+import type { TeamResponseDto } from '../../../../../services/basic/teamService'
+import type { PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
+import type { ScheduledAbsenceResponseDto } from '../../../../../services/basic/scheduledAbsenceService'
 
 // Função para gerar preview mockado
-export async function generatePreviewMock(config: GenerationConfiguration): Promise<GenerationPreview> {
+// Aceita dados reais como parâmetros opcionais para melhor simulação
+export async function generatePreviewMock(
+  config: GenerationConfiguration,
+  realGroups?: GroupResponseDto[],
+  realTeams?: TeamResponseDto[],
+  realPersons?: PersonAreaResponseDto[],
+  realAbsences?: ScheduledAbsenceResponseDto[]
+): Promise<GenerationPreview> {
   // Simular delay de API
   await new Promise(resolve => setTimeout(resolve, 500))
   
   const schedules: SchedulePreview[] = []
   const startDate = new Date(config.periodStartDate)
   const endDate = new Date(config.periodEndDate)
+  
+  // Usar dados reais se disponíveis, senão usar mocks
+  const groups = realGroups || []
+  const teams = realTeams || []
+  const persons = realPersons || []
+  const absences = realAbsences || []
   
   // Gerar escalas baseado no tipo de período
   if (config.periodType === 'fixed') {
@@ -64,13 +35,13 @@ export async function generatePreviewMock(config: GenerationConfiguration): Prom
       startDatetime: config.periodConfig?.baseDateTime || config.periodStartDate,
       endDatetime: config.periodEndDate,
       groups: config.generationType === 'group' && config.groupConfig
-        ? mockGroups.filter(g => config.groupConfig!.groupIds.includes(g.id)).map(g => ({ id: g.id, name: g.name }))
+        ? groups.filter(g => config.groupConfig!.groupIds.includes(g.id)).map(g => ({ id: g.id, name: g.name }))
         : undefined,
       team: config.generationType !== 'group' && config.teamConfig
-        ? mockTeams.find(t => t.id === config.teamConfig!.teamId)
+        ? teams.find(t => t.id === config.teamConfig!.teamId) ? { id: teams.find(t => t.id === config.teamConfig!.teamId)!.id, name: teams.find(t => t.id === config.teamConfig!.teamId)!.name } : undefined
         : undefined,
       assignments: config.generationType !== 'group' && config.teamConfig
-        ? generateMockAssignments(config)
+        ? generateMockAssignments(config, teams, persons, 1)
         : undefined,
       warnings: ['Repetição consecutiva detectada'],
     })
@@ -83,18 +54,21 @@ export async function generatePreviewMock(config: GenerationConfiguration): Prom
       const scheduleEnd = new Date(currentDate)
       scheduleEnd.setDate(scheduleEnd.getDate() + (config.periodConfig?.duration || 7) - 1)
       
+      const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
+      const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+      
       schedules.push({
         id: `s${scheduleIndex}`,
         startDatetime: scheduleStart.toISOString(),
         endDatetime: scheduleEnd.toISOString(),
-        groups: config.generationType === 'group' && config.groupConfig
-          ? [mockGroups[(scheduleIndex - 1) % config.groupConfig.groupIds.length]]
+        groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
+          ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
           : undefined,
-        team: config.generationType !== 'group' && config.teamConfig
-          ? mockTeams.find(t => t.id === config.teamConfig!.teamId)
+        team: config.generationType !== 'group' && config.teamConfig && selectedTeam
+          ? { id: selectedTeam.id, name: selectedTeam.name }
           : undefined,
         assignments: config.generationType !== 'group' && config.teamConfig
-          ? generateMockAssignments(config, scheduleIndex)
+          ? generateMockAssignments(config, teams, persons, scheduleIndex)
           : undefined,
         warnings: scheduleIndex % 3 === 0 ? ['Repetição consecutiva'] : undefined,
       })
@@ -107,18 +81,21 @@ export async function generatePreviewMock(config: GenerationConfiguration): Prom
     let scheduleIndex = 1
     
     while (currentDate <= endDate) {
+      const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
+      const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+      
       schedules.push({
         id: `s${scheduleIndex}`,
         startDatetime: currentDate.toISOString(),
         endDatetime: new Date(currentDate.getTime() + (config.periodConfig?.duration || 1) * 24 * 60 * 60 * 1000).toISOString(),
-        groups: config.generationType === 'group' && config.groupConfig
-          ? [mockGroups[(scheduleIndex - 1) % config.groupConfig.groupIds.length]]
+        groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
+          ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
           : undefined,
-        team: config.generationType !== 'group' && config.teamConfig
-          ? mockTeams.find(t => t.id === config.teamConfig!.teamId)
+        team: config.generationType !== 'group' && config.teamConfig && selectedTeam
+          ? { id: selectedTeam.id, name: selectedTeam.name }
           : undefined,
         assignments: config.generationType !== 'group' && config.teamConfig
-          ? generateMockAssignments(config, scheduleIndex)
+          ? generateMockAssignments(config, teams, persons, scheduleIndex)
           : undefined,
       })
       
@@ -147,18 +124,21 @@ export async function generatePreviewMock(config: GenerationConfiguration): Prom
           scheduleEnd.setHours(scheduleStart.getHours() + 2, 0, 0, 0)
         }
         
+        const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
+        const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+        
         schedules.push({
           id: `s${scheduleIndex}`,
           startDatetime: scheduleStart.toISOString(),
           endDatetime: scheduleEnd.toISOString(),
-          groups: config.generationType === 'group' && config.groupConfig
-            ? [mockGroups[(scheduleIndex - 1) % config.groupConfig.groupIds.length]]
+          groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
+            ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
             : undefined,
-          team: config.generationType !== 'group' && config.teamConfig
-            ? mockTeams.find(t => t.id === config.teamConfig!.teamId)
+          team: config.generationType !== 'group' && config.teamConfig && selectedTeam
+            ? { id: selectedTeam.id, name: selectedTeam.name }
             : undefined,
           assignments: config.generationType !== 'group' && config.teamConfig
-            ? generateMockAssignments(config, scheduleIndex)
+            ? generateMockAssignments(config, teams, persons, scheduleIndex)
             : undefined,
         })
         
@@ -190,23 +170,40 @@ export async function generatePreviewMock(config: GenerationConfiguration): Prom
   }
 }
 
-function generateMockAssignments(config: GenerationConfiguration, scheduleIndex: number = 1) {
+function generateMockAssignments(
+  config: GenerationConfiguration,
+  teams: TeamResponseDto[],
+  persons: PersonAreaResponseDto[],
+  scheduleIndex: number = 1
+) {
   if (!config.teamConfig) return []
   
-  const team = mockTeams.find(t => t.id === config.teamConfig!.teamId)
+  const team = teams.find(t => t.id === config.teamConfig!.teamId)
   if (!team) return []
   
+  // Filtrar pessoas baseado na seleção
+  let availablePersons = persons
+  if (config.teamConfig.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
+    // Filtrar pessoas que pertencem aos grupos selecionados
+    // Nota: Isso requer uma chamada adicional à API, então por enquanto usamos todas as pessoas
+    // Em produção, isso seria feito no backend
+  } else if (config.teamConfig.participantSelection === 'individual' && config.teamConfig.selectedPersonIds) {
+    availablePersons = persons.filter(p => config.teamConfig!.selectedPersonIds!.includes(p.personId))
+  }
+  
+  if (availablePersons.length === 0) return []
+  
   const assignments: Array<{ personId: string; personName: string; roleId: string; roleName: string }> = []
-  let personIndex = scheduleIndex % mockPersons.length
+  let personIndex = scheduleIndex % availablePersons.length
   
   for (const role of team.roles) {
     for (let i = 0; i < role.quantity; i++) {
-      const person = mockPersons[personIndex % mockPersons.length]
+      const person = availablePersons[personIndex % availablePersons.length]
       assignments.push({
-        personId: person.id,
-        personName: person.fullName,
+        personId: person.personId,
+        personName: person.person?.fullName || person.personId,
         roleId: role.id,
-        roleName: role.name,
+        roleName: role.responsibilityName,
       })
       personIndex++
     }

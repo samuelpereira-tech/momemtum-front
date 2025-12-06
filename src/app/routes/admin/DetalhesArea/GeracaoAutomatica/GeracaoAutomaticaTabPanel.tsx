@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './GeracaoAutomaticaTabPanel.css'
 import type { GenerationConfiguration, GenerationPreview, GenerationType, PeriodType, DistributionOrder, ParticipantSelection } from './types'
-import { generatePreviewMock, confirmGenerationMock, mockGroups, mockTeams, mockPersons } from './mockServices'
+import { generatePreviewMock, confirmGenerationMock } from './mockServices'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
+import { groupService, type GroupResponseDto } from '../../../../../services/basic/groupService'
+import { teamService, type TeamResponseDto } from '../../../../../services/basic/teamService'
+import { personAreaService, type PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
+import { groupMemberService } from '../../../../../services/basic/groupMemberService'
+import { scheduledAbsenceService, type ScheduledAbsenceResponseDto } from '../../../../../services/basic/scheduledAbsenceService'
 
 type Step = 1 | 2 | 3 | 4 | 5
 
@@ -18,6 +23,13 @@ export default function GeracaoAutomaticaTabPanel() {
   const [isConfirming, setIsConfirming] = useState(false)
   const [preview, setPreview] = useState<GenerationPreview | null>(null)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  
+  // Estados para dados da API
+  const [groups, setGroups] = useState<GroupResponseDto[]>([])
+  const [teams, setTeams] = useState<TeamResponseDto[]>([])
+  const [persons, setPersons] = useState<PersonAreaResponseDto[]>([])
+  const [absences, setAbsences] = useState<ScheduledAbsenceResponseDto[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
   
   const [config, setConfig] = useState<GenerationConfiguration>({
     scheduledAreaId: scheduledAreaId || '',
@@ -44,9 +56,148 @@ export default function GeracaoAutomaticaTabPanel() {
     },
   })
   
+  // Carregar dados da API
+  const loadData = useCallback(async () => {
+    if (!scheduledAreaId) return
+    
+    setIsLoadingData(true)
+    try {
+      // Carregar grupos
+      const groupsData = await loadAllGroups(scheduledAreaId)
+      setGroups(groupsData)
+      
+      // Carregar equipes
+      const teamsData = await loadAllTeams(scheduledAreaId)
+      setTeams(teamsData)
+      
+      // Carregar pessoas da área
+      const personsData = await loadAllPersonsInArea(scheduledAreaId)
+      setPersons(personsData)
+      
+      // Carregar ausências (todas, serão filtradas depois)
+      const absencesData = await loadAllAbsences()
+      setAbsences(absencesData)
+    } catch (error: any) {
+      console.error('Erro ao carregar dados:', error)
+      toast.showError('Erro ao carregar dados: ' + (error.message || 'Erro desconhecido'))
+    } finally {
+      setIsLoadingData(false)
+    }
+  }, [scheduledAreaId, toast])
+  
   useEffect(() => {
     if (scheduledAreaId) {
       setConfig(prev => ({ ...prev, scheduledAreaId }))
+      loadData()
+    }
+  }, [scheduledAreaId, loadData])
+  
+  // Funções auxiliares para carregar todos os dados paginados
+  const loadAllGroups = async (areaId: string): Promise<GroupResponseDto[]> => {
+    let allGroups: GroupResponseDto[] = []
+    let page = 1
+    let hasMore = true
+    const limit = 100
+    
+    while (hasMore) {
+      const response = await groupService.getGroupsInArea(areaId, { page, limit })
+      allGroups = [...allGroups, ...response.data]
+      
+      if (page >= response.meta.totalPages || response.data.length === 0) {
+        hasMore = false
+      } else {
+        page++
+      }
+    }
+    
+    return allGroups
+  }
+  
+  const loadAllTeams = async (areaId: string): Promise<TeamResponseDto[]> => {
+    let allTeams: TeamResponseDto[] = []
+    let page = 1
+    let hasMore = true
+    const limit = 100
+    
+    while (hasMore) {
+      const response = await teamService.getTeamsInArea(areaId, { page, limit })
+      allTeams = [...allTeams, ...response.data]
+      
+      if (page >= response.meta.totalPages || response.data.length === 0) {
+        hasMore = false
+      } else {
+        page++
+      }
+    }
+    
+    return allTeams
+  }
+  
+  const loadAllPersonsInArea = async (areaId: string): Promise<PersonAreaResponseDto[]> => {
+    let allPersons: PersonAreaResponseDto[] = []
+    let page = 1
+    let hasMore = true
+    const limit = 100
+    
+    while (hasMore) {
+      const response = await personAreaService.getPersonsInArea(areaId, { page, limit })
+      allPersons = [...allPersons, ...response.data]
+      
+      if (page >= response.meta.totalPages || response.data.length === 0) {
+        hasMore = false
+      } else {
+        page++
+      }
+    }
+    
+    return allPersons
+  }
+  
+  const loadAllAbsences = async (): Promise<ScheduledAbsenceResponseDto[]> => {
+    let allAbsences: ScheduledAbsenceResponseDto[] = []
+    let page = 1
+    let hasMore = true
+    const limit = 100
+    
+    while (hasMore) {
+      const response = await scheduledAbsenceService.getAllScheduledAbsences({ page, limit })
+      allAbsences = [...allAbsences, ...response.data]
+      
+      if (page >= response.totalPages || response.data.length === 0) {
+        hasMore = false
+      } else {
+        page++
+      }
+    }
+    
+    return allAbsences
+  }
+  
+  // Função para obter pessoas por grupo
+  const getPersonsByGroup = useCallback(async (groupId: string): Promise<string[]> => {
+    if (!scheduledAreaId) return []
+    
+    try {
+      let members: any[] = []
+      let page = 1
+      let hasMore = true
+      const limit = 100
+      
+      while (hasMore) {
+        const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
+        members = [...members, ...response.data]
+        
+        if (page >= response.meta.totalPages || response.data.length === 0) {
+          hasMore = false
+        } else {
+          page++
+        }
+      }
+      
+      return members.map(m => m.personId).filter(Boolean)
+    } catch (error) {
+      console.error('Erro ao carregar membros do grupo:', error)
+      return []
     }
   }, [scheduledAreaId])
   
@@ -65,7 +216,7 @@ export default function GeracaoAutomaticaTabPanel() {
   const handleGeneratePreview = async () => {
     setIsGeneratingPreview(true)
     try {
-      const previewData = await generatePreviewMock(config)
+      const previewData = await generatePreviewMock(config, groups, teams, persons, absences)
       setPreview(previewData)
       setCurrentStep(5)
     } catch (error: any) {
@@ -117,6 +268,24 @@ export default function GeracaoAutomaticaTabPanel() {
   
   const updateConfig = (updates: Partial<GenerationConfiguration>) => {
     setConfig(prev => ({ ...prev, ...updates }))
+  }
+  
+  if (isLoadingData) {
+    return (
+      <div className="tab-panel">
+        <div className="tab-panel-header">
+          <h3 className="tab-panel-title">
+            <i className="fa-solid fa-robot"></i> Geração de Escala Automática
+          </h3>
+        </div>
+        <div className="tab-panel-body">
+          <div className="form-card" style={{ textAlign: 'center', padding: '40px' }}>
+            <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: '2rem', marginBottom: '20px' }}></i>
+            <p>Carregando dados...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
   
   return (
@@ -171,18 +340,25 @@ export default function GeracaoAutomaticaTabPanel() {
             {currentStep === 2 && (
               <Step2Configurations
                 config={config}
+                groups={groups}
+                teams={teams}
                 onUpdate={updateConfig}
                 onBack={handleBack}
                 onNext={handleNext}
+                isLoading={isLoadingData}
               />
             )}
             
             {currentStep === 3 && (
               <Step3Participants
                 config={config}
+                groups={groups}
+                persons={persons}
                 onUpdate={updateConfig}
                 onBack={handleBack}
                 onNext={handleNext}
+                getPersonsByGroup={getPersonsByGroup}
+                isLoading={isLoadingData}
               />
             )}
             
@@ -282,11 +458,14 @@ function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfigurat
 }
 
 // Step 2: Configurações
-function Step2Configurations({ config, onUpdate, onBack, onNext }: {
+function Step2Configurations({ config, groups, teams, onUpdate, onBack, onNext, isLoading }: {
   config: GenerationConfiguration
+  groups: GroupResponseDto[]
+  teams: TeamResponseDto[]
   onUpdate: (updates: Partial<GenerationConfiguration>) => void
   onBack: () => void
   onNext: () => void
+  isLoading: boolean
 }) {
   if (config.generationType === 'group') {
     return (
@@ -299,32 +478,42 @@ function Step2Configurations({ config, onUpdate, onBack, onNext }: {
           <label>
             <i className="fa-solid fa-users"></i> Grupos Participantes
           </label>
-          <div className="checkbox-group">
-            {mockGroups.map(group => (
-              <label key={group.id} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={config.groupConfig?.groupIds.includes(group.id) || false}
-                  onChange={(e) => {
-                    const currentIds = config.groupConfig?.groupIds || []
-                    const newIds = e.target.checked
-                      ? [...currentIds, group.id]
-                      : currentIds.filter(id => id !== group.id)
-                    onUpdate({
-                      groupConfig: {
-                        ...config.groupConfig!,
-                        groupIds: newIds,
-                      },
-                    })
-                  }}
-                />
-                <span className="checkbox-custom"></span>
-                <span className="checkbox-text">
-                  {group.name} ({group.memberCount} membros)
-                </span>
-              </label>
-            ))}
-          </div>
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Carregando grupos...
+            </div>
+          ) : groups.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              <i className="fa-solid fa-info-circle"></i> Nenhum grupo cadastrado nesta área
+            </div>
+          ) : (
+            <div className="checkbox-group">
+              {groups.map(group => (
+                <label key={group.id} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={config.groupConfig?.groupIds.includes(group.id) || false}
+                    onChange={(e) => {
+                      const currentIds = config.groupConfig?.groupIds || []
+                      const newIds = e.target.checked
+                        ? [...currentIds, group.id]
+                        : currentIds.filter(id => id !== group.id)
+                      onUpdate({
+                        groupConfig: {
+                          ...config.groupConfig!,
+                          groupIds: newIds,
+                        },
+                      })
+                    }}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="checkbox-text">
+                    {group.name} ({group.membersCount || 0} membros)
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
         
         <div className="form-row">
@@ -405,32 +594,43 @@ function Step2Configurations({ config, onUpdate, onBack, onNext }: {
         <label>
           <i className="fa-solid fa-user-group"></i> Equipe
         </label>
-        <select
-          value={config.teamConfig?.teamId || ''}
-          onChange={(e) => onUpdate({
-            teamConfig: {
-              ...config.teamConfig!,
-              teamId: e.target.value,
-            },
-          })}
-        >
-          <option value="">Selecione uma equipe</option>
-          {mockTeams.map(team => (
-            <option key={team.id} value={team.id}>{team.name}</option>
-          ))}
-        </select>
+        {isLoading ? (
+          <div style={{ padding: '20px', textAlign: 'center' }}>
+            <i className="fa-solid fa-spinner fa-spin"></i> Carregando equipes...
+          </div>
+        ) : (
+          <select
+            value={config.teamConfig?.teamId || ''}
+            onChange={(e) => onUpdate({
+              teamConfig: {
+                ...config.teamConfig!,
+                teamId: e.target.value,
+              },
+            })}
+            disabled={teams.length === 0}
+          >
+            <option value="">{teams.length === 0 ? 'Nenhuma equipe cadastrada' : 'Selecione uma equipe'}</option>
+            {teams.map(team => (
+              <option key={team.id} value={team.id}>{team.name}</option>
+            ))}
+          </select>
+        )}
       </div>
       
       {config.teamConfig?.teamId && (
         <div className="team-roles-info">
           <h5>Papéis da Equipe:</h5>
-          <ul>
-            {mockTeams.find(t => t.id === config.teamConfig?.teamId)?.roles.map(role => (
-              <li key={role.id}>
-                <strong>{role.name}</strong> - Quantidade: {role.quantity} | Prioridade: {role.priority}
-              </li>
-            ))}
-          </ul>
+          {teams.find(t => t.id === config.teamConfig?.teamId)?.roles.length === 0 ? (
+            <p style={{ color: 'var(--text-light)' }}>Nenhum papel cadastrado nesta equipe</p>
+          ) : (
+            <ul>
+              {teams.find(t => t.id === config.teamConfig?.teamId)?.roles.map(role => (
+                <li key={role.id}>
+                  <strong>{role.responsibilityName}</strong> - Quantidade: {role.quantity} | Prioridade: {role.priority}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
       
@@ -486,11 +686,15 @@ function Step2Configurations({ config, onUpdate, onBack, onNext }: {
 }
 
 // Step 3: Participantes
-function Step3Participants({ config, onUpdate, onBack, onNext }: {
+function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, getPersonsByGroup, isLoading }: {
   config: GenerationConfiguration
+  groups: GroupResponseDto[]
+  persons: PersonAreaResponseDto[]
   onUpdate: (updates: Partial<GenerationConfiguration>) => void
   onBack: () => void
   onNext: () => void
+  getPersonsByGroup: (groupId: string) => Promise<string[]>
+  isLoading: boolean
 }) {
   if (config.generationType === 'group') {
     // Para grupos, não precisa selecionar participantes
@@ -549,30 +753,40 @@ function Step3Participants({ config, onUpdate, onBack, onNext }: {
           <label>
             <i className="fa-solid fa-users"></i> Grupos
           </label>
-          <div className="checkbox-group">
-            {mockGroups.map(group => (
-              <label key={group.id} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={config.teamConfig?.selectedGroupIds?.includes(group.id) || false}
-                  onChange={(e) => {
-                    const currentIds = config.teamConfig?.selectedGroupIds || []
-                    const newIds = e.target.checked
-                      ? [...currentIds, group.id]
-                      : currentIds.filter(id => id !== group.id)
-                    onUpdate({
-                      teamConfig: {
-                        ...config.teamConfig!,
-                        selectedGroupIds: newIds,
-                      },
-                    })
-                  }}
-                />
-                <span className="checkbox-custom"></span>
-                <span className="checkbox-text">{group.name}</span>
-              </label>
-            ))}
-          </div>
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Carregando grupos...
+            </div>
+          ) : groups.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              <i className="fa-solid fa-info-circle"></i> Nenhum grupo cadastrado nesta área
+            </div>
+          ) : (
+            <div className="checkbox-group">
+              {groups.map(group => (
+                <label key={group.id} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={config.teamConfig?.selectedGroupIds?.includes(group.id) || false}
+                    onChange={(e) => {
+                      const currentIds = config.teamConfig?.selectedGroupIds || []
+                      const newIds = e.target.checked
+                        ? [...currentIds, group.id]
+                        : currentIds.filter(id => id !== group.id)
+                      onUpdate({
+                        teamConfig: {
+                          ...config.teamConfig!,
+                          selectedGroupIds: newIds,
+                        },
+                      })
+                    }}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="checkbox-text">{group.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       )}
       
@@ -581,30 +795,47 @@ function Step3Participants({ config, onUpdate, onBack, onNext }: {
           <label>
             <i className="fa-solid fa-user"></i> Pessoas
           </label>
-          <div className="checkbox-group">
-            {mockPersons.map(person => (
-              <label key={person.id} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={config.teamConfig?.selectedPersonIds?.includes(person.id) || false}
-                  onChange={(e) => {
-                    const currentIds = config.teamConfig?.selectedPersonIds || []
-                    const newIds = e.target.checked
-                      ? [...currentIds, person.id]
-                      : currentIds.filter(id => id !== person.id)
-                    onUpdate({
-                      teamConfig: {
-                        ...config.teamConfig!,
-                        selectedPersonIds: newIds,
-                      },
-                    })
-                  }}
-                />
-                <span className="checkbox-custom"></span>
-                <span className="checkbox-text">{person.fullName}</span>
-              </label>
-            ))}
-          </div>
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Carregando pessoas...
+            </div>
+          ) : persons.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              <i className="fa-solid fa-info-circle"></i> Nenhuma pessoa cadastrada nesta área
+            </div>
+          ) : (
+            <div className="checkbox-group">
+              {persons.map(person => (
+                <label key={person.id} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={config.teamConfig?.selectedPersonIds?.includes(person.personId) || false}
+                    onChange={(e) => {
+                      const currentIds = config.teamConfig?.selectedPersonIds || []
+                      const newIds = e.target.checked
+                        ? [...currentIds, person.personId]
+                        : currentIds.filter(id => id !== person.personId)
+                      onUpdate({
+                        teamConfig: {
+                          ...config.teamConfig!,
+                          selectedPersonIds: newIds,
+                        },
+                      })
+                    }}
+                  />
+                  <span className="checkbox-custom"></span>
+                  <span className="checkbox-text">
+                    {person.person?.fullName || person.personId}
+                    {person.responsibilities && person.responsibilities.length > 0 && (
+                      <span style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginLeft: '8px' }}>
+                        ({person.responsibilities.map(r => r.name).join(', ')})
+                      </span>
+                    )}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
       )}
       
