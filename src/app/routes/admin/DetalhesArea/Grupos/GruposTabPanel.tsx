@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './GruposTabPanel.css'
@@ -9,6 +9,7 @@ import { groupService, type GroupResponseDto } from '../../../../../services/bas
 import { groupMemberService, type GroupMemberResponseDto } from '../../../../../services/basic/groupMemberService'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
+import { withCache, clearCache } from '../../../../../utils/apiCache'
 import Modal from '../shared/Modal'
 
 export default function GruposTabPanel() {
@@ -40,13 +41,158 @@ export default function GruposTabPanel() {
   const [novaPessoaId, setNovaPessoaId] = useState('')
   const [novasFuncoesIds, setNovasFuncoesIds] = useState<string[]>([])
 
-  useEffect(() => {
-    if (scheduledAreaId) {
-      loadData()
-    }
-  }, [scheduledAreaId])
+  // Refs para evitar chamadas duplicadas durante StrictMode
+  const loadingGroupsRef = useRef(false)
+  const loadingMembersRef = useRef<string | null>(null)
 
-  const loadData = async () => {
+  const loadMembrosDoGrupo = useCallback(async (groupId: string) => {
+    if (!scheduledAreaId || loadingMembersRef.current === groupId) return
+    
+    loadingMembersRef.current = groupId
+    try {
+      const allMembers = await withCache(
+        `group-members-${scheduledAreaId}-${groupId}`,
+        async () => {
+          let members: GroupMemberResponseDto[] = []
+          let page = 1
+          let hasMore = true
+          const limit = 100
+
+          while (hasMore) {
+            const response = await groupMemberService.getMembersInGroup(
+              scheduledAreaId,
+              groupId,
+              { page, limit }
+            )
+            members = [...members, ...response.data]
+
+            if (page >= response.meta.totalPages || response.data.length === 0) {
+              hasMore = false
+            } else {
+              page++
+            }
+          }
+          return members
+        }
+      )
+
+      setMembrosDoGrupo(allMembers)
+    } catch (error: any) {
+      console.error('Erro ao carregar membros:', error)
+      toast.showError(error.message || 'Erro ao carregar membros do grupo')
+    } finally {
+      loadingMembersRef.current = null
+    }
+  }, [scheduledAreaId, toast])
+
+  const loadGroups = useCallback(async () => {
+    if (!scheduledAreaId || loadingGroupsRef.current) return
+    
+    loadingGroupsRef.current = true
+    try {
+      const allGroups = await withCache(
+        `groups-${scheduledAreaId}`,
+        async () => {
+          let groups: GroupResponseDto[] = []
+          let page = 1
+          let hasMore = true
+          const limit = 100
+
+          while (hasMore) {
+            const response = await groupService.getGroupsInArea(scheduledAreaId, {
+              page,
+              limit,
+            })
+            groups = [...groups, ...response.data]
+
+            if (page >= response.meta.totalPages || response.data.length === 0) {
+              hasMore = false
+            } else {
+              page++
+            }
+          }
+          return groups
+        }
+      )
+
+      setGrupos(allGroups)
+      
+      // Atualizar grupo selecionado usando função de callback para acessar o estado atual
+      setGrupoSelecionado(prev => {
+        if (prev) {
+          const updated = allGroups.find(g => g.id === prev.id)
+          if (updated) {
+            // Carregar membros do grupo atualizado
+            loadMembrosDoGrupo(updated.id)
+            return updated
+          } else {
+            setMembrosDoGrupo([])
+            return null
+          }
+        }
+        return prev
+      })
+    } catch (error: any) {
+      console.error('Erro ao carregar grupos:', error)
+      toast.showError(error.message || 'Erro ao carregar grupos')
+    } finally {
+      loadingGroupsRef.current = false
+    }
+  }, [scheduledAreaId, toast, loadMembrosDoGrupo])
+
+  const loadFunctions = useCallback(async () => {
+    if (!scheduledAreaId) return
+    try {
+      const response = await withCache(
+        `responsibilities-${scheduledAreaId}`,
+        () => responsibilityService.getAllResponsibilities({
+          scheduledAreaId,
+          limit: 100
+        })
+      )
+      setAvailableFunctions(response.data)
+    } catch (error) {
+      console.error('Erro ao carregar funções:', error)
+      toast.showError('Erro ao carregar lista de funções')
+    }
+  }, [scheduledAreaId, toast])
+
+  const loadPersons = useCallback(async () => {
+    if (!scheduledAreaId) return
+    try {
+      const allPersons = await withCache(
+        `person-areas-${scheduledAreaId}`,
+        async () => {
+          let persons: PersonAreaResponseDto[] = []
+          let page = 1
+          let hasMore = true
+          const limit = 100
+
+          while (hasMore) {
+            const response = await personAreaService.getPersonsInArea(scheduledAreaId, { 
+              page, 
+              limit 
+            })
+            persons = [...persons, ...response.data]
+
+            if (page >= response.meta.totalPages || response.data.length === 0) {
+              hasMore = false
+            } else {
+              page++
+            }
+          }
+          return persons
+        }
+      )
+
+      setAvailablePersons(allPersons)
+    } catch (error) {
+      console.error('Erro ao carregar pessoas da área:', error)
+      toast.showError('Erro ao carregar lista de pessoas')
+    }
+  }, [scheduledAreaId, toast])
+
+  const loadData = useCallback(async () => {
     if (!scheduledAreaId) return
     
     setIsLoading(true)
@@ -61,121 +207,13 @@ export default function GruposTabPanel() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [scheduledAreaId, loadGroups, loadFunctions, loadPersons])
 
-  const loadGroups = async () => {
-    if (!scheduledAreaId) return
-    try {
-      let allGroups: GroupResponseDto[] = []
-      let page = 1
-      let hasMore = true
-      const limit = 100
-
-      while (hasMore) {
-        const response = await groupService.getGroupsInArea(scheduledAreaId, {
-          page,
-          limit,
-        })
-        allGroups = [...allGroups, ...response.data]
-
-        if (page >= response.meta.totalPages || response.data.length === 0) {
-          hasMore = false
-        } else {
-          page++
-        }
-      }
-
-      setGrupos(allGroups)
-      
-      // Se havia um grupo selecionado, atualizar a referência
-      if (grupoSelecionado) {
-        const updated = allGroups.find(g => g.id === grupoSelecionado.id)
-        if (updated) {
-          setGrupoSelecionado(updated)
-          loadMembrosDoGrupo(updated.id)
-        } else {
-          setGrupoSelecionado(null)
-          setMembrosDoGrupo([])
-        }
-      }
-    } catch (error: any) {
-      console.error('Erro ao carregar grupos:', error)
-      toast.showError(error.message || 'Erro ao carregar grupos')
+  useEffect(() => {
+    if (scheduledAreaId) {
+      loadData()
     }
-  }
-
-  const loadMembrosDoGrupo = async (groupId: string) => {
-    if (!scheduledAreaId) return
-    try {
-      let allMembers: GroupMemberResponseDto[] = []
-      let page = 1
-      let hasMore = true
-      const limit = 100
-
-      while (hasMore) {
-        const response = await groupMemberService.getMembersInGroup(
-          scheduledAreaId,
-          groupId,
-          { page, limit }
-        )
-        allMembers = [...allMembers, ...response.data]
-
-        if (page >= response.meta.totalPages || response.data.length === 0) {
-          hasMore = false
-        } else {
-          page++
-        }
-      }
-
-      setMembrosDoGrupo(allMembers)
-    } catch (error: any) {
-      console.error('Erro ao carregar membros:', error)
-      toast.showError(error.message || 'Erro ao carregar membros do grupo')
-    }
-  }
-
-  const loadFunctions = async () => {
-    if (!scheduledAreaId) return
-    try {
-      const response = await responsibilityService.getAllResponsibilities({
-        scheduledAreaId,
-        limit: 100
-      })
-      setAvailableFunctions(response.data)
-    } catch (error) {
-      console.error('Erro ao carregar funções:', error)
-      toast.showError('Erro ao carregar lista de funções')
-    }
-  }
-
-  const loadPersons = async () => {
-    if (!scheduledAreaId) return
-    try {
-      let allPersons: PersonAreaResponseDto[] = []
-      let page = 1
-      let hasMore = true
-      const limit = 100
-
-      while (hasMore) {
-        const response = await personAreaService.getPersonsInArea(scheduledAreaId, { 
-          page, 
-          limit 
-        })
-        allPersons = [...allPersons, ...response.data]
-
-        if (page >= response.meta.totalPages || response.data.length === 0) {
-          hasMore = false
-        } else {
-          page++
-        }
-      }
-
-      setAvailablePersons(allPersons)
-    } catch (error) {
-      console.error('Erro ao carregar pessoas da área:', error)
-      toast.showError('Erro ao carregar lista de pessoas')
-    }
-  }
+  }, [scheduledAreaId, loadData])
 
   // Handlers Grupo
   const handleSaveGrupo = async () => {
@@ -191,6 +229,7 @@ export default function GruposTabPanel() {
       })
 
       setGrupos([...grupos, newGroup])
+      clearCache(`groups-${scheduledAreaId}`)
       setNovoGrupoNome('')
       setNovoGrupoDescricao('')
       setShowAddGrupoModal(false)
@@ -224,6 +263,7 @@ export default function GruposTabPanel() {
       )
 
       setGrupos(grupos.map(g => g.id === grupoParaEditar.id ? updatedGroup : g))
+      clearCache(`groups-${scheduledAreaId}`)
       
       // Se o grupo editado era o selecionado, atualizar a seleção
       if (grupoSelecionado?.id === grupoParaEditar.id) {
@@ -251,6 +291,7 @@ export default function GruposTabPanel() {
     try {
       await groupService.deleteGroup(scheduledAreaId, grupoParaDeletar.id)
       setGrupos(grupos.filter(g => g.id !== grupoParaDeletar.id))
+      clearCache(`groups-${scheduledAreaId}`)
       if (grupoSelecionado?.id === grupoParaDeletar.id) {
         setGrupoSelecionado(null)
         setMembrosDoGrupo([])
@@ -311,10 +352,10 @@ export default function GruposTabPanel() {
         }
       )
 
-      // Recarregar membros do grupo
+      // Invalidar cache e recarregar membros do grupo
+      clearCache(`group-members-${scheduledAreaId}-${grupoSelecionado.id}`)
+      clearCache(`groups-${scheduledAreaId}`)
       await loadMembrosDoGrupo(grupoSelecionado.id)
-      
-      // Recarregar grupos para atualizar o contador de membros
       await loadGroups()
 
       setNovaPessoaId('')
@@ -349,10 +390,10 @@ export default function GruposTabPanel() {
         memberId
       )
 
-      // Recarregar membros do grupo
+      // Invalidar cache e recarregar membros do grupo
+      clearCache(`group-members-${scheduledAreaId}-${grupoSelecionado.id}`)
+      clearCache(`groups-${scheduledAreaId}`)
       await loadMembrosDoGrupo(grupoSelecionado.id)
-      
-      // Recarregar grupos para atualizar o contador de membros
       await loadGroups()
 
       toast.showSuccess('Pessoa removida do grupo com sucesso!')
