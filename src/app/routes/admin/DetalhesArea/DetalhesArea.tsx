@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
 import TopNavbar from '../../../../components/admin/TopNavbar/TopNavbar'
 import Sidebar from '../../../../components/admin/Sidebar/Sidebar'
@@ -38,28 +38,12 @@ export default function DetalhesArea() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [areasFavoritas, setAreasFavoritas] = useState<Array<{ id: string; nome: string }>>([])
+  const loadingAreaRef = useRef(false)
+  const loadingFavoritasRef = useRef(false)
 
-  useEffect(() => {
-    if (id) {
-      loadAreaData()
-      loadAreasFavoritas()
-    } else {
-      navigate('/Dashboard/escala/areas')
-    }
-  }, [id])
-
-  // Atualizar aba ativa quando a rota mudar
-  useEffect(() => {
-    const tab = getActiveTabFromPath()
-    setActiveTab(tab)
-    // Redirecionar para a rota correta se acessar a rota base sem especificar a aba
-    if (id && location.pathname === `/Dashboard/escala/areas/${id}`) {
-      navigate(`/Dashboard/escala/areas/${id}/pessoas`, { replace: true })
-    }
-  }, [location.pathname, id, navigate])
-
-  const loadAreaData = async () => {
-    if (!id) return
+  const loadAreaData = useCallback(async () => {
+    if (!id || loadingAreaRef.current) return
+    loadingAreaRef.current = true
     
     setIsLoading(true)
     setError(null)
@@ -73,10 +57,13 @@ export default function DetalhesArea() {
       navigate('/Dashboard/escala/areas')
     } finally {
       setIsLoading(false)
+      loadingAreaRef.current = false
     }
-  }
+  }, [id, navigate, toast])
 
-  const loadAreasFavoritas = async () => {
+  const loadAreasFavoritas = useCallback(async () => {
+    if (loadingFavoritasRef.current) return
+    loadingFavoritasRef.current = true
     try {
       // Carregar todas as áreas favoritas
       let todasAreas: ScheduledAreaResponseDto[] = []
@@ -121,8 +108,29 @@ export default function DetalhesArea() {
     } catch (err: any) {
       console.error('Erro ao carregar áreas favoritas:', err)
       // Não mostrar erro para o usuário, apenas logar
+    } finally {
+      loadingFavoritasRef.current = false
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (id) {
+      loadAreaData()
+      loadAreasFavoritas()
+    } else {
+      navigate('/Dashboard/escala/areas')
+    }
+  }, [id, loadAreaData, loadAreasFavoritas, navigate])
+
+  // Atualizar aba ativa quando a rota mudar
+  useEffect(() => {
+    const tab = getActiveTabFromPath()
+    setActiveTab(tab)
+    // Redirecionar para a rota correta se acessar a rota base sem especificar a aba
+    if (id && location.pathname === `/Dashboard/escala/areas/${id}`) {
+      navigate(`/Dashboard/escala/areas/${id}/pessoas`, { replace: true })
+    }
+  }, [location.pathname, id, navigate])
 
   const tabs = [
     { id: 'pessoas' as TabType, label: 'Pessoas', icon: 'fa-solid fa-user-plus' },

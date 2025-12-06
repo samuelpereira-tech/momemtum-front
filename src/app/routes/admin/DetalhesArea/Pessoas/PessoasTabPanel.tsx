@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import { personService, type PersonResponseDto } from '../../../../../services/basic/personService'
 import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
 import { personAreaService, type PersonAreaResponseDto, type ResponsibilityInfoDto } from '../../../../../services/basic/personAreaService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
+import { withCache, clearCache } from '../../../../../utils/apiCache'
 import Modal from '../shared/Modal'
 import '../shared/TabPanel.css'
 import './PessoasTabPanel.css'
@@ -29,61 +30,69 @@ export default function PessoasTabPanel() {
   const [selectedPerson, setSelectedPerson] = useState<PersonResponseDto | null>(null)
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
 
-  useEffect(() => {
-    if (scheduledAreaId) {
-      loadData()
-    }
-  }, [scheduledAreaId])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!scheduledAreaId) return
     
     setIsLoading(true)
     try {
-      // Carregar todas as pessoas (para o modal de adicionar)
-      let todasPessoas: PersonResponseDto[] = []
-      let pagina = 1
-      let temMaisPaginas = true
-      const limitePorRequisicao = 100
+      // Carregar todos os dados em paralelo e aguardar todos antes de atualizar o estado
+      const [todasPessoas, rolesResponse, todasPersonAreas] = await Promise.all([
+        // Carregar todas as pessoas com cache
+        withCache(
+          'all-persons',
+          async () => {
+            let pessoas: PersonResponseDto[] = []
+            let pagina = 1
+            let temMaisPaginas = true
+            const limitePorRequisicao = 100
 
-      while (temMaisPaginas) {
-        const response = await personService.getAllPersons(pagina, limitePorRequisicao)
-        todasPessoas = [...todasPessoas, ...response.data]
-        
-        if (pagina >= response.totalPages || response.data.length === 0) {
-          temMaisPaginas = false
-        } else {
-          pagina++
-        }
-      }
-      setAvailablePersons(todasPessoas)
+            while (temMaisPaginas) {
+              const response = await personService.getAllPersons(pagina, limitePorRequisicao)
+              pessoas = [...pessoas, ...response.data]
+              
+              if (pagina >= response.totalPages || response.data.length === 0) {
+                temMaisPaginas = false
+              } else {
+                pagina++
+              }
+            }
+            return pessoas
+          }
+        ),
+        // Carregar funções (responsabilidades) da área com cache
+        withCache(
+          `responsibilities-${scheduledAreaId}`,
+          () => responsibilityService.getAllResponsibilities({
+            scheduledAreaId,
+            limit: 100
+          })
+        ),
+        // Carregar pessoas associadas à área com cache
+        withCache(
+          `person-areas-${scheduledAreaId}`,
+          async () => {
+            let personAreas: PersonAreaResponseDto[] = []
+            let paginaPersonAreas = 1
+            let temMaisPaginasPersonAreas = true
+            const limitePersonAreas = 100
 
-      // Carregar funções (responsabilidades) da área
-      const rolesResponse = await responsibilityService.getAllResponsibilities({
-        scheduledAreaId,
-        limit: 100
-      })
-      setAvailableRoles(rolesResponse.data)
-
-      // Carregar pessoas associadas à área usando a API de person-areas
-      let todasPersonAreas: PersonAreaResponseDto[] = []
-      let paginaPersonAreas = 1
-      let temMaisPaginasPersonAreas = true
-      const limitePersonAreas = 100
-
-      while (temMaisPaginasPersonAreas) {
-        const personAreasResponse = await personAreaService.getPersonsInArea(scheduledAreaId, {
-          page: paginaPersonAreas,
-          limit: limitePersonAreas
-        })
-        todasPersonAreas = [...todasPersonAreas, ...personAreasResponse.data]
-        
-        if (paginaPersonAreas >= personAreasResponse.meta.totalPages || personAreasResponse.data.length === 0) {
-          temMaisPaginasPersonAreas = false
-        } else {
-          paginaPersonAreas++
-        }
-      }
+            while (temMaisPaginasPersonAreas) {
+              const personAreasResponse = await personAreaService.getPersonsInArea(scheduledAreaId, {
+                page: paginaPersonAreas,
+                limit: limitePersonAreas
+              })
+              personAreas = [...personAreas, ...personAreasResponse.data]
+              
+              if (paginaPersonAreas >= personAreasResponse.meta.totalPages || personAreasResponse.data.length === 0) {
+                temMaisPaginasPersonAreas = false
+              } else {
+                paginaPersonAreas++
+              }
+            }
+            return personAreas
+          }
+        )
+      ])
 
       // Converter PersonAreaResponseDto para PersonWithRoles
       const personsWithRolesData: PersonWithRoles[] = todasPersonAreas.map((personArea) => {
@@ -112,6 +121,11 @@ export default function PessoasTabPanel() {
         }
       })
 
+      // Atualizar todos os estados de uma vez
+      // React 18+ faz batching automático de setState dentro de callbacks assíncronos
+      // Isso resulta em um único re-render ao invés de três
+      setAvailablePersons(todasPessoas)
+      setAvailableRoles(rolesResponse.data)
       setPersonsWithRoles(personsWithRolesData)
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error)
@@ -119,7 +133,13 @@ export default function PessoasTabPanel() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [scheduledAreaId, toast])
+
+  useEffect(() => {
+    if (scheduledAreaId) {
+      loadData()
+    }
+  }, [scheduledAreaId, loadData])
 
   const handleAdicionarPessoa = () => {
     setEditingPerson(null)
@@ -146,7 +166,13 @@ export default function PessoasTabPanel() {
 
     try {
       await personAreaService.removePersonFromArea(scheduledAreaId, personAreaId)
+      
+      // Remover da lista imediatamente
       setPersonsWithRoles(prev => prev.filter(p => p.personAreaId !== personAreaId))
+      
+      // Invalidar cache para garantir dados atualizados
+      clearCache(`person-areas-${scheduledAreaId}`)
+      
       toast.showSuccess(`${personName} removido(a) da área com sucesso!`)
     } catch (error: any) {
       console.error('Erro ao remover pessoa:', error)
@@ -199,6 +225,7 @@ export default function PessoasTabPanel() {
           roles: updatedPersonArea.responsibilities
         }
 
+        // Atualizar na lista (a ordenação será feita pelo useMemo)
         setPersonsWithRoles(prev => 
           prev.map(p => 
             p.personAreaId === editingPerson.personAreaId 
@@ -206,6 +233,10 @@ export default function PessoasTabPanel() {
               : p
           )
         )
+        
+        // Invalidar cache para garantir dados atualizados
+        clearCache(`person-areas-${scheduledAreaId}`)
+        
         toast.showSuccess('Pessoa atualizada com sucesso!')
       } else {
         // Adicionar nova pessoa à área
@@ -224,7 +255,12 @@ export default function PessoasTabPanel() {
           roles: newPersonArea.responsibilities
         }
 
+        // Adicionar à lista (a ordenação será feita pelo useMemo)
         setPersonsWithRoles(prev => [...prev, newPersonWithRoles])
+        
+        // Invalidar cache para garantir dados atualizados na próxima vez
+        clearCache(`person-areas-${scheduledAreaId}`)
+        
         toast.showSuccess('Pessoa adicionada à área com sucesso!')
       }
       
@@ -256,6 +292,13 @@ export default function PessoasTabPanel() {
     return selectedPerson !== null && selectedPerson.id === personId
   }
 
+  // Ordenar pessoas alfabeticamente usando useMemo para evitar re-ordenação desnecessária
+  const sortedPersonsWithRoles = useMemo(() => {
+    return [...personsWithRoles].sort((a, b) => 
+      a.person.fullName.localeCompare(b.person.fullName)
+    )
+  }, [personsWithRoles])
+
   return (
     <div className="tab-panel">
       <div className="tab-panel-header">
@@ -282,10 +325,8 @@ export default function PessoasTabPanel() {
           </div>
         ) : (
           <div className="area-persons-list">
-            {personsWithRoles
-              .sort((a, b) => a.person.fullName.localeCompare(b.person.fullName))
-              .map((personWithRoles) => (
-                <div key={personWithRoles.person.id} className="area-person-group-card">
+            {sortedPersonsWithRoles.map((personWithRoles) => (
+                <div key={personWithRoles.personAreaId} className="area-person-group-card">
                   <div className="area-person-main-info">
                     <div className="area-person-photo">
                       {personWithRoles.person.photoUrl ? (

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react'
 import { signInWithEmailPassword, refreshToken, signOut, getCurrentUser, type User, type AuthResult } from '../../services/authService'
 
 interface AuthContextType {
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
+  const initializingRef = useRef(false)
 
   const saveAuthData = (authResult: AuthResult) => {
     const token = authResult.accessToken || authResult.session?.accessToken
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false)
   }
 
-  const checkAndRefreshToken = async (accessToken: string | null, refreshTokenValue: string | null) => {
+  const checkAndRefreshToken = useCallback(async (accessToken: string | null, refreshTokenValue: string | null) => {
     if (!accessToken || !refreshTokenValue) {
       clearAuthData()
       return
@@ -65,11 +66,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearAuthData()
       }
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Verificar se há tokens salvos no localStorage ao inicializar
   useEffect(() => {
     const initializeAuth = async () => {
+      if (initializingRef.current) return
+      initializingRef.current = true
+
       const savedAccessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
       const savedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
       const savedUser = localStorage.getItem(USER_KEY)
