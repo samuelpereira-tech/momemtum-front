@@ -332,6 +332,17 @@ export default function GruposTabPanel() {
     setShowEditGrupoModal(true)
   }
 
+  // Funções auxiliares
+  const getResponsibilityName = (responsibilityId: string): string => {
+    const responsibility = availableFunctions.find(f => f.id === responsibilityId)
+    return responsibility?.name || `Função ${responsibilityId}`
+  }
+
+  const getResponsibilityImage = (responsibilityId: string): string | null => {
+    const responsibility = availableFunctions.find(f => f.id === responsibilityId)
+    return responsibility?.imageUrl || null
+  }
+
   // Handlers Pessoa
   const handleAddPessoa = async () => {
     if (!scheduledAreaId || !novaPessoaId || !grupoSelecionado) {
@@ -527,11 +538,21 @@ export default function GruposTabPanel() {
                           {/* Renderiza múltiplas funções */}
                           <div className="membro-roles" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center', marginBottom: '10px' }}>
                             {membro.responsibilities && membro.responsibilities.length > 0 ? (
-                              membro.responsibilities.map((role) => (
-                                <span key={role.id} className="membro-role-badge has-role">
-                                  {role.name}
-                                </span>
-                              ))
+                              membro.responsibilities.map((role) => {
+                                const roleImage = getResponsibilityImage(role.id)
+                                return (
+                                  <span key={role.id} className="membro-role-badge has-role">
+                                    {roleImage ? (
+                                      <img 
+                                        src={addCacheBusting(roleImage)} 
+                                        alt={role.name}
+                                        className="membro-role-badge-image"
+                                      />
+                                    ) : null}
+                                    {role.name}
+                                  </span>
+                                )
+                              })
                             ) : (
                               <span className="membro-role-badge">Membro</span>
                             )}

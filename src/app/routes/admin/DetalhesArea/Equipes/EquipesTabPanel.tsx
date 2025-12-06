@@ -243,6 +243,45 @@ export default function EquipesTabPanel() {
     setShowEditEquipeModal(true)
   }
 
+  const handleCloneEquipe = async (equipe: TeamResponseDto, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    if (!scheduledAreaId) return
+
+    try {
+      // Criar nome para a equipe clonada
+      const clonedName = `${equipe.name} (Cópia)`
+      
+      // Clonar todos os papéis (roles) da equipe original
+      const clonedRoles = equipe.roles.map(role => ({
+        responsibilityId: role.responsibilityId,
+        quantity: role.quantity,
+        priority: role.priority,
+        isFree: role.isFree,
+        fixedPersonIds: role.fixedPersonIds || []
+      }))
+
+      // Criar a nova equipe com os papéis clonados
+      const newTeam = await teamService.createTeam(scheduledAreaId, {
+        name: clonedName,
+        description: equipe.description || undefined,
+        scheduledAreaId,
+        roles: clonedRoles
+      })
+
+      // Adicionar a nova equipe à lista
+      setEquipes([...equipes, newTeam])
+      
+      // Selecionar a equipe clonada automaticamente
+      setEquipeSelecionada(newTeam)
+      
+      toast.showSuccess(`Equipe "${clonedName}" clonada com sucesso!`)
+    } catch (error: any) {
+      console.error('Erro ao clonar equipe:', error)
+      toast.showError(error.message || 'Erro ao clonar equipe')
+    }
+  }
+
   // Funções auxiliares
   const getResponsibilityName = (responsibilityId: string): string => {
     const responsibility = availableFunctions.find(f => f.id === responsibilityId)
@@ -503,6 +542,13 @@ export default function EquipesTabPanel() {
                     <span className="equipe-meta">{equipe.roles.length} função(ões)</span>
                   </div>
                   <div style={{ display: 'flex', gap: '5px' }}>
+                    <button
+                      className="btn-icon-clone-sm"
+                      onClick={(e) => handleCloneEquipe(equipe, e)}
+                      title="Clonar equipe"
+                    >
+                      <i className="fa-solid fa-copy"></i>
+                    </button>
                     <button
                       className="btn-icon-edit-sm"
                       onClick={(e) => handleOpenEditModal(equipe, e)}

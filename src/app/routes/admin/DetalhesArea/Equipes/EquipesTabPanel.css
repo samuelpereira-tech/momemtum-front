@@ -395,7 +395,8 @@
     box-shadow: 0 2px 8px rgba(173, 130, 216, 0.3);
 }
 
-.btn-icon-edit-sm {
+.btn-icon-edit-sm,
+.btn-icon-clone-sm {
     background: transparent;
     color: var(--text-light);
     width: 24px;
@@ -453,13 +454,20 @@
 }
 
 .equipe-item:hover .btn-icon-edit-sm,
-.equipe-item:hover .btn-icon-delete-sm {
+.equipe-item:hover .btn-icon-delete-sm,
+.equipe-item:hover .btn-icon-clone-sm {
     opacity: 1;
 }
 
 .btn-icon-edit-sm:hover {
     background: rgba(121, 217, 199, 0.1);
     color: var(--color-teal);
+    transform: scale(1.1);
+}
+
+.btn-icon-clone-sm:hover {
+    background: rgba(173, 130, 216, 0.1);
+    color: var(--color-purple);
     transform: scale(1.1);
 }
 

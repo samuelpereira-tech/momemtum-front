@@ -233,7 +233,9 @@
 }
 
 .membro-role-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 4px 12px;
     border-radius: 12px;
     font-size: 0.75rem;
@@ -246,6 +248,14 @@
 .membro-role-badge.has-role {
     background: rgba(173, 130, 216, 0.15);
     color: var(--color-purple);
+}
+
+.membro-role-badge-image {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 
 .membro-roles {
