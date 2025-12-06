@@ -765,14 +765,15 @@ export default function EquipesTabPanel() {
                 <div className="selector-container">
                   <input
                     type="text"
-                    placeholder="Buscar pessoa por nome..."
+                    placeholder="Buscar pessoa por nome ou função..."
                     className="search-input"
                     onChange={(e) => {
                       const term = e.target.value.toLowerCase();
                       const items = document.querySelectorAll('.person-item');
                       items.forEach((item: any) => {
                         const name = item.getAttribute('data-name').toLowerCase();
-                        if (name.includes(term)) {
+                        const responsibilities = item.getAttribute('data-responsibilities')?.toLowerCase() || '';
+                        if (name.includes(term) || responsibilities.includes(term)) {
                           item.style.display = 'flex';
                         } else {
                           item.style.display = 'none';
@@ -786,27 +787,30 @@ export default function EquipesTabPanel() {
                       const isMaxReached = novoPapelIsFixo && !isSelected && novoPapelPessoasFixas.length >= novoPapelQuantidade
 
                       return (
-                        <div
-                          key={p.id}
-                          className={`option-item person-item ${isSelected ? 'selected' : ''} ${isMaxReached ? 'disabled' : ''}`}
-                          onClick={() => {
-                            if (isMaxReached) {
-                              toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
-                              return
-                            }
-                            if (isSelected) {
-                              setNovoPapelPessoasFixas(novoPapelPessoasFixas.filter(id => id !== p.personId))
-                            } else {
-                              if (novoPapelIsFixo && novoPapelPessoasFixas.length >= novoPapelQuantidade) {
-                                toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
-                                return
-                              }
-                              setNovoPapelPessoasFixas([...novoPapelPessoasFixas, p.personId])
-                            }
-                          }}
-                          data-name={p.person?.fullName || ''}
-                          title={isMaxReached ? `Limite de ${novoPapelQuantidade} pessoa(s) atingido` : ''}
-                        >
+                         <div
+                           key={p.id}
+                           className={`option-item person-item ${isSelected ? 'selected' : ''} ${isMaxReached ? 'disabled' : ''}`}
+                           onClick={() => {
+                             if (isMaxReached) {
+                               toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
+                               return
+                             }
+                             if (isSelected) {
+                               setNovoPapelPessoasFixas(novoPapelPessoasFixas.filter(id => id !== p.personId))
+                             } else {
+                               if (novoPapelIsFixo && novoPapelPessoasFixas.length >= novoPapelQuantidade) {
+                                 toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
+                                 return
+                               }
+                               setNovoPapelPessoasFixas([...novoPapelPessoasFixas, p.personId])
+                             }
+                           }}
+                           data-name={p.person?.fullName || ''}
+                           data-responsibilities={p.responsibilities && p.responsibilities.length > 0
+                             ? p.responsibilities.map(r => r.name).join(', ')
+                             : ''}
+                           title={isMaxReached ? `Limite de ${novoPapelQuantidade} pessoa(s) atingido` : ''}
+                         >
                           {p.person?.photoUrl ? (
                             <img
                               src={addCacheBusting(p.person.photoUrl)}

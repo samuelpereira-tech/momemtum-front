@@ -24,6 +24,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .equipes-sidebar-header h3 {
@@ -322,10 +324,15 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
 }
 
 .btn-icon-primary:hover {
     background: var(--color-dark-purple);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(173, 130, 216, 0.3);
 }
 
 .btn-icon-edit-sm {
