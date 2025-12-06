@@ -327,56 +327,66 @@ export default function PessoasTabPanel() {
           <div className="area-persons-list">
             {sortedPersonsWithRoles.map((personWithRoles) => (
                 <div key={personWithRoles.personAreaId} className="area-person-group-card">
-                  <div className="area-person-main-info">
-                    <div className="area-person-photo">
+                  <div className="area-person-card-header">
+                    <div className="area-person-photo-container">
                       {personWithRoles.person.photoUrl ? (
-                        <img src={addCacheBusting(personWithRoles.person.photoUrl)} alt={personWithRoles.person.fullName} />
+                        <img 
+                          src={addCacheBusting(personWithRoles.person.photoUrl)} 
+                          alt={personWithRoles.person.fullName}
+                          className="area-person-photo"
+                        />
                       ) : (
                         <div className="area-person-photo-placeholder">
-                          <i className="fa-solid fa-user"></i>
+                          {personWithRoles.person.fullName?.charAt(0).toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
-                    <div className="area-person-details">
-                      <div className="area-person-name">{personWithRoles.person.fullName}</div>
-                      <div className="area-person-email">{personWithRoles.person.email}</div>
-                    </div>
-                    <div className="area-person-main-actions">
-                      <button
-                        className="btn-icon btn-icon-edit"
-                        onClick={() => handleEditarPessoa(personWithRoles)}
-                        title="Editar funções da pessoa"
-                      >
-                        <i className="fa-solid fa-pencil"></i>
-                      </button>
-                      <button
-                        className="btn-icon btn-icon-delete"
-                        onClick={() => handleRemoverPessoa(personWithRoles.personAreaId, personWithRoles.person.fullName)}
-                        title="Remover pessoa da área"
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
-                    </div>
                   </div>
-                  <div className="area-person-roles-list">
-                    <div className="area-person-section">
-                      <div className="area-person-section-title">
-                        <i className="fa-solid fa-briefcase"></i> Funções
-                      </div>
+
+                  <div className="area-person-info">
+                    <h4 className="area-person-name" title={personWithRoles.person.fullName}>
+                      {personWithRoles.person.fullName}
+                    </h4>
+                    <p className="area-person-email" title={personWithRoles.person.email}>
+                      {personWithRoles.person.email}
+                    </p>
+
+                    {/* Renderiza múltiplas funções */}
+                    <div className="area-person-roles">
                       {personWithRoles.roles.length === 0 ? (
-                        <div className="area-person-role-item">
-                          <span className="area-person-role-name" style={{ color: 'var(--text-light)' }}>
-                            Nenhuma função atribuída
-                          </span>
-                        </div>
+                        <span className="area-person-role-badge">Sem função</span>
                       ) : (
                         personWithRoles.roles.map((role) => (
-                          <div key={role.id} className="area-person-role-item">
-                            <span className="area-person-role-name">{role.name}</span>
-                          </div>
+                          <span key={role.id} className="area-person-role-badge has-role">
+                            {role.imageUrl ? (
+                              <img 
+                                src={addCacheBusting(role.imageUrl)} 
+                                alt={role.name}
+                                className="area-person-role-badge-image"
+                              />
+                            ) : null}
+                            {role.name}
+                          </span>
                         ))
                       )}
                     </div>
+                  </div>
+
+                  <div className="area-person-actions">
+                    <button
+                      className="btn-icon btn-icon-edit"
+                      onClick={() => handleEditarPessoa(personWithRoles)}
+                      title="Editar funções da pessoa"
+                    >
+                      <i className="fa-solid fa-pencil"></i>
+                    </button>
+                    <button
+                      className="btn-icon btn-icon-delete"
+                      onClick={() => handleRemoverPessoa(personWithRoles.personAreaId, personWithRoles.person.fullName)}
+                      title="Remover pessoa da área"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
                   </div>
                 </div>
               ))}
