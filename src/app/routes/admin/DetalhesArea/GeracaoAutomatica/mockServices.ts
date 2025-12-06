@@ -1,47 +1,50 @@
-// Serviços mockados para geração automática de escalas
+// Serviços para geração automática de escalas
 
 import type { GenerationConfiguration, GenerationPreview, SchedulePreview } from './types'
 import type { GroupResponseDto } from '../../../../../services/basic/groupService'
 import type { TeamResponseDto } from '../../../../../services/basic/teamService'
 import type { PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
 import type { ScheduledAbsenceResponseDto } from '../../../../../services/basic/scheduledAbsenceService'
+import type { GroupMemberResponseDto } from '../../../../../services/basic/groupMemberService'
 
-// Função para gerar preview mockado
-// Aceita dados reais como parâmetros opcionais para melhor simulação
-export async function generatePreviewMock(
+// Função para gerar preview usando dados reais
+export async function generatePreview(
   config: GenerationConfiguration,
-  realGroups?: GroupResponseDto[],
-  realTeams?: TeamResponseDto[],
-  realPersons?: PersonAreaResponseDto[],
-  realAbsences?: ScheduledAbsenceResponseDto[]
+  groups: GroupResponseDto[],
+  teams: TeamResponseDto[],
+  persons: PersonAreaResponseDto[],
+  absences: ScheduledAbsenceResponseDto[],
+  groupMembers: GroupMemberResponseDto[]
 ): Promise<GenerationPreview> {
-  // Simular delay de API
-  await new Promise(resolve => setTimeout(resolve, 500))
-  
   const schedules: SchedulePreview[] = []
   const startDate = new Date(config.periodStartDate)
   const endDate = new Date(config.periodEndDate)
   
-  // Usar dados reais se disponíveis, senão usar mocks
-  const groups = realGroups || []
-  const teams = realTeams || []
-  const persons = realPersons || []
-  const absences = realAbsences || []
+  // Validar dados necessários
+  if (!groups || !teams || !persons) {
+    throw new Error('Dados insuficientes para gerar preview')
+  }
+  
+  // Rastrear atribuições anteriores para balanceamento
+  const assignmentHistory = new Map<string, Map<string, number>>() // roleId -> personId -> count
   
   // Gerar escalas baseado no tipo de período
   if (config.periodType === 'fixed') {
+    const scheduleStart = new Date(config.periodConfig?.baseDateTime || config.periodStartDate)
+    const scheduleEnd = new Date(config.periodEndDate)
+    
     schedules.push({
       id: 's1',
-      startDatetime: config.periodConfig?.baseDateTime || config.periodStartDate,
-      endDatetime: config.periodEndDate,
+      startDatetime: scheduleStart.toISOString(),
+      endDatetime: scheduleEnd.toISOString(),
       groups: config.generationType === 'group' && config.groupConfig
         ? groups.filter(g => config.groupConfig!.groupIds.includes(g.id)).map(g => ({ id: g.id, name: g.name }))
         : undefined,
       team: config.generationType !== 'group' && config.teamConfig
         ? teams.find(t => t.id === config.teamConfig!.teamId) ? { id: teams.find(t => t.id === config.teamConfig!.teamId)!.id, name: teams.find(t => t.id === config.teamConfig!.teamId)!.name } : undefined
         : undefined,
-      assignments: config.generationType !== 'group' && config.teamConfig
-        ? generateMockAssignments(config, teams, persons, 1)
+        assignments: config.generationType !== 'group' && config.teamConfig
+        ? generateAssignments(config, teams, persons, 1, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
         : undefined,
       warnings: ['Repetição consecutiva detectada'],
     })
@@ -68,7 +71,7 @@ export async function generatePreviewMock(
           ? { id: selectedTeam.id, name: selectedTeam.name }
           : undefined,
         assignments: config.generationType !== 'group' && config.teamConfig
-          ? generateMockAssignments(config, teams, persons, scheduleIndex)
+          ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
           : undefined,
         warnings: scheduleIndex % 3 === 0 ? ['Repetição consecutiva'] : undefined,
       })
@@ -81,13 +84,16 @@ export async function generatePreviewMock(
     let scheduleIndex = 1
     
     while (currentDate <= endDate) {
+      const scheduleStart = new Date(currentDate)
+      const scheduleEnd = new Date(currentDate.getTime() + (config.periodConfig?.duration || 1) * 24 * 60 * 60 * 1000)
+      
       const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
       const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
       
       schedules.push({
         id: `s${scheduleIndex}`,
-        startDatetime: currentDate.toISOString(),
-        endDatetime: new Date(currentDate.getTime() + (config.periodConfig?.duration || 1) * 24 * 60 * 60 * 1000).toISOString(),
+        startDatetime: scheduleStart.toISOString(),
+        endDatetime: scheduleEnd.toISOString(),
         groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
           ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
           : undefined,
@@ -95,7 +101,7 @@ export async function generatePreviewMock(
           ? { id: selectedTeam.id, name: selectedTeam.name }
           : undefined,
         assignments: config.generationType !== 'group' && config.teamConfig
-          ? generateMockAssignments(config, teams, persons, scheduleIndex)
+          ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
           : undefined,
       })
       
@@ -138,7 +144,7 @@ export async function generatePreviewMock(
             ? { id: selectedTeam.id, name: selectedTeam.name }
             : undefined,
           assignments: config.generationType !== 'group' && config.teamConfig
-            ? generateMockAssignments(config, teams, persons, scheduleIndex)
+            ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
             : undefined,
         })
         
@@ -149,9 +155,102 @@ export async function generatePreviewMock(
     }
   }
   
-  // Calcular resumo
-  const warnings = schedules.filter(s => s.warnings && s.warnings.length > 0).length
-  const errors = schedules.filter(s => s.errors && s.errors.length > 0).length
+  // Calcular resumo e validar
+  const warnings: string[] = []
+  const errors: string[] = []
+  
+  // Criar mapa de responsabilidades para validação
+  const personResponsibilitiesMap = new Map<string, Set<string>>()
+  
+  // Se a seleção for por grupo, usar APENAS as responsabilidades do grupo
+  // Caso contrário, usar responsabilidades da área + grupo
+  if (config.teamConfig?.participantSelection === 'by_group' && groupMembers.length > 0) {
+    // Usar APENAS responsabilidades dos grupos selecionados
+    for (const member of groupMembers) {
+      if (member.personId && member.responsibilities) {
+        const responsibilities = new Set<string>()
+        member.responsibilities.forEach(r => responsibilities.add(r.id))
+        personResponsibilitiesMap.set(member.personId, responsibilities)
+      }
+    }
+  } else {
+    // Usar responsabilidades da área + grupo (comportamento padrão)
+    for (const person of persons) {
+      const responsibilities = new Set<string>()
+      if (person.responsibilities) {
+        person.responsibilities.forEach(r => responsibilities.add(r.id))
+      }
+      personResponsibilitiesMap.set(person.personId, responsibilities)
+    }
+    
+    // Adicionar responsabilidades dos grupos (complementar)
+    for (const member of groupMembers) {
+      if (member.personId && member.responsibilities) {
+        const existing = personResponsibilitiesMap.get(member.personId) || new Set<string>()
+        member.responsibilities.forEach(r => existing.add(r.id))
+        personResponsibilitiesMap.set(member.personId, existing)
+      }
+    }
+  }
+  
+  // Validar distribuição e detectar problemas
+  for (const schedule of schedules) {
+    const scheduleWarnings: string[] = []
+    const scheduleErrors: string[] = []
+    
+    // Verificar se há pessoas ausentes nas atribuições
+    if (schedule.assignments && config.teamConfig?.considerAbsences) {
+      for (const assignment of schedule.assignments) {
+        const personAbsences = absences.filter(a => 
+          a.personId === assignment.personId &&
+          new Date(a.startDate) <= new Date(schedule.endDatetime) &&
+          new Date(a.endDate) >= new Date(schedule.startDatetime)
+        )
+        if (personAbsences.length > 0) {
+          scheduleErrors.push(`${assignment.personName} está ausente no período`)
+        }
+      }
+    }
+    
+    // Verificar se há pessoas sem responsabilidade necessária (modo restrito)
+    if (schedule.assignments && config.generationType === 'team_with_restriction') {
+      const team = teams.find(t => t.id === config.teamConfig?.teamId)
+      if (team) {
+        for (const assignment of schedule.assignments) {
+          // Verificar se a atribuição está vazia (não foi possível atribuir ninguém)
+          if (!assignment.personId || assignment.personName === '[Não atribuído]') {
+            scheduleErrors.push(`Não foi possível atribuir ninguém para o papel "${assignment.roleName}"`)
+            continue
+          }
+          
+          const personResponsibilities = personResponsibilitiesMap.get(assignment.personId) || new Set<string>()
+          const role = team.roles.find(r => r.id === assignment.roleId)
+          
+          if (role && !personResponsibilities.has(role.responsibilityId)) {
+            scheduleErrors.push(`${assignment.personName} não tem a responsabilidade "${role.responsibilityName}"`)
+          }
+        }
+      }
+    }
+    
+    // Verificar atribuições vazias em qualquer modo
+    if (schedule.assignments) {
+      for (const assignment of schedule.assignments) {
+        if (!assignment.personId || assignment.personName === '[Não atribuído]') {
+          scheduleErrors.push(`Não foi possível atribuir ninguém para o papel "${assignment.roleName}"`)
+        }
+      }
+    }
+    
+    if (scheduleWarnings.length > 0) {
+      schedule.warnings = scheduleWarnings
+      warnings.push(...scheduleWarnings)
+    }
+    if (scheduleErrors.length > 0) {
+      schedule.errors = scheduleErrors
+      errors.push(...scheduleErrors)
+    }
+  }
   
   return {
     configuration: config,
@@ -163,18 +262,45 @@ export async function generatePreviewMock(
         if (s.assignments) return acc + s.assignments.length
         return acc
       }, 0),
-      warnings,
-      errors,
-      distributionBalance: warnings > schedules.length / 2 ? 'unbalanced' : 'balanced',
+      warnings: warnings.length,
+      errors: errors.length,
+      distributionBalance: warnings.length > schedules.length / 2 ? 'unbalanced' : 'balanced',
     },
   }
 }
 
-function generateMockAssignments(
+// Função para confirmar geração (mock - será substituída pela API real)
+export async function confirmGenerationMock(
+  config: GenerationConfiguration,
+  groups: GroupResponseDto[],
+  teams: TeamResponseDto[],
+  persons: PersonAreaResponseDto[],
+  absences: ScheduledAbsenceResponseDto[],
+  groupMembers: GroupMemberResponseDto[]
+): Promise<{ success: boolean; generationId: string; schedulesCreated: number }> {
+  // Simular delay de API
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  // Gerar preview para contar quantas escalas seriam criadas
+  const preview = await generatePreview(config, groups, teams, persons, absences, groupMembers)
+  
+  return {
+    success: true,
+    generationId: `gen-${Date.now()}`,
+    schedulesCreated: preview.schedules.length,
+  }
+}
+
+function generateAssignments(
   config: GenerationConfiguration,
   teams: TeamResponseDto[],
   persons: PersonAreaResponseDto[],
-  scheduleIndex: number = 1
+  scheduleIndex: number = 1,
+  groupMembers: GroupMemberResponseDto[],
+  absences: ScheduledAbsenceResponseDto[],
+  scheduleStart: Date,
+  scheduleEnd: Date,
+  assignmentHistory: Map<string, Map<string, number>>
 ) {
   if (!config.teamConfig) return []
   
@@ -183,45 +309,155 @@ function generateMockAssignments(
   
   // Filtrar pessoas baseado na seleção
   let availablePersons = persons
-  if (config.teamConfig.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
+  if (config.teamConfig.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds && groupMembers.length > 0) {
     // Filtrar pessoas que pertencem aos grupos selecionados
-    // Nota: Isso requer uma chamada adicional à API, então por enquanto usamos todas as pessoas
-    // Em produção, isso seria feito no backend
+    const selectedPersonIds = new Set(
+      groupMembers
+        .filter(m => config.teamConfig!.selectedGroupIds!.includes(m.groupId))
+        .map(m => m.personId)
+    )
+    availablePersons = persons.filter(p => selectedPersonIds.has(p.personId))
   } else if (config.teamConfig.participantSelection === 'individual' && config.teamConfig.selectedPersonIds) {
     availablePersons = persons.filter(p => config.teamConfig!.selectedPersonIds!.includes(p.personId))
   }
   
   if (availablePersons.length === 0) return []
   
-  const assignments: Array<{ personId: string; personName: string; roleId: string; roleName: string }> = []
-  let personIndex = scheduleIndex % availablePersons.length
+  // Filtrar pessoas ausentes se necessário
+  if (config.teamConfig.considerAbsences && absences.length > 0) {
+    const absentPersonIds = new Set<string>()
+    for (const absence of absences) {
+      const absenceStart = new Date(absence.startDate)
+      const absenceEnd = new Date(absence.endDate)
+      
+      // Verificar se a ausência sobrepõe o período da escala
+      if (absenceStart <= scheduleEnd && absenceEnd >= scheduleStart) {
+        absentPersonIds.add(absence.personId)
+      }
+    }
+    
+    availablePersons = availablePersons.filter(p => !absentPersonIds.has(p.personId))
+  }
   
-  for (const role of team.roles) {
+  if (availablePersons.length === 0) return []
+  
+  // Criar um mapa de responsabilidades por pessoa
+  const personResponsibilitiesMap = new Map<string, Set<string>>()
+  
+  // Se a seleção for por grupo, usar APENAS as responsabilidades do grupo
+  // Caso contrário, usar responsabilidades da área + grupo
+  if (config.teamConfig.participantSelection === 'by_group' && groupMembers.length > 0) {
+    // Usar APENAS responsabilidades dos grupos selecionados
+    for (const member of groupMembers) {
+      if (member.personId && member.responsibilities) {
+        const responsibilities = new Set<string>()
+        member.responsibilities.forEach(r => responsibilities.add(r.id))
+        personResponsibilitiesMap.set(member.personId, responsibilities)
+      }
+    }
+  } else {
+    // Usar responsabilidades da área + grupo (comportamento padrão)
+    // Adicionar responsabilidades da área
+    for (const person of availablePersons) {
+      const responsibilities = new Set<string>()
+      if (person.responsibilities) {
+        person.responsibilities.forEach(r => responsibilities.add(r.id))
+      }
+      personResponsibilitiesMap.set(person.personId, responsibilities)
+    }
+    
+    // Adicionar responsabilidades dos grupos (complementar)
+    for (const member of groupMembers) {
+      if (member.personId && member.responsibilities) {
+        const existing = personResponsibilitiesMap.get(member.personId) || new Set<string>()
+        member.responsibilities.forEach(r => existing.add(r.id))
+        personResponsibilitiesMap.set(member.personId, existing)
+      }
+    }
+  }
+  
+  const assignments: Array<{ personId: string; personName: string; roleId: string; roleName: string }> = []
+  const usedPersonIds = new Set<string>() // Pessoas já usadas nesta escala
+  
+  // Ordenar roles por prioridade
+  const sortedRoles = [...team.roles].sort((a, b) => a.priority - b.priority)
+  
+  for (const role of sortedRoles) {
+    // Filtrar pessoas elegíveis para este papel
+    const eligiblePersons = availablePersons.filter(person => {
+      // Não pode estar já usada nesta escala
+      if (usedPersonIds.has(person.personId)) return false
+      
+      // Verificar responsabilidade se necessário
+      if (config.generationType === 'team_with_restriction') {
+        const personResponsibilities = personResponsibilitiesMap.get(person.personId) || new Set<string>()
+        return personResponsibilities.has(role.responsibilityId)
+      }
+      
+      return true
+    })
+    
+    // Se não há pessoas elegíveis, deixar vazio
+    if (eligiblePersons.length === 0) {
+      for (let i = 0; i < role.quantity; i++) {
+        assignments.push({
+          personId: '',
+          personName: '[Não atribuído]',
+          roleId: role.id,
+          roleName: role.responsibilityName,
+        })
+      }
+      continue
+    }
+    
+    // Obter histórico de atribuições para este papel
+    const roleHistory = assignmentHistory.get(role.id) || new Map<string, number>()
+    
+    // Criar lista de pessoas com contagem de atribuições anteriores
+    const personsWithCount = eligiblePersons.map((person, index) => ({
+      person,
+      count: roleHistory.get(person.personId) || 0,
+      originalIndex: index,
+    }))
+    
+    // Ordenar por menor contagem (pessoas menos escaladas primeiro)
+    // Em caso de empate, usar rotação baseada no scheduleIndex para garantir alternância
+    personsWithCount.sort((a, b) => {
+      if (a.count !== b.count) return a.count - b.count
+      // Em caso de empate, usar rotação baseada no scheduleIndex para distribuir igualmente
+      const rotatedIndexA = (a.originalIndex + scheduleIndex) % eligiblePersons.length
+      const rotatedIndexB = (b.originalIndex + scheduleIndex) % eligiblePersons.length
+      return rotatedIndexA - rotatedIndexB
+    })
+    
+    // Atribuir pessoas para este papel
     for (let i = 0; i < role.quantity; i++) {
-      const person = availablePersons[personIndex % availablePersons.length]
-      assignments.push({
-        personId: person.personId,
-        personName: person.person?.fullName || person.personId,
-        roleId: role.id,
-        roleName: role.responsibilityName,
-      })
-      personIndex++
+      if (i < personsWithCount.length) {
+        const selected = personsWithCount[i]
+        assignments.push({
+          personId: selected.person.personId,
+          personName: selected.person.person?.fullName || selected.person.personId,
+          roleId: role.id,
+          roleName: role.responsibilityName,
+        })
+        usedPersonIds.add(selected.person.personId)
+        
+        // Atualizar histórico
+        const currentCount = roleHistory.get(selected.person.personId) || 0
+        roleHistory.set(selected.person.personId, currentCount + 1)
+        assignmentHistory.set(role.id, roleHistory)
+      } else {
+        // Não há pessoas suficientes, deixar vazio
+        assignments.push({
+          personId: '',
+          personName: '[Não atribuído]',
+          roleId: role.id,
+          roleName: role.responsibilityName,
+        })
+      }
     }
   }
   
   return assignments
-}
-
-// Função para confirmar geração (mock)
-export async function confirmGenerationMock(config: GenerationConfiguration): Promise<{ success: boolean; generationId: string; schedulesCreated: number }> {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  const preview = await generatePreviewMock(config)
-  
-  return {
-    success: true,
-    generationId: `gen-${Date.now()}`,
-    schedulesCreated: preview.schedules.length,
-  }
 }
 

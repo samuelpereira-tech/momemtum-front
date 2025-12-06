@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './GeracaoAutomaticaTabPanel.css'
 import type { GenerationConfiguration, GenerationPreview, GenerationType, PeriodType, DistributionOrder, ParticipantSelection } from './types'
-import { generatePreviewMock, confirmGenerationMock } from './mockServices'
+import { generatePreview, confirmGenerationMock } from './mockServices'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
 import { groupService, type GroupResponseDto } from '../../../../../services/basic/groupService'
@@ -210,34 +210,6 @@ export default function GeracaoAutomaticaTabPanel() {
     return responsibility?.imageUrl || null
   }
   
-  // Função para obter pessoas por grupo
-  const getPersonsByGroup = useCallback(async (groupId: string): Promise<string[]> => {
-    if (!scheduledAreaId) return []
-    
-    try {
-      let members: any[] = []
-      let page = 1
-      let hasMore = true
-      const limit = 100
-      
-      while (hasMore) {
-        const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
-        members = [...members, ...response.data]
-        
-        if (page >= response.meta.totalPages || response.data.length === 0) {
-          hasMore = false
-        } else {
-          page++
-        }
-      }
-      
-      return members.map(m => m.personId).filter(Boolean)
-    } catch (error) {
-      console.error('Erro ao carregar membros do grupo:', error)
-      return []
-    }
-  }, [scheduledAreaId])
-  
   const handleNext = () => {
     if (currentStep < 5) {
       setCurrentStep((prev) => (prev + 1) as Step)
@@ -253,7 +225,35 @@ export default function GeracaoAutomaticaTabPanel() {
   const handleGeneratePreview = async () => {
     setIsGeneratingPreview(true)
     try {
-      const previewData = await generatePreviewMock(config, groups, teams, persons, absences)
+      // Carregar membros dos grupos se necessário
+      let groupMembers: any[] = []
+      if (config.teamConfig?.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
+        for (const groupId of config.teamConfig.selectedGroupIds) {
+          try {
+            let members: any[] = []
+            let page = 1
+            let hasMore = true
+            const limit = 100
+            
+            while (hasMore && scheduledAreaId) {
+              const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
+              members = [...members, ...response.data]
+              
+              if (page >= response.meta.totalPages || response.data.length === 0) {
+                hasMore = false
+              } else {
+                page++
+              }
+            }
+            
+            groupMembers = [...groupMembers, ...members]
+          } catch (error) {
+            console.error(`Erro ao carregar membros do grupo ${groupId}:`, error)
+          }
+        }
+      }
+      
+      const previewData = await generatePreview(config, groups, teams, persons, absences, groupMembers)
       setPreview(previewData)
       setCurrentStep(5)
     } catch (error: any) {
@@ -267,7 +267,35 @@ export default function GeracaoAutomaticaTabPanel() {
     setIsConfirming(true)
     setShowConfirmModal(false)
     try {
-      const result = await confirmGenerationMock(config)
+      // Carregar membros dos grupos se necessário
+      let groupMembers: any[] = []
+      if (config.teamConfig?.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
+        for (const groupId of config.teamConfig.selectedGroupIds) {
+          try {
+            let members: any[] = []
+            let page = 1
+            let hasMore = true
+            const limit = 100
+            
+            while (hasMore && scheduledAreaId) {
+              const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
+              members = [...members, ...response.data]
+              
+              if (page >= response.meta.totalPages || response.data.length === 0) {
+                hasMore = false
+              } else {
+                page++
+              }
+            }
+            
+            groupMembers = [...groupMembers, ...members]
+          } catch (error) {
+            console.error(`Erro ao carregar membros do grupo ${groupId}:`, error)
+          }
+        }
+      }
+      
+      const result = await confirmGenerationMock(config, groups, teams, persons, absences, groupMembers)
       toast.showSuccess(`Geração concluída! ${result.schedulesCreated} escalas criadas.`)
       // Resetar formulário
       setCurrentStep(1)
@@ -379,7 +407,6 @@ export default function GeracaoAutomaticaTabPanel() {
                 config={config}
                 groups={groups}
                 teams={teams}
-                responsibilities={responsibilities}
                 getResponsibilityImage={getResponsibilityImage}
                 onUpdate={updateConfig}
                 onBack={handleBack}
@@ -396,7 +423,6 @@ export default function GeracaoAutomaticaTabPanel() {
                 onUpdate={updateConfig}
                 onBack={handleBack}
                 onNext={handleNext}
-                getPersonsByGroup={getPersonsByGroup}
                 isLoading={isLoadingData}
               />
             )}
@@ -501,11 +527,10 @@ function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfigurat
 }
 
 // Step 2: Configurações
-function Step2Configurations({ config, groups, teams, responsibilities, getResponsibilityImage, onUpdate, onBack, onNext, isLoading }: {
+function Step2Configurations({ config, groups, teams, getResponsibilityImage, onUpdate, onBack, onNext, isLoading }: {
   config: GenerationConfiguration
   groups: GroupResponseDto[]
   teams: TeamResponseDto[]
-  responsibilities: ResponsibilityResponseDto[]
   getResponsibilityImage: (id: string) => string | null
   onUpdate: (updates: Partial<GenerationConfiguration>) => void
   onBack: () => void
@@ -731,7 +756,7 @@ function Step2Configurations({ config, groups, teams, responsibilities, getRespo
       )}
       
       {config.generationType === 'team_with_restriction' && (
-        <div className="form-group">
+        <div className="form-group" style={{ marginTop: '16px' }}>
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -782,14 +807,13 @@ function Step2Configurations({ config, groups, teams, responsibilities, getRespo
 }
 
 // Step 3: Participantes
-function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, getPersonsByGroup, isLoading }: {
+function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, isLoading }: {
   config: GenerationConfiguration
   groups: GroupResponseDto[]
   persons: PersonAreaResponseDto[]
   onUpdate: (updates: Partial<GenerationConfiguration>) => void
   onBack: () => void
   onNext: () => void
-  getPersonsByGroup: (groupId: string) => Promise<string[]>
   isLoading: boolean
 }) {
   if (config.generationType === 'group') {
