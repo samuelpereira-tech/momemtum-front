@@ -529,7 +529,9 @@ export default function GruposTabPanel() {
             handleSaveGrupo()
           }}>
             <div className="form-group">
-              <label>Nome do Grupo *</label>
+              <label>
+                <i className="fa-solid fa-users"></i> Nome do Grupo *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -539,8 +541,10 @@ export default function GruposTabPanel() {
                 required
               />
             </div>
-            <div className="form-group">
-              <label>Descrição (Opcional)</label>
+            <div className="form-group" style={{ marginTop: '20px' }}>
+              <label>
+                <i className="fa-solid fa-align-left"></i> Descrição (Opcional)
+              </label>
               <textarea
                 className="form-control"
                 value={novoGrupoDescricao}
@@ -549,7 +553,7 @@ export default function GruposTabPanel() {
                 rows={3}
               />
             </div>
-            <div className="modal-footer">
+            <div className="form-actions">
               <button 
                 type="button"
                 className="btn-secondary" 
@@ -559,14 +563,14 @@ export default function GruposTabPanel() {
                   setNovoGrupoDescricao('')
                 }}
               >
-                Cancelar
+                <i className="fa-solid fa-times"></i> Cancelar
               </button>
               <button 
                 type="submit"
                 className="btn-primary" 
                 disabled={!novoGrupoNome.trim()}
               >
-                Criar Grupo
+                <i className="fa-solid fa-check"></i> Criar Grupo
               </button>
             </div>
           </form>
@@ -589,7 +593,9 @@ export default function GruposTabPanel() {
             handleEditGrupo()
           }}>
             <div className="form-group">
-              <label>Nome do Grupo *</label>
+              <label>
+                <i className="fa-solid fa-users"></i> Nome do Grupo *
+              </label>
               <input
                 type="text"
                 className="form-control"
@@ -600,7 +606,9 @@ export default function GruposTabPanel() {
               />
             </div>
             <div className="form-group">
-              <label>Descrição (Opcional)</label>
+              <label>
+                <i className="fa-solid fa-align-left"></i> Descrição (Opcional)
+              </label>
               <textarea
                 className="form-control"
                 value={editGrupoDescricao}
@@ -609,7 +617,7 @@ export default function GruposTabPanel() {
                 rows={3}
               />
             </div>
-            <div className="modal-footer">
+            <div className="form-actions">
               <button 
                 type="button"
                 className="btn-secondary" 
@@ -619,14 +627,14 @@ export default function GruposTabPanel() {
                   setEditGrupoDescricao('')
                 }}
               >
-                Cancelar
+                <i className="fa-solid fa-times"></i> Cancelar
               </button>
               <button 
                 type="submit"
                 className="btn-primary" 
                 disabled={!editGrupoNome.trim()}
               >
-                Salvar Alterações
+                <i className="fa-solid fa-check"></i> Salvar Alterações
               </button>
             </div>
           </form>
