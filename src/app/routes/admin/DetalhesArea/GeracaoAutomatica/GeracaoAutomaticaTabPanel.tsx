@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './GeracaoAutomaticaTabPanel.css'
@@ -1255,6 +1255,63 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
   onConfirm: () => void
   isConfirming: boolean
 }) {
+  const confirmButtonRef = useRef<HTMLButtonElement>(null)
+  const [showScrollButton, setShowScrollButton] = useState(true)
+  
+  useEffect(() => {
+    const checkVisibility = () => {
+      if (!confirmButtonRef.current) {
+        setShowScrollButton(true)
+        return
+      }
+      
+      const rect = confirmButtonRef.current.getBoundingClientRect()
+      // Verificar se o botão está visível na viewport (com uma margem de 100px)
+      const isVisible = rect.top < window.innerHeight - 100 && rect.bottom > 0
+      
+      setShowScrollButton(!isVisible)
+    }
+    
+    // Verificar inicialmente
+    checkVisibility()
+    
+    // Verificar durante o scroll
+    window.addEventListener('scroll', checkVisibility, { passive: true })
+    window.addEventListener('resize', checkVisibility, { passive: true })
+    
+    // Usar IntersectionObserver para melhor performance
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setShowScrollButton(!entry.isIntersecting)
+        })
+      },
+      {
+        root: null,
+        rootMargin: '-100px 0px',
+        threshold: 0.1,
+      }
+    )
+    
+    if (confirmButtonRef.current) {
+      observer.observe(confirmButtonRef.current)
+    }
+    
+    return () => {
+      window.removeEventListener('scroll', checkVisibility)
+      window.removeEventListener('resize', checkVisibility)
+      if (confirmButtonRef.current) {
+        observer.unobserve(confirmButtonRef.current)
+      }
+    }
+  }, [])
+  
+  const scrollToConfirm = () => {
+    confirmButtonRef.current?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'center' 
+    })
+  }
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleString('pt-BR', {
@@ -1347,6 +1404,18 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
           </div>
         </div>
       </div>
+      
+      {showScrollButton && (
+        <button 
+          type="button" 
+          className="btn-scroll-to-confirm"
+          onClick={scrollToConfirm}
+          title="Ir para confirmar geração"
+        >
+          <i className="fa-solid fa-arrow-down"></i>
+          <span>Ir para Confirmar</span>
+        </button>
+      )}
       
       <div className="preview-schedules">
         <h5>Escalas Geradas:</h5>
@@ -1512,6 +1581,7 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
           <i className="fa-solid fa-arrow-left"></i> Voltar
         </button>
         <button
+          ref={confirmButtonRef}
           type="button"
           className="btn-primary"
           onClick={onConfirm}
