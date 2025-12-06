@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import TopNavbar from '../../../../components/admin/TopNavbar/TopNavbar'
 import Sidebar from '../../../../components/admin/Sidebar/Sidebar'
 import { useToast } from '../../../../components/ui/Toast/ToastProvider'
+import ConfirmModal from '../../../../components/ui/ConfirmModal/ConfirmModal'
 import { scheduledAreaService, type ScheduledAreaResponseDto } from '../../../../services/basic/scheduledAreaService'
 import { addCacheBusting } from '../../../../utils/fileUtils'
 import '../../../../components/admin/admin.css'
@@ -14,6 +15,8 @@ export default function ListarAreas() {
   const [areas, setAreas] = useState<ScheduledAreaResponseDto[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showDeleteAreaModal, setShowDeleteAreaModal] = useState(false)
+  const [areaParaDeletar, setAreaParaDeletar] = useState<{ id: string; nome: string } | null>(null)
 
   // Carregar áreas
   useEffect(() => {
@@ -104,15 +107,20 @@ export default function ListarAreas() {
     }
   }
 
-  const handleExcluirArea = async (areaId: string, areaNome: string) => {
-    if (!confirm(`Tem certeza que deseja excluir a área "${areaNome}"?`)) {
-      return
-    }
+  const handleExcluirArea = (areaId: string, areaNome: string) => {
+    setAreaParaDeletar({ id: areaId, nome: areaNome })
+    setShowDeleteAreaModal(true)
+  }
+
+  const confirmExcluirArea = async () => {
+    if (!areaParaDeletar) return
 
     try {
-      await scheduledAreaService.deleteScheduledArea(areaId)
-      setAreas(prevAreas => prevAreas.filter(area => area.id !== areaId))
-      toast.showSuccess(`Área "${areaNome}" excluída com sucesso!`)
+      await scheduledAreaService.deleteScheduledArea(areaParaDeletar.id)
+      setAreas(prevAreas => prevAreas.filter(area => area.id !== areaParaDeletar.id))
+      setShowDeleteAreaModal(false)
+      setAreaParaDeletar(null)
+      toast.showSuccess(`Área "${areaParaDeletar.nome}" excluída com sucesso!`)
     } catch (err: any) {
       console.error('Erro ao excluir área:', err)
       toast.showError(err.message || 'Erro ao excluir área')
@@ -256,6 +264,17 @@ export default function ListarAreas() {
           )}
         </main>
       </div>
+
+      <ConfirmModal
+        isOpen={showDeleteAreaModal}
+        title="Excluir Área"
+        message={areaParaDeletar ? `Tem certeza que deseja excluir a área "${areaParaDeletar.nome}"?` : ''}
+        onConfirm={confirmExcluirArea}
+        onCancel={() => {
+          setShowDeleteAreaModal(false)
+          setAreaParaDeletar(null)
+        }}
+      />
     </>
   )
 }

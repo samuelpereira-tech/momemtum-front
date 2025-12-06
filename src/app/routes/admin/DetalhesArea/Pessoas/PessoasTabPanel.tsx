@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
+import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
 import { personService, type PersonResponseDto } from '../../../../../services/basic/personService'
 import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
 import { personAreaService, type PersonAreaResponseDto, type ResponsibilityInfoDto } from '../../../../../services/basic/personAreaService'
@@ -25,9 +26,11 @@ export default function PessoasTabPanel() {
   const [availableRoles, setAvailableRoles] = useState<ResponsibilityResponseDto[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showDeletePessoaModal, setShowDeletePessoaModal] = useState(false)
   const [editingPerson, setEditingPerson] = useState<PersonWithRoles | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPerson, setSelectedPerson] = useState<PersonResponseDto | null>(null)
+  const [pessoaParaRemover, setPessoaParaRemover] = useState<{ personAreaId: string; personName: string } | null>(null)
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
 
   const loadData = useCallback(async () => {
@@ -157,23 +160,28 @@ export default function PessoasTabPanel() {
     setShowModal(true)
   }
 
-  const handleRemoverPessoa = async (personAreaId: string, personName: string) => {
+  const handleRemoverPessoa = (personAreaId: string, personName: string) => {
     if (!scheduledAreaId) return
     
-    if (!confirm(`Tem certeza que deseja remover ${personName} da área?`)) {
-      return
-    }
+    setPessoaParaRemover({ personAreaId, personName })
+    setShowDeletePessoaModal(true)
+  }
+
+  const confirmRemoverPessoa = async () => {
+    if (!scheduledAreaId || !pessoaParaRemover) return
 
     try {
-      await personAreaService.removePersonFromArea(scheduledAreaId, personAreaId)
+      await personAreaService.removePersonFromArea(scheduledAreaId, pessoaParaRemover.personAreaId)
       
       // Remover da lista imediatamente
-      setPersonsWithRoles(prev => prev.filter(p => p.personAreaId !== personAreaId))
+      setPersonsWithRoles(prev => prev.filter(p => p.personAreaId !== pessoaParaRemover.personAreaId))
       
       // Invalidar cache para garantir dados atualizados
       clearCache(`person-areas-${scheduledAreaId}`)
       
-      toast.showSuccess(`${personName} removido(a) da área com sucesso!`)
+      setShowDeletePessoaModal(false)
+      setPessoaParaRemover(null)
+      toast.showSuccess(`${pessoaParaRemover.personName} removido(a) da área com sucesso!`)
     } catch (error: any) {
       console.error('Erro ao remover pessoa:', error)
       toast.showError(error.message || 'Erro ao remover pessoa')
@@ -568,6 +576,17 @@ export default function PessoasTabPanel() {
           </form>
         </Modal>
       )}
+
+      <ConfirmModal
+        isOpen={showDeletePessoaModal}
+        title="Remover Pessoa da Área"
+        message={pessoaParaRemover ? `Tem certeza que deseja remover ${pessoaParaRemover.personName} da área?` : ''}
+        onConfirm={confirmRemoverPessoa}
+        onCancel={() => {
+          setShowDeletePessoaModal(false)
+          setPessoaParaRemover(null)
+        }}
+      />
     </div>
   )
 }

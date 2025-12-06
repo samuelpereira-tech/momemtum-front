@@ -27,9 +27,11 @@ export default function EquipesTabPanel() {
   const [showEditFuncaoModal, setShowEditFuncaoModal] = useState(false)
   const [showDeleteEquipeModal, setShowDeleteEquipeModal] = useState(false)
   const [showEditEquipeModal, setShowEditEquipeModal] = useState(false)
+  const [showDeleteFuncaoModal, setShowDeleteFuncaoModal] = useState(false)
   const [equipeParaDeletar, setEquipeParaDeletar] = useState<TeamResponseDto | null>(null)
   const [equipeParaEditar, setEquipeParaEditar] = useState<TeamResponseDto | null>(null)
   const [funcaoParaEditar, setFuncaoParaEditar] = useState<TeamRoleDto | null>(null)
+  const [funcaoParaDeletar, setFuncaoParaDeletar] = useState<string | null>(null)
 
   // Form States
   const [novaEquipeNome, setNovaEquipeNome] = useState('')
@@ -426,13 +428,16 @@ export default function EquipesTabPanel() {
   const handleRemoveFuncao = async (roleId: string) => {
     if (!scheduledAreaId || !equipeSelecionada) return
 
-    if (!confirm('Tem certeza que deseja remover esta função da equipe?')) {
-      return
-    }
+    setFuncaoParaDeletar(roleId)
+    setShowDeleteFuncaoModal(true)
+  }
+
+  const confirmRemoveFuncao = async () => {
+    if (!scheduledAreaId || !equipeSelecionada || !funcaoParaDeletar) return
 
     try {
       const updatedRoles = equipeSelecionada.roles
-        .filter(r => r.id !== roleId)
+        .filter(r => r.id !== funcaoParaDeletar)
         .map(r => ({
           id: r.id,
           responsibilityId: r.responsibilityId,
@@ -451,6 +456,8 @@ export default function EquipesTabPanel() {
 
       setEquipes(equipes.map(e => e.id === equipeSelecionada.id ? updatedTeam : e))
       setEquipeSelecionada(updatedTeam)
+      setShowDeleteFuncaoModal(false)
+      setFuncaoParaDeletar(null)
       toast.showSuccess('Função removida com sucesso!')
     } catch (error: any) {
       console.error('Erro ao remover função:', error)
@@ -1086,6 +1093,17 @@ export default function EquipesTabPanel() {
         onCancel={() => {
           setShowDeleteEquipeModal(false)
           setEquipeParaDeletar(null)
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteFuncaoModal}
+        title="Remover Função"
+        message="Tem certeza que deseja remover esta função da equipe?"
+        onConfirm={confirmRemoveFuncao}
+        onCancel={() => {
+          setShowDeleteFuncaoModal(false)
+          setFuncaoParaDeletar(null)
         }}
       />
     </div>

@@ -29,8 +29,10 @@ export default function GruposTabPanel() {
   const [showAddPessoaModal, setShowAddPessoaModal] = useState(false)
   const [showDeleteGrupoModal, setShowDeleteGrupoModal] = useState(false)
   const [showEditGrupoModal, setShowEditGrupoModal] = useState(false)
+  const [showDeleteMembroModal, setShowDeleteMembroModal] = useState(false)
   const [grupoParaDeletar, setGrupoParaDeletar] = useState<GroupResponseDto | null>(null)
   const [grupoParaEditar, setGrupoParaEditar] = useState<GroupResponseDto | null>(null)
+  const [membroParaDeletar, setMembroParaDeletar] = useState<string | null>(null)
 
   // Form States
   const [novoGrupoNome, setNovoGrupoNome] = useState('')
@@ -376,18 +378,21 @@ export default function GruposTabPanel() {
     }
   }
 
-  const handleRemoveMembro = async (memberId: string) => {
+  const handleRemoveMembro = (memberId: string) => {
     if (!scheduledAreaId || !grupoSelecionado) return
 
-    if (!confirm('Tem certeza que deseja remover esta pessoa do grupo?')) {
-      return
-    }
+    setMembroParaDeletar(memberId)
+    setShowDeleteMembroModal(true)
+  }
+
+  const confirmRemoveMembro = async () => {
+    if (!scheduledAreaId || !grupoSelecionado || !membroParaDeletar) return
 
     try {
       await groupMemberService.removeMemberFromGroup(
         scheduledAreaId,
         grupoSelecionado.id,
-        memberId
+        membroParaDeletar
       )
 
       // Invalidar cache e recarregar membros do grupo
@@ -396,6 +401,8 @@ export default function GruposTabPanel() {
       await loadMembrosDoGrupo(grupoSelecionado.id)
       await loadGroups()
 
+      setShowDeleteMembroModal(false)
+      setMembroParaDeletar(null)
       toast.showSuccess('Pessoa removida do grupo com sucesso!')
     } catch (error: any) {
       console.error('Erro ao remover membro:', error)
@@ -854,6 +861,17 @@ export default function GruposTabPanel() {
         onCancel={() => {
           setShowDeleteGrupoModal(false)
           setGrupoParaDeletar(null)
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteMembroModal}
+        title="Remover Pessoa do Grupo"
+        message="Tem certeza que deseja remover esta pessoa do grupo?"
+        onConfirm={confirmRemoveMembro}
+        onCancel={() => {
+          setShowDeleteMembroModal(false)
+          setMembroParaDeletar(null)
         }}
       />
     </div>

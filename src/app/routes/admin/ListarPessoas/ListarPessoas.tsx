@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import TopNavbar from '../../../../components/admin/TopNavbar/TopNavbar'
 import Sidebar from '../../../../components/admin/Sidebar/Sidebar'
 import PageHeader from '../../../../components/admin/PageHeader/PageHeader'
+import ConfirmModal from '../../../../components/ui/ConfirmModal/ConfirmModal'
 import { personService } from '../../../../services/basic/personService'
 import type { PersonResponseDto } from '../../../../services/basic/personService'
 import { useToast } from '../../../../components/ui/Toast/ToastProvider'
@@ -28,6 +29,8 @@ export default function ListarPessoas() {
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
   const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null)
   const [photoCacheBuster, setPhotoCacheBuster] = useState(Date.now())
+  const [showDeletePessoaModal, setShowDeletePessoaModal] = useState(false)
+  const [pessoaParaDeletar, setPessoaParaDeletar] = useState<{ id: string; nome: string } | null>(null)
 
   // Função para adicionar cache-busting à URL da foto
   const getPhotoUrl = (photoUrl: string | null | undefined) => {
@@ -216,16 +219,21 @@ export default function ListarPessoas() {
     }
   }
 
-  const handleDelete = async (id: string, nome: string) => {
-    if (!confirm(`Tem certeza que deseja excluir ${nome}?`)) {
-      return
-    }
+  const handleDelete = (id: string, nome: string) => {
+    setPessoaParaDeletar({ id, nome })
+    setShowDeletePessoaModal(true)
+  }
+
+  const confirmDeletePessoa = async () => {
+    if (!pessoaParaDeletar) return
 
     try {
-      await personService.deletePerson(id)
+      await personService.deletePerson(pessoaParaDeletar.id)
       // Atualizar cache buster para forçar reload das fotos
       setPhotoCacheBuster(Date.now())
       await loadPessoas()
+      setShowDeletePessoaModal(false)
+      setPessoaParaDeletar(null)
       toast.showSuccess('Pessoa excluída com sucesso!')
     } catch (err: any) {
       console.error('Erro ao excluir pessoa:', err)
@@ -542,6 +550,17 @@ export default function ListarPessoas() {
           </div>
         </main>
       </div>
+
+      <ConfirmModal
+        isOpen={showDeletePessoaModal}
+        title="Excluir Pessoa"
+        message={pessoaParaDeletar ? `Tem certeza que deseja excluir ${pessoaParaDeletar.nome}?` : ''}
+        onConfirm={confirmDeletePessoa}
+        onCancel={() => {
+          setShowDeletePessoaModal(false)
+          setPessoaParaDeletar(null)
+        }}
+      />
     </>
   )
 }

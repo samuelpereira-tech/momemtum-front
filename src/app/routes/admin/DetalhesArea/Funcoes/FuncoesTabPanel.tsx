@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
 import { validateImageFile, createImagePreview, addCacheBusting } from '../../../../../utils/fileUtils'
+import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
 import Modal from '../shared/Modal'
 import '../shared/TabPanel.css'
 import './FuncoesTabPanel.css'
@@ -13,7 +14,9 @@ export default function FuncoesTabPanel() {
   const [funcoes, setFuncoes] = useState<ResponsibilityResponseDto[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showDeleteFuncaoModal, setShowDeleteFuncaoModal] = useState(false)
   const [funcaoEditando, setFuncaoEditando] = useState<ResponsibilityResponseDto | null>(null)
+  const [funcaoParaDeletar, setFuncaoParaDeletar] = useState<{ id: string; nome: string } | null>(null)
 
   useEffect(() => {
     if (scheduledAreaId) {
@@ -39,15 +42,20 @@ export default function FuncoesTabPanel() {
     }
   }
 
-  const handleExcluirFuncao = async (funcaoId: string, funcaoNome: string) => {
-    if (!confirm(`Tem certeza que deseja excluir a função "${funcaoNome}"?`)) {
-      return
-    }
+  const handleExcluirFuncao = (funcaoId: string, funcaoNome: string) => {
+    setFuncaoParaDeletar({ id: funcaoId, nome: funcaoNome })
+    setShowDeleteFuncaoModal(true)
+  }
+
+  const confirmExcluirFuncao = async () => {
+    if (!funcaoParaDeletar) return
 
     try {
-      await responsibilityService.deleteResponsibility(funcaoId)
-      setFuncoes(prevFuncoes => prevFuncoes.filter(funcao => funcao.id !== funcaoId))
-      toast.showSuccess(`Função "${funcaoNome}" excluída com sucesso!`)
+      await responsibilityService.deleteResponsibility(funcaoParaDeletar.id)
+      setFuncoes(prevFuncoes => prevFuncoes.filter(funcao => funcao.id !== funcaoParaDeletar.id))
+      setShowDeleteFuncaoModal(false)
+      setFuncaoParaDeletar(null)
+      toast.showSuccess(`Função "${funcaoParaDeletar.nome}" excluída com sucesso!`)
     } catch (error: any) {
       console.error('Erro ao excluir função:', error)
       toast.showError(error.message || 'Erro ao excluir função')
@@ -197,6 +205,17 @@ export default function FuncoesTabPanel() {
           }}
         />
       )}
+
+      <ConfirmModal
+        isOpen={showDeleteFuncaoModal}
+        title="Excluir Função"
+        message={funcaoParaDeletar ? `Tem certeza que deseja excluir a função "${funcaoParaDeletar.nome}"?` : ''}
+        onConfirm={confirmExcluirFuncao}
+        onCancel={() => {
+          setShowDeleteFuncaoModal(false)
+          setFuncaoParaDeletar(null)
+        }}
+      />
     </div>
   )
 }
