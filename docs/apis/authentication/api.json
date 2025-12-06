@@ -3388,6 +3388,318 @@
           "group-members"
         ]
       }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/teams": {
+      "post": {
+        "description": "Creates a new team within a scheduled area. Teams can have multiple roles (funções) with quantities, priorities, and fixed person assignments.",
+        "operationId": "TeamAreaController_create",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Team created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          },
+          "409": {
+            "description": "Conflict - Team with this name already exists in the scheduled area"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new team",
+        "tags": [
+          "teams"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of all teams within a scheduled area, including their roles.",
+        "operationId": "TeamAreaController_findAll",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filter by team name (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of teams retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedTeamResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List teams in scheduled area",
+        "tags": [
+          "teams"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/teams/{teamId}": {
+      "get": {
+        "description": "Retrieves a specific team by its ID, including all roles and fixed person assignments.",
+        "operationId": "TeamAreaController_findOne",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "description": "Team unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Team retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Team or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get team by ID",
+        "tags": [
+          "teams"
+        ]
+      },
+      "patch": {
+        "description": "Updates a team's name, description, and/or roles. Only provided fields will be updated. When updating roles, the entire roles array is replaced.",
+        "operationId": "TeamAreaController_update",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "description": "Team unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeamDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Team updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (e.g., duplicate priority, invalid quantity, fixed persons exceed quantity)"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Team or scheduled area not found"
+          },
+          "409": {
+            "description": "Conflict - Team with this name already exists in the scheduled area, or duplicate priority in roles"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update team",
+        "tags": [
+          "teams"
+        ]
+      },
+      "delete": {
+        "description": "Removes a team and all its roles. This operation cannot be undone.",
+        "operationId": "TeamAreaController_remove",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "teamId",
+            "required": true,
+            "in": "path",
+            "description": "Team unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Team deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Team or scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete team",
+        "tags": [
+          "teams"
+        ]
+      }
     }
   },
   "info": {
@@ -5203,6 +5515,303 @@
         "required": [
           "responsibilityIds"
         ]
+      },
+      "CreateTeamRoleDto": {
+        "type": "object",
+        "properties": {
+          "responsibilityId": {
+            "type": "string",
+            "description": "ID of the responsibility (função) - must belong to the scheduled area",
+            "format": "uuid",
+            "example": "456e7890-e89b-12d3-a456-426614174001"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Number of people needed for this role",
+            "minimum": 1,
+            "example": 3
+          },
+          "priority": {
+            "type": "number",
+            "description": "Priority of this role (lower number = higher priority). Must be unique within the team.",
+            "minimum": 1,
+            "example": 1
+          },
+          "isFree": {
+            "type": "boolean",
+            "description": "If true, the role is free to be assigned to any person. If false, specific fixed persons must be assigned.",
+            "default": true,
+            "example": false
+          },
+          "fixedPersonIds": {
+            "description": "Array of person IDs assigned as fixed to this role. Required if isFree is false. All persons must be associated with the scheduled area. The number of fixed persons cannot exceed the quantity.",
+            "example": [
+              "123e4567-e89b-12d3-a456-426614174000",
+              "234e5678-e89b-12d3-a456-426614174001"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "responsibilityId",
+          "quantity",
+          "priority"
+        ]
+      },
+      "CreateTeamDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the team",
+            "example": "Equipe de Plantão A",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the team (optional)",
+            "example": "Equipe responsável pelo plantão noturno",
+            "maxLength": 1000
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area this team belongs to",
+            "format": "uuid",
+            "example": "def67890-e89b-12d3-a456-426614174004"
+          },
+          "roles": {
+            "description": "Array of roles (funções) for the team (optional, can be added later)",
+            "default": [],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateTeamRoleDto"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "scheduledAreaId"
+        ]
+      },
+      "TeamRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the team role",
+            "format": "uuid",
+            "example": "role-12345-e89b-12d3-a456-426614174003"
+          },
+          "responsibilityId": {
+            "type": "string",
+            "description": "ID of the responsibility (função)",
+            "format": "uuid",
+            "example": "456e7890-e89b-12d3-a456-426614174001"
+          },
+          "responsibilityName": {
+            "type": "string",
+            "description": "Name of the responsibility (função) - populated by the server",
+            "example": "Líder"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Number of people needed for this role",
+            "example": 3
+          },
+          "priority": {
+            "type": "number",
+            "description": "Priority of this role (lower number = higher priority)",
+            "example": 1
+          },
+          "isFree": {
+            "type": "boolean",
+            "description": "If true, the role is free to be assigned to any person. If false, specific fixed persons are assigned.",
+            "example": false
+          },
+          "fixedPersonIds": {
+            "description": "Array of person IDs assigned as fixed to this role (empty if isFree is true)",
+            "example": [
+              "123e4567-e89b-12d3-a456-426614174000",
+              "234e5678-e89b-12d3-a456-426614174001"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "responsibilityId",
+          "responsibilityName",
+          "quantity",
+          "priority",
+          "isFree",
+          "fixedPersonIds"
+        ]
+      },
+      "TeamResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the team",
+            "format": "uuid",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "name": {
+            "type": "string",
+            "example": "Equipe de Plantão A"
+          },
+          "description": {
+            "type": "object",
+            "example": "Equipe responsável pelo plantão noturno",
+            "nullable": true
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area this team belongs to",
+            "format": "uuid",
+            "example": "def67890-e89b-12d3-a456-426614174004"
+          },
+          "scheduledArea": {
+            "description": "Scheduled area information (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledAreaDto"
+              }
+            ]
+          },
+          "roles": {
+            "description": "Array of roles (funções) in the team",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamRoleDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "scheduledAreaId",
+          "scheduledArea",
+          "roles",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedTeamResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdateTeamRoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID of the role (required when updating existing role, omit when adding new role)",
+            "format": "uuid"
+          },
+          "responsibilityId": {
+            "type": "string",
+            "description": "ID of the responsibility (função) - must belong to the scheduled area",
+            "format": "uuid",
+            "example": "456e7890-e89b-12d3-a456-426614174001"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Number of people needed for this role",
+            "minimum": 1,
+            "example": 3
+          },
+          "priority": {
+            "type": "number",
+            "description": "Priority of this role (lower number = higher priority). Must be unique within the team (excluding the role being updated).",
+            "minimum": 1,
+            "example": 1
+          },
+          "isFree": {
+            "type": "boolean",
+            "description": "If true, the role is free to be assigned to any person. If false, specific fixed persons must be assigned.",
+            "example": false
+          },
+          "fixedPersonIds": {
+            "description": "Array of person IDs assigned as fixed to this role. Required if isFree is false. All persons must be associated with the scheduled area. The number of fixed persons cannot exceed the quantity.",
+            "example": [
+              "123e4567-e89b-12d3-a456-426614174000",
+              "234e5678-e89b-12d3-a456-426614174001"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "responsibilityId",
+          "quantity",
+          "priority"
+        ]
+      },
+      "UpdateTeamDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the team",
+            "example": "Nome Atualizado",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the team",
+            "example": "Nova descrição",
+            "maxLength": 1000
+          },
+          "roles": {
+            "description": "Array of roles (funções) for the team. When provided, the entire roles array is replaced.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpdateTeamRoleDto"
+            }
+          }
+        }
       }
     }
   }

@@ -153,7 +153,7 @@ export default function EquipesTabPanel() {
         name: novaEquipeNome.trim(),
         description: novaEquipeDescricao.trim() || undefined,
         scheduledAreaId,
-        roles: [] as (Omit<TeamRoleDto, 'id' | 'responsibilityName'> & { responsibilityName?: string })[]
+        roles: []
       })
 
       setEquipes([...equipes, newTeam])
@@ -298,10 +298,8 @@ export default function EquipesTabPanel() {
     }
 
     try {
-      const responsibilityName = getResponsibilityName(novaFuncaoResponsibilityId)
-      const newRole: Omit<TeamRoleDto, 'id'> & { responsibilityName: string } = {
+      const newRole = {
         responsibilityId: novaFuncaoResponsibilityId,
-        responsibilityName,
         quantity: novaFuncaoQuantidade,
         priority: novaFuncaoPrioridade,
         isFree: !novaFuncaoIsFixo,
@@ -312,7 +310,14 @@ export default function EquipesTabPanel() {
         scheduledAreaId,
         equipeSelecionada.id,
         {
-          roles: [...equipeSelecionada.roles, newRole]
+          roles: [...equipeSelecionada.roles.map(r => ({
+            id: r.id,
+            responsibilityId: r.responsibilityId,
+            quantity: r.quantity,
+            priority: r.priority,
+            isFree: r.isFree,
+            fixedPersonIds: r.fixedPersonIds
+          })), newRole]
         }
       )
 
@@ -374,19 +379,22 @@ export default function EquipesTabPanel() {
     }
 
     try {
-      const responsibilityName = getResponsibilityName(novaFuncaoResponsibilityId)
-      const updatedRole: Omit<TeamRoleDto, 'id'> & { id: string; responsibilityName: string } = {
-        id: funcaoParaEditar.id,
-        responsibilityId: novaFuncaoResponsibilityId,
-        responsibilityName,
-        quantity: novaFuncaoQuantidade,
-        priority: novaFuncaoPrioridade,
-        isFree: !novaFuncaoIsFixo,
-        fixedPersonIds: novaFuncaoIsFixo ? novaFuncaoPessoasFixas : []
-      }
-
       const updatedRoles = equipeSelecionada.roles.map(r => 
-        r.id === funcaoParaEditar.id ? updatedRole : r
+        r.id === funcaoParaEditar.id ? {
+          id: r.id,
+          responsibilityId: novaFuncaoResponsibilityId,
+          quantity: novaFuncaoQuantidade,
+          priority: novaFuncaoPrioridade,
+          isFree: !novaFuncaoIsFixo,
+          fixedPersonIds: novaFuncaoIsFixo ? novaFuncaoPessoasFixas : []
+        } : {
+          id: r.id,
+          responsibilityId: r.responsibilityId,
+          quantity: r.quantity,
+          priority: r.priority,
+          isFree: r.isFree,
+          fixedPersonIds: r.fixedPersonIds
+        }
       )
 
       const updatedTeam = await teamService.updateTeam(
@@ -423,7 +431,16 @@ export default function EquipesTabPanel() {
     }
 
     try {
-      const updatedRoles = equipeSelecionada.roles.filter(r => r.id !== roleId)
+      const updatedRoles = equipeSelecionada.roles
+        .filter(r => r.id !== roleId)
+        .map(r => ({
+          id: r.id,
+          responsibilityId: r.responsibilityId,
+          quantity: r.quantity,
+          priority: r.priority,
+          isFree: r.isFree,
+          fixedPersonIds: r.fixedPersonIds
+        }))
       const updatedTeam = await teamService.updateTeam(
         scheduledAreaId,
         equipeSelecionada.id,

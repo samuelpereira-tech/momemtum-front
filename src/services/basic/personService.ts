@@ -111,6 +111,17 @@ export class PersonService {
       if (response.status === 404) {
         throw new Error('Pessoa não encontrada')
       }
+      if (response.status === 409) {
+        // Tentar extrair a mensagem de erro do response
+        try {
+          const errorData = await response.json()
+          const errorMessage = errorData.message || errorData.error || 'Esta pessoa não pode ser removida porque está sendo usada como pessoa responsável em uma ou mais áreas agendadas. Por favor, altere a pessoa responsável dessas áreas antes de remover esta pessoa.'
+          throw new Error(errorMessage)
+        } catch (parseError) {
+          // Se não conseguir parsear o JSON, usar mensagem padrão
+          throw new Error('Esta pessoa não pode ser removida porque está sendo usada como pessoa responsável em uma ou mais áreas agendadas. Por favor, altere a pessoa responsável dessas áreas antes de remover esta pessoa.')
+        }
+      }
       throw new Error(`Erro ao deletar pessoa: ${response.status}`)
     }
 
