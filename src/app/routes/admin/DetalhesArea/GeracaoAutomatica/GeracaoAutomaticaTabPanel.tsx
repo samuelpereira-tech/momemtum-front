@@ -227,29 +227,45 @@ export default function GeracaoAutomaticaTabPanel() {
     try {
       // Carregar membros dos grupos se necessário
       let groupMembers: any[] = []
+      
+      // Carregar membros quando o tipo de geração é por grupo
+      const groupIdsToLoad: string[] = []
+      
+      if (config.generationType === 'group' && config.groupConfig?.groupIds) {
+        groupIdsToLoad.push(...config.groupConfig.groupIds)
+      }
+      
+      // Carregar membros quando a seleção de participantes é por grupo
       if (config.teamConfig?.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
         for (const groupId of config.teamConfig.selectedGroupIds) {
-          try {
-            let members: any[] = []
-            let page = 1
-            let hasMore = true
-            const limit = 100
-            
-            while (hasMore && scheduledAreaId) {
-              const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
-              members = [...members, ...response.data]
-              
-              if (page >= response.meta.totalPages || response.data.length === 0) {
-                hasMore = false
-              } else {
-                page++
-              }
-            }
-            
-            groupMembers = [...groupMembers, ...members]
-          } catch (error) {
-            console.error(`Erro ao carregar membros do grupo ${groupId}:`, error)
+          if (!groupIdsToLoad.includes(groupId)) {
+            groupIdsToLoad.push(groupId)
           }
+        }
+      }
+      
+      // Carregar membros de todos os grupos necessários
+      for (const groupId of groupIdsToLoad) {
+        try {
+          let members: any[] = []
+          let page = 1
+          let hasMore = true
+          const limit = 100
+          
+          while (hasMore && scheduledAreaId) {
+            const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
+            members = [...members, ...response.data]
+            
+            if (page >= response.meta.totalPages || response.data.length === 0) {
+              hasMore = false
+            } else {
+              page++
+            }
+          }
+          
+          groupMembers = [...groupMembers, ...members]
+        } catch (error) {
+          console.error(`Erro ao carregar membros do grupo ${groupId}:`, error)
         }
       }
       
@@ -1366,11 +1382,67 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
               {schedule.groups && schedule.groups.length > 0 && (
                 <div className="schedule-content">
                   <strong>Grupos:</strong>
-                  <ul>
+                  <div className="schedule-groups-list">
                     {schedule.groups.map(group => (
-                      <li key={group.id}>{group.name}</li>
+                      <div key={group.id} className="schedule-group-card">
+                        <div className="schedule-group-header">
+                          <h6 className="schedule-group-name">
+                            <i className="fa-solid fa-users"></i> {group.name}
+                          </h6>
+                          {group.members && (
+                            <span className="schedule-group-member-count">
+                              {group.members.length} {group.members.length === 1 ? 'membro' : 'membros'}
+                            </span>
+                          )}
+                        </div>
+                        {group.members && group.members.length > 0 ? (
+                          <div className="schedule-group-members">
+                            {group.members.map((member, memberIndex) => (
+                              <div key={memberIndex} className="schedule-group-member">
+                                <div className="schedule-member-photo-container">
+                                  {member.personPhotoUrl ? (
+                                    <img
+                                      src={addCacheBusting(member.personPhotoUrl)}
+                                      alt={member.personName}
+                                      className="schedule-member-photo"
+                                    />
+                                  ) : (
+                                    <div className="schedule-member-photo-placeholder">
+                                      {member.personName.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="schedule-member-info">
+                                  <div className="schedule-member-name">{member.personName}</div>
+                                  {member.responsibilities && member.responsibilities.length > 0 && (
+                                    <div className="schedule-member-roles">
+                                      {member.responsibilities.map((responsibility) => (
+                                        <span key={responsibility.id} className="schedule-member-role-badge">
+                                          {responsibility.imageUrl ? (
+                                            <img
+                                              src={addCacheBusting(responsibility.imageUrl)}
+                                              alt={responsibility.name}
+                                              className="schedule-member-role-image"
+                                            />
+                                          ) : null}
+                                          <span className="schedule-member-role-name">{responsibility.name}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="schedule-group-empty">
+                            <i className="fa-solid fa-info-circle"></i>
+                            <span>Nenhum membro cadastrado neste grupo</span>
+                          </div>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
               

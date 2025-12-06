@@ -9,7 +9,20 @@ export interface SchedulePreview {
   id: string
   startDatetime: string
   endDatetime: string
-  groups?: Array<{ id: string; name: string }>
+  groups?: Array<{ 
+    id: string
+    name: string
+    members?: Array<{
+      personId: string
+      personName: string
+      personPhotoUrl: string | null
+      responsibilities: Array<{
+        id: string
+        name: string
+        imageUrl: string | null
+      }>
+    }>
+  }>
   team?: { id: string; name: string }
   assignments?: Array<{
     personId: string

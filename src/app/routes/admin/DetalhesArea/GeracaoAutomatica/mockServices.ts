@@ -28,17 +28,68 @@ export async function generatePreview(
   // Rastrear atribuições anteriores para balanceamento
   const assignmentHistory = new Map<string, Map<string, number>>() // roleId -> personId -> count
   
+  // Função auxiliar para enriquecer grupos com membros
+  const enrichGroupsWithMembers = (groupIds: string[]): Array<{ 
+    id: string
+    name: string
+    members?: Array<{
+      personId: string
+      personName: string
+      personPhotoUrl: string | null
+      responsibilities: Array<{ id: string; name: string; imageUrl: string | null }>
+    }>
+  }> => {
+    const enrichedGroups = []
+    
+    for (const groupId of groupIds) {
+      const group = groups.find(g => g.id === groupId)
+      if (!group) continue
+      
+      // Buscar membros do grupo nos groupMembers
+      const groupMembersList = groupMembers.filter(m => m.groupId === groupId)
+      
+      const members = groupMembersList.map(member => {
+        // Tentar encontrar a pessoa no array persons primeiro, depois usar member.person como fallback
+        const personArea = persons.find(p => p.personId === member.personId)
+        const person = personArea?.person || member.person
+        
+        return {
+          personId: member.personId,
+          personName: person?.fullName || member.personId,
+          personPhotoUrl: person?.photoUrl || null,
+          responsibilities: member.responsibilities?.map(r => ({
+            id: r.id,
+            name: r.name,
+            imageUrl: r.imageUrl,
+          })) || [],
+        }
+      })
+      
+      enrichedGroups.push({
+        id: group.id,
+        name: group.name,
+        members: members.length > 0 ? members : undefined,
+      })
+    }
+    
+    return enrichedGroups
+  }
+  
   // Gerar escalas baseado no tipo de período
   if (config.periodType === 'fixed') {
     const scheduleStart = new Date(config.periodConfig?.baseDateTime || config.periodStartDate)
     const scheduleEnd = new Date(config.periodEndDate)
     
+    const selectedGroupIds = config.generationType === 'group' && config.groupConfig
+      ? config.groupConfig.groupIds
+      : []
+    
     schedules.push({
       id: 's1',
       startDatetime: scheduleStart.toISOString(),
       endDatetime: scheduleEnd.toISOString(),
-      groups: config.generationType === 'group' && config.groupConfig
-        ? groups.filter(g => config.groupConfig!.groupIds.includes(g.id)).map(g => ({ id: g.id, name: g.name }))
+      groups: selectedGroupIds.length > 0
+        ? enrichGroupsWithMembers(selectedGroupIds)
         : undefined,
       team: config.generationType !== 'group' && config.teamConfig
         ? teams.find(t => t.id === config.teamConfig!.teamId) ? { id: teams.find(t => t.id === config.teamConfig!.teamId)!.id, name: teams.find(t => t.id === config.teamConfig!.teamId)!.name } : undefined
@@ -60,12 +111,16 @@ export async function generatePreview(
       const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
       const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
       
+      const selectedGroupIds = config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
+        ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length].id]
+        : []
+      
       schedules.push({
         id: `s${scheduleIndex}`,
         startDatetime: scheduleStart.toISOString(),
         endDatetime: scheduleEnd.toISOString(),
-        groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
-          ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
+        groups: selectedGroupIds.length > 0
+          ? await enrichGroupsWithMembers(selectedGroupIds)
           : undefined,
         team: config.generationType !== 'group' && config.teamConfig && selectedTeam
           ? { id: selectedTeam.id, name: selectedTeam.name }
@@ -90,12 +145,16 @@ export async function generatePreview(
       const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
       const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
       
+      const selectedGroupIds = config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
+        ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length].id]
+        : []
+      
       schedules.push({
         id: `s${scheduleIndex}`,
         startDatetime: scheduleStart.toISOString(),
         endDatetime: scheduleEnd.toISOString(),
-        groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
-          ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
+        groups: selectedGroupIds.length > 0
+          ? await enrichGroupsWithMembers(selectedGroupIds)
           : undefined,
         team: config.generationType !== 'group' && config.teamConfig && selectedTeam
           ? { id: selectedTeam.id, name: selectedTeam.name }
@@ -133,12 +192,16 @@ export async function generatePreview(
         const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
         const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
         
+        const selectedGroupIds = config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
+          ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length].id]
+          : []
+        
         schedules.push({
           id: `s${scheduleIndex}`,
           startDatetime: scheduleStart.toISOString(),
           endDatetime: scheduleEnd.toISOString(),
-          groups: config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
-            ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length]].map(g => ({ id: g.id, name: g.name }))
+          groups: selectedGroupIds.length > 0
+            ? await enrichGroupsWithMembers(selectedGroupIds)
             : undefined,
           team: config.generationType !== 'group' && config.teamConfig && selectedTeam
             ? { id: selectedTeam.id, name: selectedTeam.name }
@@ -309,6 +372,16 @@ function generateAssignments(
   
   // Filtrar pessoas baseado na seleção
   let availablePersons = persons
+  const fixedPersonIds = new Set<string>() // Coletar todas as pessoas fixas de todos os papéis
+  
+  // Primeiro, coletar todas as pessoas fixas da equipe (independente do grupo)
+  for (const role of team.roles) {
+    if (role.fixedPersonIds && role.fixedPersonIds.length > 0) {
+      role.fixedPersonIds.forEach(id => fixedPersonIds.add(id))
+    }
+  }
+  
+  // Filtrar pessoas baseado na seleção, mas SEMPRE incluir pessoas fixas
   if (config.teamConfig.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds && groupMembers.length > 0) {
     // Filtrar pessoas que pertencem aos grupos selecionados
     const selectedPersonIds = new Set(
@@ -316,9 +389,18 @@ function generateAssignments(
         .filter(m => config.teamConfig!.selectedGroupIds!.includes(m.groupId))
         .map(m => m.personId)
     )
-    availablePersons = persons.filter(p => selectedPersonIds.has(p.personId))
+    // Incluir pessoas do grupo + pessoas fixas (mesmo que não estejam no grupo)
+    availablePersons = persons.filter(p => 
+      selectedPersonIds.has(p.personId) || fixedPersonIds.has(p.personId)
+    )
   } else if (config.teamConfig.participantSelection === 'individual' && config.teamConfig.selectedPersonIds) {
-    availablePersons = persons.filter(p => config.teamConfig!.selectedPersonIds!.includes(p.personId))
+    // Incluir pessoas selecionadas + pessoas fixas (mesmo que não estejam selecionadas)
+    availablePersons = persons.filter(p => 
+      config.teamConfig!.selectedPersonIds!.includes(p.personId) || fixedPersonIds.has(p.personId)
+    )
+  } else {
+    // Modo "TODOS" - já inclui todas as pessoas, mas garantir que fixas estejam
+    // (já estão incluídas, mas manter para clareza)
   }
   
   if (availablePersons.length === 0) return []
@@ -344,6 +426,14 @@ function generateAssignments(
   // Criar um mapa de responsabilidades por pessoa
   const personResponsibilitiesMap = new Map<string, Set<string>>()
   
+  // Coletar todas as pessoas fixas da equipe
+  const allFixedPersonIds = new Set<string>()
+  for (const role of team.roles) {
+    if (role.fixedPersonIds && role.fixedPersonIds.length > 0) {
+      role.fixedPersonIds.forEach(id => allFixedPersonIds.add(id))
+    }
+  }
+  
   // Se a seleção for por grupo, usar APENAS as responsabilidades do grupo
   // Caso contrário, usar responsabilidades da área + grupo
   if (config.teamConfig.participantSelection === 'by_group' && groupMembers.length > 0) {
@@ -353,6 +443,19 @@ function generateAssignments(
         const responsibilities = new Set<string>()
         member.responsibilities.forEach(r => responsibilities.add(r.id))
         personResponsibilitiesMap.set(member.personId, responsibilities)
+      }
+    }
+    
+    // IMPORTANTE: Adicionar responsabilidades de pessoas fixas que não estão no grupo
+    // Buscar responsabilidades da área para pessoas fixas
+    for (const fixedPersonId of allFixedPersonIds) {
+      if (!personResponsibilitiesMap.has(fixedPersonId)) {
+        const fixedPerson = persons.find(p => p.personId === fixedPersonId)
+        if (fixedPerson && fixedPerson.responsibilities) {
+          const responsibilities = new Set<string>()
+          fixedPerson.responsibilities.forEach(r => responsibilities.add(r.id))
+          personResponsibilitiesMap.set(fixedPersonId, responsibilities)
+        }
       }
     }
   } else {
@@ -383,77 +486,119 @@ function generateAssignments(
   const sortedRoles = [...team.roles].sort((a, b) => a.priority - b.priority)
   
   for (const role of sortedRoles) {
-    // Filtrar pessoas elegíveis para este papel
-    const eligiblePersons = availablePersons.filter(person => {
-      // Não pode estar já usada nesta escala
-      if (usedPersonIds.has(person.personId)) return false
-      
-      // Verificar responsabilidade se necessário
-      if (config.generationType === 'team_with_restriction') {
-        const personResponsibilities = personResponsibilitiesMap.get(person.personId) || new Set<string>()
-        return personResponsibilities.has(role.responsibilityId)
+    // PRIMEIRO: Atribuir pessoas fixas (prioridade máxima)
+    // Pessoas fixas têm prioridade sobre seleção de grupo - buscar na lista completa
+    const fixedPersonsForRole: PersonAreaResponseDto[] = []
+    if (role.fixedPersonIds && role.fixedPersonIds.length > 0) {
+      for (const fixedPersonId of role.fixedPersonIds) {
+        // Buscar na lista completa de pessoas (não apenas availablePersons)
+        // pois pessoa fixa pode não estar no grupo selecionado
+        const fixedPerson = persons.find(p => p.personId === fixedPersonId)
+        if (fixedPerson && !usedPersonIds.has(fixedPerson.personId)) {
+          // Verificar se a pessoa fixa tem a responsabilidade necessária (se modo restrito)
+          if (config.generationType === 'team_with_restriction') {
+            const personResponsibilities = personResponsibilitiesMap.get(fixedPerson.personId) || new Set<string>()
+            if (personResponsibilities.has(role.responsibilityId)) {
+              fixedPersonsForRole.push(fixedPerson)
+            }
+          } else {
+            fixedPersonsForRole.push(fixedPerson)
+          }
+        }
       }
-      
-      return true
-    })
-    
-    // Se não há pessoas elegíveis, deixar vazio
-    if (eligiblePersons.length === 0) {
-      for (let i = 0; i < role.quantity; i++) {
-        assignments.push({
-          personId: '',
-          personName: '[Não atribuído]',
-          roleId: role.id,
-          roleName: role.responsibilityName,
-        })
-      }
-      continue
     }
     
-    // Obter histórico de atribuições para este papel
-    const roleHistory = assignmentHistory.get(role.id) || new Map<string, number>()
+    // Atribuir pessoas fixas primeiro
+    for (const fixedPerson of fixedPersonsForRole) {
+      assignments.push({
+        personId: fixedPerson.personId,
+        personName: fixedPerson.person?.fullName || fixedPerson.personId,
+        roleId: role.id,
+        roleName: role.responsibilityName,
+      })
+      usedPersonIds.add(fixedPerson.personId)
+    }
     
-    // Criar lista de pessoas com contagem de atribuições anteriores
-    const personsWithCount = eligiblePersons.map((person, index) => ({
-      person,
-      count: roleHistory.get(person.personId) || 0,
-      originalIndex: index,
-    }))
+    // Calcular quantas vagas ainda faltam (quantidade total - pessoas fixas já atribuídas)
+    const remainingSlots = role.quantity - fixedPersonsForRole.length
     
-    // Ordenar por menor contagem (pessoas menos escaladas primeiro)
-    // Em caso de empate, usar rotação baseada no scheduleIndex para garantir alternância
-    personsWithCount.sort((a, b) => {
-      if (a.count !== b.count) return a.count - b.count
-      // Em caso de empate, usar rotação baseada no scheduleIndex para distribuir igualmente
-      const rotatedIndexA = (a.originalIndex + scheduleIndex) % eligiblePersons.length
-      const rotatedIndexB = (b.originalIndex + scheduleIndex) % eligiblePersons.length
-      return rotatedIndexA - rotatedIndexB
-    })
-    
-    // Atribuir pessoas para este papel
-    for (let i = 0; i < role.quantity; i++) {
-      if (i < personsWithCount.length) {
-        const selected = personsWithCount[i]
-        assignments.push({
-          personId: selected.person.personId,
-          personName: selected.person.person?.fullName || selected.person.personId,
-          roleId: role.id,
-          roleName: role.responsibilityName,
-        })
-        usedPersonIds.add(selected.person.personId)
+    // Se ainda há vagas para preencher, usar algoritmo de balanceamento
+    if (remainingSlots > 0) {
+      // Filtrar pessoas elegíveis para este papel (excluindo fixas já atribuídas)
+      const eligiblePersons = availablePersons.filter(person => {
+        // Não pode estar já usada nesta escala
+        if (usedPersonIds.has(person.personId)) return false
         
-        // Atualizar histórico
-        const currentCount = roleHistory.get(selected.person.personId) || 0
-        roleHistory.set(selected.person.personId, currentCount + 1)
-        assignmentHistory.set(role.id, roleHistory)
-      } else {
-        // Não há pessoas suficientes, deixar vazio
-        assignments.push({
-          personId: '',
-          personName: '[Não atribuído]',
-          roleId: role.id,
-          roleName: role.responsibilityName,
-        })
+        // Não pode ser pessoa fixa (já foi atribuída acima)
+        if (role.fixedPersonIds && role.fixedPersonIds.includes(person.personId)) return false
+        
+        // Verificar responsabilidade se necessário
+        if (config.generationType === 'team_with_restriction') {
+          const personResponsibilities = personResponsibilitiesMap.get(person.personId) || new Set<string>()
+          return personResponsibilities.has(role.responsibilityId)
+        }
+        
+        return true
+      })
+      
+      // Se não há pessoas elegíveis, deixar vazio
+      if (eligiblePersons.length === 0) {
+        for (let i = 0; i < remainingSlots; i++) {
+          assignments.push({
+            personId: '',
+            personName: '[Não atribuído]',
+            roleId: role.id,
+            roleName: role.responsibilityName,
+          })
+        }
+        continue
+      }
+      
+      // Obter histórico de atribuições para este papel
+      const roleHistory = assignmentHistory.get(role.id) || new Map<string, number>()
+      
+      // Criar lista de pessoas com contagem de atribuições anteriores
+      const personsWithCount = eligiblePersons.map((person, index) => ({
+        person,
+        count: roleHistory.get(person.personId) || 0,
+        originalIndex: index,
+      }))
+      
+      // Ordenar por menor contagem (pessoas menos escaladas primeiro)
+      // Em caso de empate, usar rotação baseada no scheduleIndex para garantir alternância
+      personsWithCount.sort((a, b) => {
+        if (a.count !== b.count) return a.count - b.count
+        // Em caso de empate, usar rotação baseada no scheduleIndex para distribuir igualmente
+        const rotatedIndexA = (a.originalIndex + scheduleIndex) % eligiblePersons.length
+        const rotatedIndexB = (b.originalIndex + scheduleIndex) % eligiblePersons.length
+        return rotatedIndexA - rotatedIndexB
+      })
+      
+      // Atribuir pessoas para as vagas restantes
+      for (let i = 0; i < remainingSlots; i++) {
+        if (i < personsWithCount.length) {
+          const selected = personsWithCount[i]
+          assignments.push({
+            personId: selected.person.personId,
+            personName: selected.person.person?.fullName || selected.person.personId,
+            roleId: role.id,
+            roleName: role.responsibilityName,
+          })
+          usedPersonIds.add(selected.person.personId)
+          
+          // Atualizar histórico
+          const currentCount = roleHistory.get(selected.person.personId) || 0
+          roleHistory.set(selected.person.personId, currentCount + 1)
+          assignmentHistory.set(role.id, roleHistory)
+        } else {
+          // Não há pessoas suficientes, deixar vazio
+          assignments.push({
+            personId: '',
+            personName: '[Não atribuído]',
+            roleId: role.id,
+            roleName: role.responsibilityName,
+          })
+        }
       }
     }
   }

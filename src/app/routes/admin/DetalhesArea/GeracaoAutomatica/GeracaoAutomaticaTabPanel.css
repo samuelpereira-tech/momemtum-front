@@ -754,6 +754,172 @@
   margin-bottom: 5px;
 }
 
+/* Schedule Groups List */
+.schedule-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.schedule-group-card {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.3s;
+}
+
+.schedule-group-card:hover {
+  border-color: var(--color-purple);
+  box-shadow: 0 2px 8px rgba(173, 130, 216, 0.1);
+}
+
+.schedule-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.schedule-group-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-group-name i {
+  color: var(--color-purple);
+}
+
+.schedule-group-member-count {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  background: var(--white);
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.schedule-group-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.schedule-group-member {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  background: var(--white);
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.schedule-group-member:hover {
+  border-color: var(--color-purple);
+  box-shadow: 0 2px 6px rgba(173, 130, 216, 0.1);
+}
+
+.schedule-member-photo-container {
+  flex-shrink: 0;
+}
+
+.schedule-member-photo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e0e0;
+  background: var(--white);
+}
+
+.schedule-member-photo-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-purple), var(--color-teal));
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+  border: 2px solid #e0e0e0;
+}
+
+.schedule-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-member-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 6px;
+  word-wrap: break-word;
+}
+
+.schedule-member-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schedule-member-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(173, 130, 216, 0.1);
+  border: 1px solid rgba(173, 130, 216, 0.3);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--color-purple);
+  font-weight: 500;
+}
+
+.schedule-member-role-image {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.schedule-member-role-name {
+  line-height: 1;
+}
+
+.schedule-group-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  text-align: center;
+  justify-content: center;
+}
+
+.schedule-group-empty i {
+  color: var(--color-teal);
+}
+
+@media (max-width: 768px) {
+  .schedule-group-members {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Assignments Grid */
 .assignments-grid {
   display: grid;
