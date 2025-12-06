@@ -7,4 +7,5 @@ export * from './responsibilityService'
 export * from './personAreaService'
 export * from './groupService'
 export * from './groupMemberService'
+export * from './teamService'
 
