@@ -414,6 +414,10 @@ export default function GeracaoAutomaticaTabPanel() {
             {currentStep === 5 && preview && (
               <Step5Preview
                 preview={preview}
+                persons={persons}
+                teams={teams}
+                responsibilities={responsibilities}
+                getResponsibilityImage={getResponsibilityImage}
                 onBack={handleBack}
                 onConfirm={() => setShowConfirmModal(true)}
                 isConfirming={isConfirming}
@@ -1201,8 +1205,12 @@ function Step4Period({ config, onUpdate, onBack, onGeneratePreview, isGenerating
 }
 
 // Step 5: Preview
-function Step5Preview({ preview, onBack, onConfirm, isConfirming }: {
+function Step5Preview({ preview, persons, teams, responsibilities, getResponsibilityImage, onBack, onConfirm, isConfirming }: {
   preview: GenerationPreview
+  persons: PersonAreaResponseDto[]
+  teams: TeamResponseDto[]
+  responsibilities: ResponsibilityResponseDto[]
+  getResponsibilityImage: (id: string) => string | null
   onBack: () => void
   onConfirm: () => void
   isConfirming: boolean
@@ -1216,6 +1224,40 @@ function Step5Preview({ preview, onBack, onConfirm, isConfirming }: {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+  
+  // Função para obter a imagem da pessoa
+  const getPersonImage = (personId: string): string | null => {
+    const personArea = persons.find(p => p.personId === personId)
+    return personArea?.person?.photoUrl || null
+  }
+  
+  // Função para obter a imagem da função/responsabilidade
+  const getRoleImage = (roleId: string, teamId?: string): string | null => {
+    // Se temos o teamId, buscar através do team
+    if (teamId) {
+      const team = teams.find(t => t.id === teamId)
+      if (team) {
+        const role = team.roles.find(r => r.id === roleId)
+        if (role) {
+          // Buscar a responsabilidade pelo responsibilityId
+          const responsibility = responsibilities.find(r => r.id === role.responsibilityId)
+          if (responsibility?.imageUrl) {
+            return responsibility.imageUrl
+          }
+          // Tentar usar getResponsibilityImage
+          return getResponsibilityImage(role.responsibilityId)
+        }
+      }
+    }
+    
+    // Fallback: tentar encontrar diretamente pelo roleId (caso seja o ID da responsabilidade)
+    const responsibility = responsibilities.find(r => r.id === roleId)
+    if (responsibility?.imageUrl) {
+      return responsibility.imageUrl
+    }
+    // Último fallback: usar getResponsibilityImage
+    return getResponsibilityImage(roleId)
   }
   
   return (
@@ -1317,13 +1359,51 @@ function Step5Preview({ preview, onBack, onConfirm, isConfirming }: {
               {schedule.assignments && schedule.assignments.length > 0 && (
                 <div className="schedule-content">
                   <strong>Atribuições:</strong>
-                  <ul>
-                    {schedule.assignments.map((assignment, i) => (
-                      <li key={i}>
-                        <strong>{assignment.personName}</strong> - {assignment.roleName}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="assignments-grid">
+                    {schedule.assignments.map((assignment, i) => {
+                      const personImage = getPersonImage(assignment.personId)
+                      const roleImage = getRoleImage(assignment.roleId, schedule.team?.id)
+                      return (
+                        <div key={i} className="assignment-card">
+                          <div className="assignment-person">
+                            <div className="assignment-image-container">
+                              {personImage ? (
+                                <img
+                                  src={addCacheBusting(personImage)}
+                                  alt={assignment.personName}
+                                  className="assignment-person-image"
+                                />
+                              ) : (
+                                <div className="assignment-image-placeholder">
+                                  <i className="fa-solid fa-user"></i>
+                                </div>
+                              )}
+                            </div>
+                            <div className="assignment-person-name">{assignment.personName}</div>
+                          </div>
+                          <div className="assignment-arrow">
+                            <i className="fa-solid fa-arrow-right"></i>
+                          </div>
+                          <div className="assignment-role">
+                            <div className="assignment-image-container">
+                              {roleImage ? (
+                                <img
+                                  src={addCacheBusting(roleImage)}
+                                  alt={assignment.roleName}
+                                  className="assignment-role-image"
+                                />
+                              ) : (
+                                <div className="assignment-image-placeholder">
+                                  <i className="fa-solid fa-briefcase"></i>
+                                </div>
+                              )}
+                            </div>
+                            <div className="assignment-role-name">{assignment.roleName}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
             </div>
