@@ -47,7 +47,7 @@ export default function EquipesTabPanel() {
 
   const loadEquipes = useCallback(async () => {
     if (!scheduledAreaId || loadingTeamsRef.current) return
-    
+
     loadingTeamsRef.current = true
     try {
       const response = await teamService.getTeamsInArea(scheduledAreaId, {
@@ -56,7 +56,7 @@ export default function EquipesTabPanel() {
       })
 
       setEquipes(response.data)
-      
+
       // Atualizar equipe selecionada usando função de callback para acessar o estado atual
       setEquipeSelecionada(prev => {
         if (prev) {
@@ -96,9 +96,9 @@ export default function EquipesTabPanel() {
       const limit = 100
 
       while (hasMore) {
-        const response = await personAreaService.getPersonsInArea(scheduledAreaId, { 
-          page, 
-          limit 
+        const response = await personAreaService.getPersonsInArea(scheduledAreaId, {
+          page,
+          limit
         })
         persons = [...persons, ...response.data]
 
@@ -118,7 +118,7 @@ export default function EquipesTabPanel() {
 
   const loadData = useCallback(async () => {
     if (!scheduledAreaId) return
-    
+
     setIsLoading(true)
     try {
       await Promise.all([
@@ -182,12 +182,12 @@ export default function EquipesTabPanel() {
       )
 
       setEquipes(equipes.map(e => e.id === equipeParaEditar.id ? updatedTeam : e))
-      
+
       // Se a equipe editada era a selecionada, atualizar a seleção
       if (equipeSelecionada?.id === equipeParaEditar.id) {
         setEquipeSelecionada(updatedTeam)
       }
-      
+
       setShowEditEquipeModal(false)
       setEquipeParaEditar(null)
       toast.showSuccess('Equipe atualizada com sucesso!')
@@ -341,13 +341,13 @@ export default function EquipesTabPanel() {
         <aside className="equipes-sidebar">
           <div className="equipes-sidebar-header">
             <h3>Equipes</h3>
-            <button 
-              className="btn-icon-primary" 
+            <button
+              className="btn-icon-primary"
               onClick={() => {
                 setNovaEquipeNome('')
                 setNovaEquipeDescricao('')
                 setShowAddEquipeModal(true)
-              }} 
+              }}
               title="Adicionar Equipe"
             >
               <i className="fa-solid fa-plus"></i>
@@ -402,8 +402,8 @@ export default function EquipesTabPanel() {
                   <h2>{equipeSelecionada.name}</h2>
                   <p>{equipeSelecionada.description || 'Sem descrição'}</p>
                 </div>
-                <button 
-                  className="btn-primary" 
+                <button
+                  className="btn-primary"
                   onClick={() => {
                     setNovoPapelResponsibilityId('')
                     setNovoPapelQuantidade(1)
@@ -536,9 +536,9 @@ export default function EquipesTabPanel() {
               />
             </div>
             <div className="form-actions">
-              <button 
+              <button
                 type="button"
-                className="btn-secondary" 
+                className="btn-secondary"
                 onClick={() => {
                   setShowAddEquipeModal(false)
                   setNovaEquipeNome('')
@@ -547,9 +547,9 @@ export default function EquipesTabPanel() {
               >
                 <i className="fa-solid fa-times"></i> Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
-                className="btn-primary" 
+                className="btn-primary"
                 disabled={!novaEquipeNome.trim()}
               >
                 <i className="fa-solid fa-check"></i> Criar Equipe
@@ -600,9 +600,9 @@ export default function EquipesTabPanel() {
               />
             </div>
             <div className="form-actions">
-              <button 
+              <button
                 type="button"
-                className="btn-secondary" 
+                className="btn-secondary"
                 onClick={() => {
                   setShowEditEquipeModal(false)
                   setEditEquipeNome('')
@@ -611,9 +611,9 @@ export default function EquipesTabPanel() {
               >
                 <i className="fa-solid fa-times"></i> Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
-                className="btn-primary" 
+                className="btn-primary"
                 disabled={!editEquipeNome.trim()}
               >
                 <i className="fa-solid fa-check"></i> Salvar Alterações
@@ -735,26 +735,28 @@ export default function EquipesTabPanel() {
             </div>
 
             <div className="form-group" style={{ marginTop: '20px' }}>
-              <label className="checkbox-label-custom">
-                <div className={`checkbox-wrapper ${novoPapelIsFixo ? 'checked' : ''}`}>
-                  <input
-                    type="checkbox"
-                    className="checkbox-custom"
-                    checked={novoPapelIsFixo}
-                    onChange={(e) => {
-                      setNovoPapelIsFixo(e.target.checked)
-                      if (!e.target.checked) {
-                        setNovoPapelPessoasFixas([])
-                      }
-                    }}
-                  />
-                  <span className="checkbox-custom-label">
-                    <i className="fa-solid fa-lock"></i>
-                    Fixo (pessoas específicas)
-                  </span>
+              <div
+                className={`checkbox-wrapper ${novoPapelIsFixo ? 'checked' : ''}`}
+                onClick={() => {
+                  const newState = !novoPapelIsFixo
+                  setNovoPapelIsFixo(newState)
+                  if (!newState) {
+                    setNovoPapelPessoasFixas([])
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className={`checkbox-visual ${novoPapelIsFixo ? 'checked' : ''}`}>
+                  <i className="fa-solid fa-check"></i>
                 </div>
-                <small className="form-help">Marque para definir pessoas fixas para este papel</small>
-              </label>
+                <span className="checkbox-custom-label">
+                  <i className="fa-solid fa-lock"></i>
+                  Fixo (pessoas específicas)
+                </span>
+              </div>
+              <small className="form-help" style={{ marginLeft: '5px', marginTop: '8px' }}>
+                Marque para definir pessoas fixas para este papel
+              </small>
             </div>
 
             {novoPapelIsFixo && (
@@ -782,53 +784,53 @@ export default function EquipesTabPanel() {
                     {availablePersons.map(p => {
                       const isSelected = novoPapelPessoasFixas.includes(p.personId)
                       const isMaxReached = novoPapelIsFixo && !isSelected && novoPapelPessoasFixas.length >= novoPapelQuantidade
-                      
+
                       return (
-                      <div
-                        key={p.id}
-                        className={`option-item person-item ${isSelected ? 'selected' : ''} ${isMaxReached ? 'disabled' : ''}`}
-                        onClick={() => {
-                          if (isMaxReached) {
-                            toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
-                            return
-                          }
-                          if (isSelected) {
-                            setNovoPapelPessoasFixas(novoPapelPessoasFixas.filter(id => id !== p.personId))
-                          } else {
-                            if (novoPapelIsFixo && novoPapelPessoasFixas.length >= novoPapelQuantidade) {
+                        <div
+                          key={p.id}
+                          className={`option-item person-item ${isSelected ? 'selected' : ''} ${isMaxReached ? 'disabled' : ''}`}
+                          onClick={() => {
+                            if (isMaxReached) {
                               toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
                               return
                             }
-                            setNovoPapelPessoasFixas([...novoPapelPessoasFixas, p.personId])
-                          }
-                        }}
-                        data-name={p.person?.fullName || ''}
-                        title={isMaxReached ? `Limite de ${novoPapelQuantidade} pessoa(s) atingido` : ''}
-                      >
-                        {p.person?.photoUrl ? (
-                          <img
-                            src={addCacheBusting(p.person.photoUrl)}
-                            alt={p.person.fullName}
-                            className="option-avatar"
-                          />
-                        ) : (
-                          <div className="option-icon-placeholder">
-                            {p.person?.fullName?.charAt(0).toUpperCase() || '?'}
+                            if (isSelected) {
+                              setNovoPapelPessoasFixas(novoPapelPessoasFixas.filter(id => id !== p.personId))
+                            } else {
+                              if (novoPapelIsFixo && novoPapelPessoasFixas.length >= novoPapelQuantidade) {
+                                toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
+                                return
+                              }
+                              setNovoPapelPessoasFixas([...novoPapelPessoasFixas, p.personId])
+                            }
+                          }}
+                          data-name={p.person?.fullName || ''}
+                          title={isMaxReached ? `Limite de ${novoPapelQuantidade} pessoa(s) atingido` : ''}
+                        >
+                          {p.person?.photoUrl ? (
+                            <img
+                              src={addCacheBusting(p.person.photoUrl)}
+                              alt={p.person.fullName}
+                              className="option-avatar"
+                            />
+                          ) : (
+                            <div className="option-icon-placeholder">
+                              {p.person?.fullName?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                          )}
+                          <div className="option-info">
+                            <span className="option-title">{p.person?.fullName || 'Sem nome'}</span>
+                            <span className="option-subtitle">
+                              {p.responsibilities && p.responsibilities.length > 0
+                                ? p.responsibilities.map(r => r.name).join(', ')
+                                : 'Sem função principal'}
+                            </span>
                           </div>
-                        )}
-                        <div className="option-info">
-                          <span className="option-title">{p.person?.fullName || 'Sem nome'}</span>
-                          <span className="option-subtitle">
-                            {p.responsibilities && p.responsibilities.length > 0
-                              ? p.responsibilities.map(r => r.name).join(', ')
-                              : 'Sem função principal'}
-                          </span>
+                          {isSelected && (
+                            <i className="fa-solid fa-check check-icon"></i>
+                          )}
                         </div>
-                        {isSelected && (
-                          <i className="fa-solid fa-check check-icon"></i>
-                        )}
-                      </div>
-                    )
+                      )
                     })}
                     {availablePersons.length === 0 && (
                       <div className="empty-state" style={{ padding: '20px' }}>
@@ -838,7 +840,7 @@ export default function EquipesTabPanel() {
                   </div>
                 </div>
                 <small className="form-help">
-                  {novoPapelPessoasFixas.length > 0 
+                  {novoPapelPessoasFixas.length > 0
                     ? `Selecionado: ${novoPapelPessoasFixas.length} de ${novoPapelQuantidade} pessoa(s)`
                     : `Selecione até ${novoPapelQuantidade} pessoa(s) fixa(s) para este papel.`}
                   {novoPapelPessoasFixas.length >= novoPapelQuantidade && (
@@ -869,8 +871,8 @@ export default function EquipesTabPanel() {
                 type="submit"
                 className="btn-primary"
                 disabled={
-                  !novoPapelResponsibilityId || 
-                  novoPapelQuantidade < 1 || 
+                  !novoPapelResponsibilityId ||
+                  novoPapelQuantidade < 1 ||
                   (novoPapelIsFixo && novoPapelPessoasFixas.length === 0) ||
                   (novoPapelIsFixo && novoPapelPessoasFixas.length > novoPapelQuantidade)
                 }
