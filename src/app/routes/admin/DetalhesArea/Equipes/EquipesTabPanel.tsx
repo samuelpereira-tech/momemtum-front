@@ -23,11 +23,13 @@ export default function EquipesTabPanel() {
 
   // Modais Estado
   const [showAddEquipeModal, setShowAddEquipeModal] = useState(false)
-  const [showAddPapelModal, setShowAddPapelModal] = useState(false)
+  const [showAddFuncaoModal, setShowAddFuncaoModal] = useState(false)
+  const [showEditFuncaoModal, setShowEditFuncaoModal] = useState(false)
   const [showDeleteEquipeModal, setShowDeleteEquipeModal] = useState(false)
   const [showEditEquipeModal, setShowEditEquipeModal] = useState(false)
   const [equipeParaDeletar, setEquipeParaDeletar] = useState<TeamResponseDto | null>(null)
   const [equipeParaEditar, setEquipeParaEditar] = useState<TeamResponseDto | null>(null)
+  const [funcaoParaEditar, setFuncaoParaEditar] = useState<TeamRoleDto | null>(null)
 
   // Form States
   const [novaEquipeNome, setNovaEquipeNome] = useState('')
@@ -35,12 +37,12 @@ export default function EquipesTabPanel() {
   const [editEquipeNome, setEditEquipeNome] = useState('')
   const [editEquipeDescricao, setEditEquipeDescricao] = useState('')
 
-  // Form States para Papel
-  const [novoPapelResponsibilityId, setNovoPapelResponsibilityId] = useState('')
-  const [novoPapelQuantidade, setNovoPapelQuantidade] = useState(1)
-  const [novoPapelPrioridade, setNovoPapelPrioridade] = useState(1)
-  const [novoPapelIsFixo, setNovoPapelIsFixo] = useState(false)
-  const [novoPapelPessoasFixas, setNovoPapelPessoasFixas] = useState<string[]>([])
+  // Form States para Função
+  const [novaFuncaoResponsibilityId, setNovaFuncaoResponsibilityId] = useState('')
+  const [novaFuncaoQuantidade, setNovaFuncaoQuantidade] = useState(1)
+  const [novaFuncaoPrioridade, setNovaFuncaoPrioridade] = useState(1)
+  const [novaFuncaoIsFixo, setNovaFuncaoIsFixo] = useState(false)
+  const [novaFuncaoPessoasFixas, setNovaFuncaoPessoasFixas] = useState<string[]>([])
 
   // Refs para evitar chamadas duplicadas durante StrictMode
   const loadingTeamsRef = useRef(false)
@@ -151,7 +153,7 @@ export default function EquipesTabPanel() {
         name: novaEquipeNome.trim(),
         description: novaEquipeDescricao.trim() || undefined,
         scheduledAreaId,
-        roles: []
+        roles: [] as (Omit<TeamRoleDto, 'id' | 'responsibilityName'> & { responsibilityName?: string })[]
       })
 
       setEquipes([...equipes, newTeam])
@@ -245,42 +247,65 @@ export default function EquipesTabPanel() {
     return responsibility?.name || `Função ${responsibilityId}`
   }
 
+  const getResponsibilityImage = (responsibilityId: string): string | null => {
+    const responsibility = availableFunctions.find(f => f.id === responsibilityId)
+    return responsibility?.imageUrl || null
+  }
+
   const getPersonName = (personId: string): string => {
     const person = availablePersons.find(p => p.personId === personId)
     return person?.person?.fullName || `Pessoa ${personId}`
   }
 
-  // Handlers Papel
-  const handleAddPapel = async () => {
-    if (!scheduledAreaId || !equipeSelecionada || !novoPapelResponsibilityId) {
+  const getProximaPrioridade = (): number => {
+    if (!equipeSelecionada || equipeSelecionada.roles.length === 0) {
+      return 1
+    }
+    // Encontrar a maior prioridade e adicionar 1
+    const maiorPrioridade = Math.max(...equipeSelecionada.roles.map(r => r.priority))
+    return maiorPrioridade + 1
+  }
+
+  // Handlers Função
+  const handleAddFuncao = async () => {
+    if (!scheduledAreaId || !equipeSelecionada || !novaFuncaoResponsibilityId) {
       toast.showError('Selecione uma função')
       return
     }
 
-    if (novoPapelQuantidade < 1) {
+    if (novaFuncaoQuantidade < 1) {
       toast.showError('A quantidade deve ser pelo menos 1')
       return
     }
 
-    if (novoPapelIsFixo && novoPapelPessoasFixas.length === 0) {
+    // Verificar se já existe uma função com a mesma prioridade
+    const funcaoComMesmaPrioridade = equipeSelecionada.roles.find(
+      r => r.priority === novaFuncaoPrioridade
+    )
+    if (funcaoComMesmaPrioridade) {
+      toast.showError(`Já existe uma função com prioridade ${novaFuncaoPrioridade} nesta equipe. Escolha uma prioridade diferente.`)
+      return
+    }
+
+    if (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length === 0) {
       toast.showError('Selecione pelo menos uma pessoa fixa')
       return
     }
 
-    if (novoPapelIsFixo && novoPapelPessoasFixas.length > novoPapelQuantidade) {
-      toast.showError(`Você selecionou ${novoPapelPessoasFixas.length} pessoas, mas a quantidade é ${novoPapelQuantidade}. Remova algumas pessoas ou aumente a quantidade.`)
+    if (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length > novaFuncaoQuantidade) {
+      toast.showError(`Você selecionou ${novaFuncaoPessoasFixas.length} pessoas, mas a quantidade é ${novaFuncaoQuantidade}. Remova algumas pessoas ou aumente a quantidade.`)
       return
     }
 
     try {
-      const responsibilityName = getResponsibilityName(novoPapelResponsibilityId)
+      const responsibilityName = getResponsibilityName(novaFuncaoResponsibilityId)
       const newRole: Omit<TeamRoleDto, 'id'> & { responsibilityName: string } = {
-        responsibilityId: novoPapelResponsibilityId,
+        responsibilityId: novaFuncaoResponsibilityId,
         responsibilityName,
-        quantity: novoPapelQuantidade,
-        priority: novoPapelPrioridade,
-        isFree: !novoPapelIsFixo,
-        fixedPersonIds: novoPapelIsFixo ? novoPapelPessoasFixas : []
+        quantity: novaFuncaoQuantidade,
+        priority: novaFuncaoPrioridade,
+        isFree: !novaFuncaoIsFixo,
+        fixedPersonIds: novaFuncaoIsFixo ? novaFuncaoPessoasFixas : []
       }
 
       const updatedTeam = await teamService.updateTeam(
@@ -295,23 +320,105 @@ export default function EquipesTabPanel() {
       setEquipeSelecionada(updatedTeam)
 
       // Reset form
-      setNovoPapelResponsibilityId('')
-      setNovoPapelQuantidade(1)
-      setNovoPapelPrioridade(1)
-      setNovoPapelIsFixo(false)
-      setNovoPapelPessoasFixas([])
-      setShowAddPapelModal(false)
-      toast.showSuccess('Papel adicionado com sucesso!')
+      setNovaFuncaoResponsibilityId('')
+      setNovaFuncaoQuantidade(1)
+      setNovaFuncaoPrioridade(1)
+      setNovaFuncaoIsFixo(false)
+      setNovaFuncaoPessoasFixas([])
+      setShowAddFuncaoModal(false)
+      toast.showSuccess('Função adicionada com sucesso!')
     } catch (error: any) {
-      console.error('Erro ao adicionar papel:', error)
-      toast.showError(error.message || 'Erro ao adicionar papel')
+      console.error('Erro ao adicionar função:', error)
+      toast.showError(error.message || 'Erro ao adicionar função')
     }
   }
 
-  const handleRemovePapel = async (roleId: string) => {
+  const handleOpenEditFuncaoModal = (funcao: TeamRoleDto) => {
+    setFuncaoParaEditar(funcao)
+    setNovaFuncaoResponsibilityId(funcao.responsibilityId)
+    setNovaFuncaoQuantidade(funcao.quantity)
+    setNovaFuncaoPrioridade(funcao.priority)
+    setNovaFuncaoIsFixo(!funcao.isFree)
+    setNovaFuncaoPessoasFixas(funcao.fixedPersonIds || [])
+    setShowEditFuncaoModal(true)
+  }
+
+  const handleEditFuncao = async () => {
+    if (!scheduledAreaId || !equipeSelecionada || !funcaoParaEditar || !novaFuncaoResponsibilityId) {
+      toast.showError('Dados inválidos')
+      return
+    }
+
+    if (novaFuncaoQuantidade < 1) {
+      toast.showError('A quantidade deve ser pelo menos 1')
+      return
+    }
+
+    // Verificar se já existe uma função com a mesma prioridade (exceto a que está sendo editada)
+    const funcaoComMesmaPrioridade = equipeSelecionada.roles.find(
+      r => r.priority === novaFuncaoPrioridade && r.id !== funcaoParaEditar.id
+    )
+    if (funcaoComMesmaPrioridade) {
+      toast.showError(`Já existe uma função com prioridade ${novaFuncaoPrioridade} nesta equipe. Escolha uma prioridade diferente.`)
+      return
+    }
+
+    if (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length === 0) {
+      toast.showError('Selecione pelo menos uma pessoa fixa')
+      return
+    }
+
+    if (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length > novaFuncaoQuantidade) {
+      toast.showError(`Você selecionou ${novaFuncaoPessoasFixas.length} pessoas, mas a quantidade é ${novaFuncaoQuantidade}. Remova algumas pessoas ou aumente a quantidade.`)
+      return
+    }
+
+    try {
+      const responsibilityName = getResponsibilityName(novaFuncaoResponsibilityId)
+      const updatedRole: Omit<TeamRoleDto, 'id'> & { id: string; responsibilityName: string } = {
+        id: funcaoParaEditar.id,
+        responsibilityId: novaFuncaoResponsibilityId,
+        responsibilityName,
+        quantity: novaFuncaoQuantidade,
+        priority: novaFuncaoPrioridade,
+        isFree: !novaFuncaoIsFixo,
+        fixedPersonIds: novaFuncaoIsFixo ? novaFuncaoPessoasFixas : []
+      }
+
+      const updatedRoles = equipeSelecionada.roles.map(r => 
+        r.id === funcaoParaEditar.id ? updatedRole : r
+      )
+
+      const updatedTeam = await teamService.updateTeam(
+        scheduledAreaId,
+        equipeSelecionada.id,
+        {
+          roles: updatedRoles
+        }
+      )
+
+      setEquipes(equipes.map(e => e.id === equipeSelecionada.id ? updatedTeam : e))
+      setEquipeSelecionada(updatedTeam)
+
+      // Reset form
+      setNovaFuncaoResponsibilityId('')
+      setNovaFuncaoQuantidade(1)
+      setNovaFuncaoPrioridade(1)
+      setNovaFuncaoIsFixo(false)
+      setNovaFuncaoPessoasFixas([])
+      setFuncaoParaEditar(null)
+      setShowEditFuncaoModal(false)
+      toast.showSuccess('Função atualizada com sucesso!')
+    } catch (error: any) {
+      console.error('Erro ao atualizar função:', error)
+      toast.showError(error.message || 'Erro ao atualizar função')
+    }
+  }
+
+  const handleRemoveFuncao = async (roleId: string) => {
     if (!scheduledAreaId || !equipeSelecionada) return
 
-    if (!confirm('Tem certeza que deseja remover este papel da equipe?')) {
+    if (!confirm('Tem certeza que deseja remover esta função da equipe?')) {
       return
     }
 
@@ -327,10 +434,10 @@ export default function EquipesTabPanel() {
 
       setEquipes(equipes.map(e => e.id === equipeSelecionada.id ? updatedTeam : e))
       setEquipeSelecionada(updatedTeam)
-      toast.showSuccess('Papel removido com sucesso!')
+      toast.showSuccess('Função removida com sucesso!')
     } catch (error: any) {
-      console.error('Erro ao remover papel:', error)
-      toast.showError(error.message || 'Erro ao remover papel')
+      console.error('Erro ao remover função:', error)
+      toast.showError(error.message || 'Erro ao remover função')
     }
   }
 
@@ -369,7 +476,7 @@ export default function EquipesTabPanel() {
                 >
                   <div className="equipe-item-content">
                     <span className="equipe-name">{equipe.name}</span>
-                    <span className="equipe-meta">{equipe.roles.length} papel(is)</span>
+                    <span className="equipe-meta">{equipe.roles.length} função(ões)</span>
                   </div>
                   <div style={{ display: 'flex', gap: '5px' }}>
                     <button
@@ -405,82 +512,109 @@ export default function EquipesTabPanel() {
                 <button
                   className="btn-primary"
                   onClick={() => {
-                    setNovoPapelResponsibilityId('')
-                    setNovoPapelQuantidade(1)
-                    setNovoPapelPrioridade(1)
-                    setNovoPapelIsFixo(false)
-                    setNovoPapelPessoasFixas([])
-                    setShowAddPapelModal(true)
+                    setNovaFuncaoResponsibilityId('')
+                    setNovaFuncaoQuantidade(1)
+                    setNovaFuncaoPrioridade(getProximaPrioridade())
+                    setNovaFuncaoIsFixo(false)
+                    setNovaFuncaoPessoasFixas([])
+                    setShowAddFuncaoModal(true)
                   }}
                 >
-                  <i className="fa-solid fa-plus"></i> Adicionar Papel
+                  <i className="fa-solid fa-plus"></i> Adicionar Função
                 </button>
               </div>
 
-              <div className="papeis-list">
-                <h3>Papéis ({equipeSelecionada.roles.length})</h3>
+              <div className="funcoes-list">
+                <h3>Funções ({equipeSelecionada.roles.length})</h3>
 
                 {equipeSelecionada.roles.length === 0 ? (
                   <div className="empty-state">
                     <i className="fa-solid fa-briefcase" style={{ fontSize: '2.5rem', marginBottom: '15px' }}></i>
-                    <p>Nenhum papel cadastrado nesta equipe.</p>
+                    <p>Nenhuma função cadastrada nesta equipe.</p>
                   </div>
                 ) : (
-                  <div className="papeis-grid">
+                  <div className="funcoes-grid">
                     {equipeSelecionada.roles
                       .sort((a, b) => a.priority - b.priority)
-                      .map(papel => (
-                        <div key={papel.id} className="papel-card">
-                          <div className="papel-card-header">
-                            <div className="papel-info-main">
-                              <h4 className="papel-name">{getResponsibilityName(papel.responsibilityId)}</h4>
-                              <div className="papel-badges">
-                                <span className="papel-badge quantidade">
-                                  <i className="fa-solid fa-users"></i> {papel.quantity}
-                                </span>
-                                <span className="papel-badge prioridade">
-                                  <i className="fa-solid fa-star"></i> Prioridade {papel.priority}
-                                </span>
-                                {!papel.isFree && (
-                                  <span className="papel-badge fixo">
-                                    <i className="fa-solid fa-lock"></i>
-                                    Fixo
-                                  </span>
-                                )}
-                              </div>
+                      .map(funcao => (
+                        <div key={funcao.id} className="funcao-card">
+                          <div className="funcao-card-header">
+                            <div className="funcao-icon-container">
+                              {getResponsibilityImage(funcao.responsibilityId) ? (
+                                <img
+                                  src={addCacheBusting(getResponsibilityImage(funcao.responsibilityId)!)}
+                                  alt={getResponsibilityName(funcao.responsibilityId)}
+                                  className="funcao-icon-image"
+                                />
+                              ) : (
+                                <div className="funcao-icon-placeholder">
+                                  <i className="fa-solid fa-briefcase"></i>
+                                </div>
+                              )}
                             </div>
+                          </div>
+
+                          <div className="funcao-info">
+                            <h4 className="funcao-name" title={getResponsibilityName(funcao.responsibilityId)}>
+                              {getResponsibilityName(funcao.responsibilityId)}
+                            </h4>
+                            
+                            <div className="funcao-badges">
+                              <span className="funcao-badge quantidade">
+                                <i className="fa-solid fa-users"></i> {funcao.quantity}
+                              </span>
+                              <span className="funcao-badge prioridade">
+                                <i className="fa-solid fa-star"></i> Prioridade {funcao.priority}
+                              </span>
+                              {!funcao.isFree && (
+                                <span className="funcao-badge fixo">
+                                  <i className="fa-solid fa-lock"></i>
+                                  Fixo
+                                </span>
+                              )}
+                            </div>
+
+                            {!funcao.isFree && funcao.fixedPersonIds.length > 0 && (
+                              <div className="funcao-pessoas-fixas">
+                                <h5>Pessoas Fixas:</h5>
+                                <div className="pessoas-fixas-list">
+                                  {funcao.fixedPersonIds.map(personId => (
+                                    <div key={personId} className="pessoa-fixa-item">
+                                      {availablePersons.find(p => p.personId === personId)?.person?.photoUrl ? (
+                                        <img
+                                          src={addCacheBusting(availablePersons.find(p => p.personId === personId)!.person!.photoUrl!)}
+                                          alt={getPersonName(personId)}
+                                          className="pessoa-fixa-photo"
+                                        />
+                                      ) : (
+                                        <div className="pessoa-fixa-photo-placeholder">
+                                          {getPersonName(personId).charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <span className="pessoa-fixa-name">{getPersonName(personId)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="funcao-actions">
                             <button
-                              className="btn-icon-delete-sm"
-                              onClick={() => handleRemovePapel(papel.id)}
-                              title="Remover papel"
+                              className="btn-icon btn-icon-edit"
+                              onClick={() => handleOpenEditFuncaoModal(funcao)}
+                              title="Editar função"
+                            >
+                              <i className="fa-solid fa-pencil"></i>
+                            </button>
+                            <button
+                              className="btn-icon btn-icon-delete"
+                              onClick={() => handleRemoveFuncao(funcao.id)}
+                              title="Remover função"
                             >
                               <i className="fa-solid fa-trash"></i>
                             </button>
                           </div>
-
-                          {!papel.isFree && papel.fixedPersonIds.length > 0 && (
-                            <div className="papel-pessoas-fixas">
-                              <h5>Pessoas Fixas:</h5>
-                              <div className="pessoas-fixas-list">
-                                {papel.fixedPersonIds.map(personId => (
-                                  <div key={personId} className="pessoa-fixa-item">
-                                    {availablePersons.find(p => p.personId === personId)?.person?.photoUrl ? (
-                                      <img
-                                        src={addCacheBusting(availablePersons.find(p => p.personId === personId)!.person!.photoUrl!)}
-                                        alt={getPersonName(personId)}
-                                        className="pessoa-fixa-photo"
-                                      />
-                                    ) : (
-                                      <div className="pessoa-fixa-photo-placeholder">
-                                        {getPersonName(personId).charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                    <span className="pessoa-fixa-name">{getPersonName(personId)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       ))}
                   </div>
@@ -623,51 +757,78 @@ export default function EquipesTabPanel() {
         </Modal>
       )}
 
-      {/* Modal Adicionar Papel */}
-      {showAddPapelModal && equipeSelecionada && (
+      {/* Modal Adicionar/Editar Função */}
+      {(showAddFuncaoModal || showEditFuncaoModal) && equipeSelecionada && (
         <Modal
-          title="Adicionar Papel à Equipe"
+          title={showEditFuncaoModal ? "Editar Função" : "Adicionar Função à Equipe"}
           onClose={() => {
-            setShowAddPapelModal(false)
-            setNovoPapelResponsibilityId('')
-            setNovoPapelQuantidade(1)
-            setNovoPapelPrioridade(1)
-            setNovoPapelIsFixo(false)
-            setNovoPapelPessoasFixas([])
+            setShowAddFuncaoModal(false)
+            setShowEditFuncaoModal(false)
+            setNovaFuncaoResponsibilityId('')
+            setNovaFuncaoQuantidade(1)
+            setNovaFuncaoPrioridade(1)
+            setNovaFuncaoIsFixo(false)
+            setNovaFuncaoPessoasFixas([])
+            setFuncaoParaEditar(null)
           }}
         >
           <form onSubmit={(e) => {
             e.preventDefault()
-            handleAddPapel()
+            if (showEditFuncaoModal) {
+              handleEditFuncao()
+            } else {
+              handleAddFuncao()
+            }
           }}>
             <div className="form-group">
-              <label>Função (Papel) *</label>
-              <div className="selector-container">
-                <input
-                  type="text"
-                  placeholder="Buscar função..."
-                  className="search-input"
-                  onChange={(e) => {
-                    const term = e.target.value.toLowerCase();
-                    const items = document.querySelectorAll('.function-item');
-                    items.forEach((item: any) => {
-                      const name = item.getAttribute('data-name').toLowerCase();
-                      if (name.includes(term)) {
-                        item.style.display = 'flex';
-                      } else {
-                        item.style.display = 'none';
-                      }
-                    });
-                  }}
-                />
-                <div className="list-container">
-                  {availableFunctions.map(func => (
-                    <div
-                      key={func.id}
-                      className={`option-item function-item ${novoPapelResponsibilityId === func.id ? 'selected' : ''}`}
-                      onClick={() => setNovoPapelResponsibilityId(func.id)}
-                      data-name={func.name}
-                    >
+              <label>Função *</label>
+              {showEditFuncaoModal && funcaoParaEditar ? (
+                <div className="person-display" style={{ marginTop: '10px' }}>
+                  <div className="person-display-photo">
+                    {getResponsibilityImage(funcaoParaEditar.responsibilityId) ? (
+                      <img 
+                        src={addCacheBusting(getResponsibilityImage(funcaoParaEditar.responsibilityId)!)} 
+                        alt={getResponsibilityName(funcaoParaEditar.responsibilityId)} 
+                      />
+                    ) : (
+                      <div className="person-display-photo-placeholder">
+                        <i className="fa-solid fa-briefcase"></i>
+                      </div>
+                    )}
+                  </div>
+                  <div className="person-display-info">
+                    <div className="person-display-name">
+                      {getResponsibilityName(funcaoParaEditar.responsibilityId)}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="selector-container">
+                  <input
+                    type="text"
+                    placeholder="Buscar função..."
+                    className="search-input"
+                    onChange={(e) => {
+                      const term = e.target.value.toLowerCase();
+                      const items = document.querySelectorAll('.function-item');
+                      items.forEach((item: any) => {
+                        const name = item.getAttribute('data-name').toLowerCase();
+                        if (name.includes(term)) {
+                          item.style.display = 'flex';
+                        } else {
+                          item.style.display = 'none';
+                        }
+                      });
+                    }}
+                  />
+                  <div className="list-container">
+                    {availableFunctions.map(func => (
+                      <div
+                        key={func.id}
+                        className={`option-item function-item ${novaFuncaoResponsibilityId === func.id ? 'selected' : ''}`}
+                        onClick={() => setNovaFuncaoResponsibilityId(func.id)}
+                        data-name={func.name}
+                      >
                       {func.imageUrl ? (
                         <img
                           src={addCacheBusting(func.imageUrl)}
@@ -682,7 +843,7 @@ export default function EquipesTabPanel() {
                       <div className="option-info">
                         <span className="option-title">{func.name}</span>
                       </div>
-                      {novoPapelResponsibilityId === func.id && (
+                      {novaFuncaoResponsibilityId === func.id && (
                         <i className="fa-solid fa-check check-icon"></i>
                       )}
                     </div>
@@ -692,8 +853,9 @@ export default function EquipesTabPanel() {
                       <p>Nenhuma função disponível.</p>
                     </div>
                   )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className="form-group-row" style={{ marginTop: '20px' }}>
@@ -704,14 +866,14 @@ export default function EquipesTabPanel() {
                 <input
                   type="number"
                   className="form-control"
-                  value={novoPapelQuantidade}
+                  value={novaFuncaoQuantidade}
                   onChange={e => {
                     const newQuantity = Math.max(1, parseInt(e.target.value) || 1)
-                    setNovoPapelQuantidade(newQuantity)
+                    setNovaFuncaoQuantidade(newQuantity)
                     // Se a quantidade for reduzida e houver mais pessoas selecionadas, remover as excedentes
-                    if (novoPapelIsFixo && novoPapelPessoasFixas.length > newQuantity) {
-                      setNovoPapelPessoasFixas(novoPapelPessoasFixas.slice(0, newQuantity))
-                      toast.showInfo(`${novoPapelPessoasFixas.length - newQuantity} pessoa(s) removida(s) para ajustar à nova quantidade`)
+                    if (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length > newQuantity) {
+                      setNovaFuncaoPessoasFixas(novaFuncaoPessoasFixas.slice(0, newQuantity))
+                      toast.showInfo(`${novaFuncaoPessoasFixas.length - newQuantity} pessoa(s) removida(s) para ajustar à nova quantidade`)
                     }
                   }}
                   min="1"
@@ -724,29 +886,37 @@ export default function EquipesTabPanel() {
                 </label>
                 <input
                   type="number"
-                  className="form-control"
-                  value={novoPapelPrioridade}
-                  onChange={e => setNovoPapelPrioridade(Math.max(1, parseInt(e.target.value) || 1))}
+                  className={`form-control ${equipeSelecionada?.roles.some(r => r.priority === novaFuncaoPrioridade && r.id !== funcaoParaEditar?.id) ? 'input-error' : ''}`}
+                  value={novaFuncaoPrioridade}
+                  onChange={e => setNovaFuncaoPrioridade(Math.max(1, parseInt(e.target.value) || 1))}
                   min="1"
                   required
                 />
-                <small className="form-help">Número menor = maior prioridade</small>
+                <small className="form-help">
+                  {equipeSelecionada?.roles.some(r => r.priority === novaFuncaoPrioridade && r.id !== funcaoParaEditar?.id) ? (
+                    <span style={{ color: 'var(--color-pink)' }}>
+                      <i className="fa-solid fa-exclamation-circle"></i> Prioridade {novaFuncaoPrioridade} já está em uso
+                    </span>
+                  ) : (
+                    'Número menor = maior prioridade'
+                  )}
+                </small>
               </div>
             </div>
 
             <div className="form-group" style={{ marginTop: '20px' }}>
               <div
-                className={`checkbox-wrapper ${novoPapelIsFixo ? 'checked' : ''}`}
+                className={`checkbox-wrapper ${novaFuncaoIsFixo ? 'checked' : ''}`}
                 onClick={() => {
-                  const newState = !novoPapelIsFixo
-                  setNovoPapelIsFixo(newState)
+                  const newState = !novaFuncaoIsFixo
+                  setNovaFuncaoIsFixo(newState)
                   if (!newState) {
-                    setNovoPapelPessoasFixas([])
+                    setNovaFuncaoPessoasFixas([])
                   }
                 }}
                 style={{ cursor: 'pointer' }}
               >
-                <div className={`checkbox-visual ${novoPapelIsFixo ? 'checked' : ''}`}>
+                <div className={`checkbox-visual ${novaFuncaoIsFixo ? 'checked' : ''}`}>
                   <i className="fa-solid fa-check"></i>
                 </div>
                 <span className="checkbox-custom-label">
@@ -755,11 +925,11 @@ export default function EquipesTabPanel() {
                 </span>
               </div>
               <small className="form-help" style={{ marginLeft: '5px', marginTop: '8px' }}>
-                Marque para definir pessoas fixas para este papel
+                Marque para definir pessoas fixas para esta função
               </small>
             </div>
 
-            {novoPapelIsFixo && (
+            {novaFuncaoIsFixo && (
               <div className="form-group" style={{ marginTop: '20px' }}>
                 <label>Pessoas Fixas *</label>
                 <div className="selector-container">
@@ -783,8 +953,8 @@ export default function EquipesTabPanel() {
                   />
                   <div className="list-container">
                     {availablePersons.map(p => {
-                      const isSelected = novoPapelPessoasFixas.includes(p.personId)
-                      const isMaxReached = novoPapelIsFixo && !isSelected && novoPapelPessoasFixas.length >= novoPapelQuantidade
+                      const isSelected = novaFuncaoPessoasFixas.includes(p.personId)
+                      const isMaxReached = novaFuncaoIsFixo && !isSelected && novaFuncaoPessoasFixas.length >= novaFuncaoQuantidade
 
                       return (
                          <div
@@ -792,24 +962,24 @@ export default function EquipesTabPanel() {
                            className={`option-item person-item ${isSelected ? 'selected' : ''} ${isMaxReached ? 'disabled' : ''}`}
                            onClick={() => {
                              if (isMaxReached) {
-                               toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
+                               toast.showError(`Você já selecionou o máximo de ${novaFuncaoQuantidade} pessoa(s) fixa(s)`)
                                return
                              }
                              if (isSelected) {
-                               setNovoPapelPessoasFixas(novoPapelPessoasFixas.filter(id => id !== p.personId))
+                               setNovaFuncaoPessoasFixas(novaFuncaoPessoasFixas.filter(id => id !== p.personId))
                              } else {
-                               if (novoPapelIsFixo && novoPapelPessoasFixas.length >= novoPapelQuantidade) {
-                                 toast.showError(`Você já selecionou o máximo de ${novoPapelQuantidade} pessoa(s) fixa(s)`)
+                               if (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length >= novaFuncaoQuantidade) {
+                                 toast.showError(`Você já selecionou o máximo de ${novaFuncaoQuantidade} pessoa(s) fixa(s)`)
                                  return
                                }
-                               setNovoPapelPessoasFixas([...novoPapelPessoasFixas, p.personId])
+                               setNovaFuncaoPessoasFixas([...novaFuncaoPessoasFixas, p.personId])
                              }
                            }}
                            data-name={p.person?.fullName || ''}
                            data-responsibilities={p.responsibilities && p.responsibilities.length > 0
                              ? p.responsibilities.map(r => r.name).join(', ')
                              : ''}
-                           title={isMaxReached ? `Limite de ${novoPapelQuantidade} pessoa(s) atingido` : ''}
+                           title={isMaxReached ? `Limite de ${novaFuncaoQuantidade} pessoa(s) atingido` : ''}
                          >
                           {p.person?.photoUrl ? (
                             <img
@@ -844,10 +1014,10 @@ export default function EquipesTabPanel() {
                   </div>
                 </div>
                 <small className="form-help">
-                  {novoPapelPessoasFixas.length > 0
-                    ? `Selecionado: ${novoPapelPessoasFixas.length} de ${novoPapelQuantidade} pessoa(s)`
-                    : `Selecione até ${novoPapelQuantidade} pessoa(s) fixa(s) para este papel.`}
-                  {novoPapelPessoasFixas.length >= novoPapelQuantidade && (
+                  {novaFuncaoPessoasFixas.length > 0
+                    ? `Selecionado: ${novaFuncaoPessoasFixas.length} de ${novaFuncaoQuantidade} pessoa(s)`
+                    : `Selecione até ${novaFuncaoQuantidade} pessoa(s) fixa(s) para esta função.`}
+                  {novaFuncaoPessoasFixas.length >= novaFuncaoQuantidade && (
                     <span style={{ color: 'var(--color-teal)', marginLeft: '8px' }}>
                       <i className="fa-solid fa-check-circle"></i> Limite atingido
                     </span>
@@ -861,12 +1031,14 @@ export default function EquipesTabPanel() {
                 type="button"
                 className="btn-secondary"
                 onClick={() => {
-                  setShowAddPapelModal(false)
-                  setNovoPapelResponsibilityId('')
-                  setNovoPapelQuantidade(1)
-                  setNovoPapelPrioridade(1)
-                  setNovoPapelIsFixo(false)
-                  setNovoPapelPessoasFixas([])
+                  setShowAddFuncaoModal(false)
+                  setShowEditFuncaoModal(false)
+                  setNovaFuncaoResponsibilityId('')
+                  setNovaFuncaoQuantidade(1)
+                  setNovaFuncaoPrioridade(1)
+                  setNovaFuncaoIsFixo(false)
+                  setNovaFuncaoPessoasFixas([])
+                  setFuncaoParaEditar(null)
                 }}
               >
                 <i className="fa-solid fa-times"></i> Cancelar
@@ -875,13 +1047,14 @@ export default function EquipesTabPanel() {
                 type="submit"
                 className="btn-primary"
                 disabled={
-                  !novoPapelResponsibilityId ||
-                  novoPapelQuantidade < 1 ||
-                  (novoPapelIsFixo && novoPapelPessoasFixas.length === 0) ||
-                  (novoPapelIsFixo && novoPapelPessoasFixas.length > novoPapelQuantidade)
+                  !novaFuncaoResponsibilityId ||
+                  novaFuncaoQuantidade < 1 ||
+                  (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length === 0) ||
+                  (novaFuncaoIsFixo && novaFuncaoPessoasFixas.length > novaFuncaoQuantidade) ||
+                  (equipeSelecionada?.roles.some(r => r.priority === novaFuncaoPrioridade && r.id !== funcaoParaEditar?.id) ?? false)
                 }
               >
-                <i className="fa-solid fa-check"></i> Adicionar Papel
+                <i className="fa-solid fa-check"></i> {showEditFuncaoModal ? 'Salvar Alterações' : 'Adicionar Função'}
               </button>
             </div>
           </form>
