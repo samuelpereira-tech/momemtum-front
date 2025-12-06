@@ -1,0 +1,72 @@
+/* Estilos para o Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--white);
+  border: 1px solid #e0e0e0;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.modal-close {
+  width: 35px;
+  height: 35px;
+  border: none;
+  background: transparent;
+  color: var(--text-light);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  border-radius: 0;
+}
+
+.modal-close:hover {
+  background: rgba(242, 156, 148, 0.1);
+  color: var(--color-pink);
+}
+
+.modal-body {
+  padding: 25px;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 100%;
+    margin: 10px;
+  }
+}
+

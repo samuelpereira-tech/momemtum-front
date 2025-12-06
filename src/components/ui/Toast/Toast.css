@@ -1,0 +1,129 @@
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 15px 20px;
+  background: var(--white);
+  border-left: 4px solid;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+  max-width: 500px;
+  animation: slideIn 0.3s ease-out;
+  position: relative;
+  z-index: 10000;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.toast i {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text-color);
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  color: var(--text-color);
+}
+
+.toast-close i {
+  font-size: 0.9rem;
+}
+
+/* Toast types */
+.toast-success {
+  border-left-color: var(--color-green);
+}
+
+.toast-success i {
+  color: var(--color-green);
+}
+
+.toast-error {
+  border-left-color: var(--color-pink);
+}
+
+.toast-error i {
+  color: var(--color-pink);
+}
+
+.toast-warning {
+  border-left-color: var(--color-yellow);
+}
+
+.toast-warning i {
+  color: var(--color-yellow);
+}
+
+.toast-info {
+  border-left-color: var(--color-purple);
+}
+
+.toast-info i {
+  color: var(--color-purple);
+}
+
+/* Toast container */
+.toast-container {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast-container > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .toast {
+    min-width: 280px;
+    max-width: calc(100vw - 40px);
+  }
+
+  .toast-container {
+    right: 10px;
+    left: 10px;
+    top: 80px;
+  }
+}
+

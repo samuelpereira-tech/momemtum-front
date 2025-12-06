@@ -1,0 +1,204 @@
+/* Estilos compartilhados para os painéis de abas */
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tab-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-panel-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tab-panel-title i {
+  color: var(--color-purple);
+}
+
+.tab-panel-body {
+  flex: 1;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-light);
+}
+
+.empty-state i {
+  font-size: 4rem;
+  color: #e0e0e0;
+  margin-bottom: 20px;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin: 0 0 20px 0;
+}
+
+/* Estilos para tabelas */
+.tab-panel-body .table-wrapper {
+  overflow-x: auto;
+}
+
+.tab-panel-body .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tab-panel-body .data-table thead {
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tab-panel-body .data-table th {
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tab-panel-body .data-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.tab-panel-body .data-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.tab-panel-body .data-table td {
+  padding: 15px;
+  color: var(--text-color);
+  vertical-align: middle;
+}
+
+.tab-panel-body .table-photo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  flex-shrink: 0;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tab-panel-body .table-photo:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tab-panel-body .table-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tab-panel-body .table-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  font-size: 1.2rem;
+  background: linear-gradient(135deg, var(--color-purple), var(--color-teal));
+  color: var(--white);
+}
+
+.tab-panel-body .table-empty {
+  text-align: center;
+  padding: 40px 20px !important;
+  color: var(--text-light);
+}
+
+.tab-panel-body .table-empty i {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+.tab-panel-body .table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tab-panel-body .btn-action {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  font-size: 0.85rem;
+}
+
+.tab-panel-body .btn-edit {
+  background: rgba(173, 130, 216, 0.1);
+  color: var(--color-purple);
+}
+
+.tab-panel-body .btn-edit:hover {
+  background: var(--color-purple);
+  color: var(--white);
+}
+
+.tab-panel-body .btn-delete {
+  background: rgba(242, 156, 148, 0.1);
+  color: var(--color-pink);
+}
+
+.tab-panel-body .btn-delete:hover {
+  background: var(--color-pink);
+  color: var(--white);
+}
+
+@media (max-width: 768px) {
+  .tab-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .tab-panel-body .table-wrapper {
+    overflow-x: scroll;
+  }
+
+  .tab-panel-body .data-table {
+    font-size: 0.8rem;
+  }
+
+  .tab-panel-body .data-table th,
+  .tab-panel-body .data-table td {
+    padding: 10px 8px;
+  }
+}
+

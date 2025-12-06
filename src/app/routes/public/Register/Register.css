@@ -1,0 +1,191 @@
+:root {
+  --color-purple: #AD82D9;
+  --color-teal: #79D9C7;
+  --color-green: #A9D979;
+  --color-yellow: #F2B33D;
+  --color-pink: #F29C94;
+  
+  --bg-gradient: linear-gradient(135deg, var(--color-purple), var(--color-teal));
+  --text-color: #333;
+  --text-light: #666;
+  --white: #ffffff;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+body:has(.register-container) {
+  background: linear-gradient(135deg, #AD82D9, #79D9C7);
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+body:has(.register-container)::before,
+body:has(.register-container)::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  z-index: -1;
+}
+
+body:has(.register-container)::before {
+  width: 300px;
+  height: 300px;
+  background: #F2B33D;
+  top: -50px;
+  left: -50px;
+  filter: blur(80px);
+  opacity: 0.6;
+}
+
+body:has(.register-container)::after {
+  width: 250px;
+  height: 250px;
+  background: #F29C94;
+  bottom: -50px;
+  right: -50px;
+  filter: blur(80px);
+  opacity: 0.6;
+}
+
+.register-container {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.register-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.register-header h2 {
+  color: var(--text-color);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.register-header p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: 30px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-wrapper i {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+  transition: color 0.3s;
+}
+
+.input-wrapper i:first-child {
+  left: 15px;
+}
+
+.input-wrapper .toggle-password {
+  right: 15px;
+  cursor: pointer;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 12px 15px 12px 45px;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.input-wrapper:has(.toggle-password) input {
+  padding-right: 45px;
+}
+
+.input-wrapper input:focus {
+  border-color: var(--color-purple);
+}
+
+.input-wrapper input:focus + i,
+.input-wrapper input:focus ~ i {
+  color: var(--color-purple);
+}
+
+.btn-register {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(to right, var(--color-purple), var(--color-teal));
+  border: none;
+  border-radius: 10px;
+  color: var(--white);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 5px 15px rgba(173, 130, 216, 0.4);
+  margin-top: 10px;
+}
+
+.btn-register:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(173, 130, 216, 0.6);
+}
+
+.btn-register:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-register:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.register-footer {
+  margin-top: 25px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.register-footer a {
+  color: var(--color-purple);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .register-card {
+    padding: 30px 20px;
+  }
+}
+

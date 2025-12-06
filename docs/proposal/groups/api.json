@@ -1,0 +1,1367 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Groups API",
+    "version": "1.0.0",
+    "description": "API for managing groups within scheduled areas and the association of persons (members) to those groups"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/api/scheduled-areas/{scheduledAreaId}/groups": {
+      "post": {
+        "summary": "Create a new group",
+        "description": "Creates a new group within a scheduled area.",
+        "operationId": "GroupController_create",
+        "tags": ["groups"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Group created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Group with this name already exists in the scheduled area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List groups in scheduled area",
+        "description": "Retrieves a paginated list of all groups within a scheduled area, including their members and member responsibilities.",
+        "operationId": "GroupController_findAll",
+        "tags": ["groups"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number (starts at 1)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by group name (partial match, case-insensitive)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of groups retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedGroupResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}": {
+      "get": {
+        "summary": "Get group by ID",
+        "description": "Retrieves a specific group by its ID, including all members and their responsibilities.",
+        "operationId": "GroupController_findOne",
+        "tags": ["groups"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update group",
+        "description": "Updates a group's name and description. Only provided fields will be updated.",
+        "operationId": "GroupController_update",
+        "tags": ["groups"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Group updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Group with this name already exists in the scheduled area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete group",
+        "description": "Removes a group and all its member associations. This operation cannot be undone.",
+        "operationId": "GroupController_remove",
+        "tags": ["groups"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Group deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}/members": {
+      "post": {
+        "summary": "Add member to group",
+        "description": "Adds a person to a group within a scheduled area. The person must already be associated with the scheduled area (via Person Area API).",
+        "operationId": "GroupMemberController_create",
+        "tags": ["group-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Member added to group successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (person not found, person not in scheduled area, responsibility not found, or responsibility doesn't belong to the area)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Person is already a member of this group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List members in group",
+        "description": "Retrieves a paginated list of all members in a group, including their responsibilities.",
+        "operationId": "GroupMemberController_findAll",
+        "tags": ["group-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number (starts at 1)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          },
+          {
+            "name": "personName",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by person name (partial match, case-insensitive)"
+          },
+          {
+            "name": "personEmail",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by person email (partial match, case-insensitive)"
+          },
+          {
+            "name": "responsibilityId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by responsibility ID (show only members with this responsibility)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of group members retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedGroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}/members/{memberId}": {
+      "get": {
+        "summary": "Get group member by ID",
+        "description": "Retrieves a specific group member by their member ID.",
+        "operationId": "GroupMemberController_findOne",
+        "tags": ["group-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group member unique identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group member retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group member, group, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update group member responsibilities",
+        "description": "Updates the responsibilities assigned to a member within a group. The entire responsibilities list is replaced with the provided list.",
+        "operationId": "GroupMemberController_update",
+        "tags": ["group-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group member unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Group member responsibilities updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (responsibility not found or doesn't belong to the area)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group member, group, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove member from group",
+        "description": "Removes a person from a group, including all their responsibility assignments within that group.",
+        "operationId": "GroupMemberController_remove",
+        "tags": ["group-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group member unique identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Member removed from group successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group member, group, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}/members/by-person/{personId}": {
+      "get": {
+        "summary": "Get group member by person ID",
+        "description": "Retrieves the group member association for a specific person in a group. This is useful when you know the person ID but not the member ID.",
+        "operationId": "GroupMemberController_findByPersonId",
+        "tags": ["group-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Group unique identifier"
+          },
+          {
+            "name": "personId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Person unique identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group member retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Person not a member of this group, or group/scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtained from authentication endpoint"
+      }
+    },
+    "schemas": {
+      "CreateGroupDto": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Name of the group",
+            "example": "Equipe de Plantão A"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Description of the group (optional)",
+            "example": "Grupo responsável pelo plantão noturno"
+          }
+        }
+      },
+      "UpdateGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255,
+            "description": "Name of the group"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Description of the group"
+          }
+        }
+      },
+      "GroupResponseDto": {
+        "type": "object",
+        "required": ["id", "name", "scheduledAreaId", "membersCount", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the group",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "name": {
+            "type": "string",
+            "example": "Equipe de Plantão A"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Grupo responsável pelo plantão noturno"
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the scheduled area this group belongs to",
+            "example": "def67890-e89b-12d3-a456-426614174004"
+          },
+          "scheduledArea": {
+            "$ref": "#/components/schemas/ScheduledAreaDto",
+            "description": "Scheduled area information (populated when requested)",
+            "nullable": true
+          },
+          "membersCount": {
+            "type": "integer",
+            "description": "Number of members in the group",
+            "example": 5
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberResponseDto"
+            },
+            "description": "Array of group members (populated when requested)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        }
+      },
+      "CreateGroupMemberDto": {
+        "type": "object",
+        "required": ["personId", "responsibilityIds"],
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the person to add to the group (must be associated with the scheduled area)",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "responsibilityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "description": "Array of responsibility IDs (must belong to the scheduled area, at least one required)",
+            "example": [
+              "456e7890-e89b-12d3-a456-426614174001",
+              "789e0123-e89b-12d3-a456-426614174002"
+            ]
+          }
+        }
+      },
+      "UpdateGroupMemberDto": {
+        "type": "object",
+        "required": ["responsibilityIds"],
+        "properties": {
+          "responsibilityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "description": "Array of responsibility IDs (must belong to the scheduled area, at least one required)",
+            "example": [
+              "456e7890-e89b-12d3-a456-426614174001",
+              "012e3456-e89b-12d3-a456-426614174005"
+            ]
+          }
+        }
+      },
+      "GroupMemberResponseDto": {
+        "type": "object",
+        "required": ["id", "personId", "groupId", "responsibilities", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the group member association",
+            "example": "xyz98765-e89b-12d3-a456-426614174005"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the associated person",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonInfoDto",
+            "description": "Person information (populated when requested)",
+            "nullable": true
+          },
+          "groupId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the group",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "group": {
+            "$ref": "#/components/schemas/GroupInfoDto",
+            "description": "Group information (populated when requested)",
+            "nullable": true
+          },
+          "responsibilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsibilityInfoDto"
+            },
+            "description": "Array of responsibilities assigned to the person in this group"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        }
+      },
+      "PersonInfoDto": {
+        "type": "object",
+        "required": ["id", "fullName", "email", "photoUrl"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "joao.silva@example.com"
+          },
+          "photoUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the person's photo",
+            "example": "https://example.com/photos/person-123e4567-e89b-12d3-a456-426614174000.jpg"
+          }
+        }
+      },
+      "GroupInfoDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "name": {
+            "type": "string",
+            "example": "Equipe de Plantão A"
+          }
+        }
+      },
+      "ScheduledAreaDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "def67890-e89b-12d3-a456-426614174004"
+          },
+          "name": {
+            "type": "string",
+            "example": "Área de Produção"
+          }
+        }
+      },
+      "ResponsibilityInfoDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "456e7890-e89b-12d3-a456-426614174001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Líder"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "Lidera a equipe"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the responsibility image",
+            "example": "https://example.com/images/responsibility-456e7890-e89b-12d3-a456-426614174001.jpg"
+          }
+        }
+      },
+      "PaginatedGroupResponseDto": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        }
+      },
+      "PaginatedGroupMemberResponseDto": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        }
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "required": ["page", "limit", "total", "totalPages"],
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 10
+          },
+          "total": {
+            "type": "integer",
+            "example": 15
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid input data"
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of validation error messages",
+            "example": [
+              "name must be longer than or equal to 3 characters",
+              "personId must be a UUID"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+
+

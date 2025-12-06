@@ -1,0 +1,5209 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "description": "Endpoint básico de teste",
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Mensagem de boas-vindas"
+          }
+        },
+        "summary": "Hello World",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health-supabase": {
+      "get": {
+        "description": "Verifica o status da aplicação e conexão com Supabase",
+        "operationId": "AppController_healthCheck",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Status da aplicação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2024-01-01T00:00:00.000Z"
+                    },
+                    "supabase": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "example": "ok"
+                        },
+                        "message": {
+                          "type": "string",
+                          "example": "Supabase is connected and responding"
+                        },
+                        "connected": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Health Check",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "description": "Registra um novo usuário com email e senha",
+        "operationId": "AuthController_signUp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpEmailPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conta criada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "403": {
+            "description": "Rate limit excedido. Aguarde antes de tentar novamente"
+          },
+          "409": {
+            "description": "Email já cadastrado"
+          }
+        },
+        "summary": "Criar nova conta",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/email-password": {
+      "post": {
+        "description": "Autentica um usuário usando email e senha",
+        "operationId": "AuthController_signInWithEmailPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInEmailPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login realizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciais inválidas"
+          },
+          "403": {
+            "description": "Rate limit excedido. Aguarde antes de tentar novamente"
+          }
+        },
+        "summary": "Login com email e senha",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/oauth": {
+      "get": {
+        "description": "Redireciona para a página de autorização do provedor OAuth (Google, GitHub, Facebook, Apple)",
+        "operationId": "AuthController_signInWithOAuth",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "query",
+            "description": "Provedor OAuth",
+            "schema": {
+              "enum": [
+                "google",
+                "github",
+                "facebook",
+                "apple"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "redirectUri",
+            "required": false,
+            "in": "query",
+            "description": "URI de redirecionamento após autenticação",
+            "schema": {
+              "example": "http://localhost:3000/callback",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "URL de autorização (quando não há redirecionamento)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthUrlResponseDto"
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirecionamento para página de autorização OAuth"
+          }
+        },
+        "summary": "Iniciar autenticação OAuth",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/oauth/callback": {
+      "get": {
+        "description": "Processa o callback do provedor OAuth após autorização do usuário",
+        "operationId": "AuthController_signInWithOAuthCallback",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "query",
+            "description": "Provedor OAuth",
+            "schema": {
+              "enum": [
+                "google",
+                "github",
+                "facebook",
+                "apple"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "query",
+            "description": "Código de autorização retornado pelo provedor OAuth",
+            "schema": {
+              "example": "4/0AeaYSHBw8...",
+              "type": "string"
+            }
+          },
+          {
+            "name": "redirectUri",
+            "required": false,
+            "in": "query",
+            "description": "URI de redirecionamento",
+            "schema": {
+              "example": "http://localhost:3000/callback",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Autenticação OAuth realizada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Código OAuth inválido ou ausente"
+          }
+        },
+        "summary": "Callback OAuth",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/magic-link": {
+      "post": {
+        "description": "Envia um link mágico por email para autenticação sem senha",
+        "operationId": "AuthController_signInWithMagicLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInMagicLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Magic link enviado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MagicLinkSentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email inválido"
+          },
+          "403": {
+            "description": "Rate limit excedido. Aguarde antes de tentar novamente"
+          }
+        },
+        "summary": "Enviar magic link",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/magic-link/verify": {
+      "post": {
+        "description": "Verifica o token do magic link e autentica o usuário",
+        "operationId": "AuthController_verifyMagicLink",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyMagicLinkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Magic link verificado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Token inválido ou expirado"
+          }
+        },
+        "summary": "Verificar magic link",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/otp": {
+      "post": {
+        "description": "Se o código não for fornecido, envia OTP por SMS. Se fornecido, verifica e autentica",
+        "operationId": "AuthController_signInWithOTP",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInOTPDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP enviado ou verificado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Telefone inválido ou código incorreto"
+          },
+          "403": {
+            "description": "Rate limit excedido. Aguarde antes de tentar novamente"
+          }
+        },
+        "summary": "Enviar ou verificar OTP",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signin/otp/verify": {
+      "post": {
+        "description": "Verifica o código OTP recebido por SMS e autentica o usuário",
+        "operationId": "AuthController_verifyOTP",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOTPDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verificado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Código OTP inválido ou expirado"
+          }
+        },
+        "summary": "Verificar código OTP",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "description": "Renova o access token usando o refresh token",
+        "operationId": "AuthController_refreshToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token renovado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResultResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token inválido ou expirado"
+          }
+        },
+        "summary": "Renovar token",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "description": "Retorna os dados do usuário autenticado",
+        "operationId": "AuthController_getCurrentUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Dados do usuário autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Obter usuário atual",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/signout": {
+      "post": {
+        "description": "Encerra a sessão do usuário autenticado",
+        "operationId": "AuthController_signOut",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Logout realizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Logged out successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Logout",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "description": "Altera a senha do usuário autenticado",
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Senha alterada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Password changed successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Senha atual incorreta ou não autenticado"
+          },
+          "403": {
+            "description": "Rate limit excedido. Aguarde antes de tentar novamente"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Alterar senha",
+        "tags": [
+          "authentication"
+        ]
+      }
+    },
+    "/persons": {
+      "post": {
+        "description": "Creates a new person with the provided information. The photo can be uploaded separately using the photo upload endpoint.",
+        "operationId": "PersonController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePersonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Person created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "409": {
+            "description": "Conflict - Person with this email or CPF already exists"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new person",
+        "tags": [
+          "persons"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a list of all persons with pagination support",
+        "operationId": "PersonController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 10, max: 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of persons retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPersonResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all persons",
+        "tags": [
+          "persons"
+        ]
+      }
+    },
+    "/persons/{id}": {
+      "get": {
+        "description": "Retrieves a specific person by their ID",
+        "operationId": "PersonController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Person retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get person by ID",
+        "tags": [
+          "persons"
+        ]
+      },
+      "put": {
+        "description": "Updates an existing person's information",
+        "operationId": "PersonController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePersonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Person updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update person",
+        "tags": [
+          "persons"
+        ]
+      },
+      "delete": {
+        "description": "Deletes a person by their ID",
+        "operationId": "PersonController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Person deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete person",
+        "tags": [
+          "persons"
+        ]
+      }
+    },
+    "/persons/{id}/photo": {
+      "post": {
+        "description": "Uploads or updates a photo for a specific person. Accepts image files (JPG, PNG, GIF) with a maximum size of 5MB.",
+        "operationId": "PersonController_uploadPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photo": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Image file (JPG, PNG, GIF). Maximum size: 5MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Photo uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoUploadResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file format or size exceeds 5MB"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not found"
+          },
+          "413": {
+            "description": "Payload too large - File size exceeds 5MB"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Upload person photo",
+        "tags": [
+          "persons"
+        ]
+      },
+      "delete": {
+        "description": "Removes the photo from a specific person",
+        "operationId": "PersonController_deletePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Photo deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not found or photo does not exist"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete person photo",
+        "tags": [
+          "persons"
+        ]
+      }
+    },
+    "/api/scheduled-absences": {
+      "post": {
+        "description": "Creates a new scheduled absence for a person",
+        "operationId": "ScheduledAbsenceController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduledAbsenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scheduled absence created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAbsenceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person or absence type not found"
+          },
+          "409": {
+            "description": "Conflict - Overlapping absence dates for the same person"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new scheduled absence",
+        "tags": [
+          "scheduled-absences"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of scheduled absences with optional filters",
+        "operationId": "ScheduledAbsenceController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 10, max: 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "personId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person ID (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "personName",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person name (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "absenceTypeId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by absence type ID (UUID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Filter by start date (ISO 8601 format YYYY-MM-DD). Returns absences starting from this date",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "Filter by end date (ISO 8601 format YYYY-MM-DD). Returns absences ending before or on this date",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateRange",
+            "required": false,
+            "in": "query",
+            "description": "Filter by date range. Returns absences that overlap with the specified date range. Format: YYYY-MM-DD,YYYY-MM-DD",
+            "schema": {
+              "example": "2024-12-01,2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of scheduled absences retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScheduledAbsenceResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all scheduled absences",
+        "tags": [
+          "scheduled-absences"
+        ]
+      }
+    },
+    "/api/scheduled-absences/{id}": {
+      "get": {
+        "description": "Retrieves a specific scheduled absence by its ID",
+        "operationId": "ScheduledAbsenceController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled absence retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAbsenceResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled absence not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get scheduled absence by ID",
+        "tags": [
+          "scheduled-absences"
+        ]
+      },
+      "put": {
+        "description": "Updates an existing scheduled absence",
+        "operationId": "ScheduledAbsenceController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduledAbsenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scheduled absence updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAbsenceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled absence, person, or absence type not found"
+          },
+          "409": {
+            "description": "Conflict - Overlapping absence dates for the same person"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update scheduled absence",
+        "tags": [
+          "scheduled-absences"
+        ]
+      },
+      "delete": {
+        "description": "Deletes a scheduled absence by its ID",
+        "operationId": "ScheduledAbsenceController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled absence deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Scheduled absence deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled absence not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete scheduled absence",
+        "tags": [
+          "scheduled-absences"
+        ]
+      }
+    },
+    "/api/absence-types": {
+      "post": {
+        "description": "Creates a new absence type (e.g., Férias, Feriado, Licença)",
+        "operationId": "AbsenceTypeController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAbsenceTypeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Absence type created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceTypeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "409": {
+            "description": "Conflict - Absence type with this name already exists"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new absence type",
+        "tags": [
+          "absence-types"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of absence types with optional filters",
+        "operationId": "AbsenceTypeController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 10, max: 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filter by name (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of absence types retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedAbsenceTypeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all absence types",
+        "tags": [
+          "absence-types"
+        ]
+      }
+    },
+    "/api/absence-types/{id}": {
+      "get": {
+        "description": "Retrieves a specific absence type by its ID",
+        "operationId": "AbsenceTypeController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Absence type retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceTypeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Absence type not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get absence type by ID",
+        "tags": [
+          "absence-types"
+        ]
+      },
+      "put": {
+        "description": "Updates an existing absence type",
+        "operationId": "AbsenceTypeController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAbsenceTypeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Absence type updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceTypeResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Absence type not found"
+          },
+          "409": {
+            "description": "Conflict - Absence type with this name already exists"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update absence type",
+        "tags": [
+          "absence-types"
+        ]
+      },
+      "delete": {
+        "description": "Deletes an absence type by its ID. Cannot delete if there are scheduled absences using this type.",
+        "operationId": "AbsenceTypeController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Absence type deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Absence type deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Absence type not found"
+          },
+          "409": {
+            "description": "Conflict - Cannot delete absence type that is being used by scheduled absences"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete absence type",
+        "tags": [
+          "absence-types"
+        ]
+      }
+    },
+    "/api/absence-types/{id}/toggle": {
+      "patch": {
+        "description": "Toggles the active status of an absence type",
+        "operationId": "AbsenceTypeController_toggle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Absence type status toggled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceTypeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Absence type not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Toggle absence type active status",
+        "tags": [
+          "absence-types"
+        ]
+      }
+    },
+    "/api/scheduled-areas": {
+      "post": {
+        "description": "Creates a new scheduled area with the provided information. The image can be uploaded separately using the image upload endpoint.",
+        "operationId": "ScheduledAreaController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduledAreaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Scheduled area created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAreaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Responsible person not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new scheduled area",
+        "tags": [
+          "scheduled-areas"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a list of all scheduled areas with pagination support. Can be filtered by favorite status.",
+        "operationId": "ScheduledAreaController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "favorite",
+            "required": false,
+            "in": "query",
+            "description": "Filter by favorite status",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of scheduled areas retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScheduledAreaResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all scheduled areas",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{id}": {
+      "get": {
+        "description": "Retrieves a specific scheduled area by its ID",
+        "operationId": "ScheduledAreaController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scheduled area retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAreaResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get scheduled area by ID",
+        "tags": [
+          "scheduled-areas"
+        ]
+      },
+      "patch": {
+        "description": "Updates a scheduled area with the provided information. Only provided fields will be updated.",
+        "operationId": "ScheduledAreaController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduledAreaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Scheduled area updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAreaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found or responsible person not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update scheduled area",
+        "tags": [
+          "scheduled-areas"
+        ]
+      },
+      "delete": {
+        "description": "Deletes a scheduled area by its ID",
+        "operationId": "ScheduledAreaController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Scheduled area deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete scheduled area",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{id}/image": {
+      "post": {
+        "description": "Uploads or updates an image for a specific scheduled area. Accepts image files (JPG, PNG, GIF) with a maximum size of 5MB.",
+        "operationId": "ScheduledAreaController_uploadImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Image file (JPG, PNG, GIF). Maximum size: 5MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file format or size exceeds 5MB"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          },
+          "413": {
+            "description": "Payload too large - File size exceeds 5MB"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Upload scheduled area image",
+        "tags": [
+          "scheduled-areas"
+        ]
+      },
+      "delete": {
+        "description": "Removes the image from a specific scheduled area",
+        "operationId": "ScheduledAreaController_deleteImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Image deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found or image does not exist"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete scheduled area image",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{id}/favorite": {
+      "patch": {
+        "description": "Toggles the favorite status of a scheduled area",
+        "operationId": "ScheduledAreaController_toggleFavorite",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToggleFavoriteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Favorite status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledAreaResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Toggle favorite status",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
+    "/api/responsibilities": {
+      "post": {
+        "description": "Creates a new responsibility with the provided information. Must be linked to a scheduled area.",
+        "operationId": "ResponsibilityController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateResponsibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Responsibility created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsibilityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new responsibility",
+        "tags": [
+          "responsibilities"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a list of all responsibilities with pagination support. Can be filtered by scheduled area ID.",
+        "operationId": "ResponsibilityController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "scheduledAreaId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by scheduled area ID",
+            "schema": {
+              "example": "123e4567-e89b-12d3-a456-426614174000",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of responsibilities retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponsibilityResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all responsibilities",
+        "tags": [
+          "responsibilities"
+        ]
+      }
+    },
+    "/api/responsibilities/{id}": {
+      "get": {
+        "description": "Retrieves a specific responsibility by its ID",
+        "operationId": "ResponsibilityController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Responsibility retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsibilityResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Responsibility not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get responsibility by ID",
+        "tags": [
+          "responsibilities"
+        ]
+      },
+      "patch": {
+        "description": "Updates a responsibility with the provided information. Only provided fields will be updated.",
+        "operationId": "ResponsibilityController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateResponsibilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Responsibility updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponsibilityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Responsibility not found or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update responsibility",
+        "tags": [
+          "responsibilities"
+        ]
+      },
+      "delete": {
+        "description": "Deletes a responsibility by its ID",
+        "operationId": "ResponsibilityController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Responsibility deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Responsibility not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete responsibility",
+        "tags": [
+          "responsibilities"
+        ]
+      }
+    },
+    "/api/responsibilities/{id}/image": {
+      "post": {
+        "description": "Uploads or updates an image for a specific responsibility. Accepts image files (JPG, PNG, GIF) with a maximum size of 5MB.",
+        "operationId": "ResponsibilityController_uploadImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Image file (JPG, PNG, GIF). Maximum size: 5MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file format or size exceeds 5MB"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Responsibility not found"
+          },
+          "413": {
+            "description": "Payload too large - File size exceeds 5MB"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Upload responsibility image",
+        "tags": [
+          "responsibilities"
+        ]
+      },
+      "delete": {
+        "description": "Removes the image from a specific responsibility",
+        "operationId": "ResponsibilityController_deleteImage",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Image deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Responsibility not found or image does not exist"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete responsibility image",
+        "tags": [
+          "responsibilities"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/persons": {
+      "post": {
+        "description": "Associates a person with a scheduled area and assigns one or more responsibilities to them.",
+        "operationId": "PersonAreaController_create",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePersonAreaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Person added to scheduled area successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonAreaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (person not found, responsibility not found, or responsibility does not belong to the area)"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          },
+          "409": {
+            "description": "Conflict - Person is already associated with this scheduled area"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add person to scheduled area",
+        "tags": [
+          "person-areas"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of all persons associated with a scheduled area, including their assigned responsibilities.",
+        "operationId": "PersonAreaController_findAll",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "personName",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person name (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "personEmail",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person email (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibilityId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by responsibility ID (show only persons with this responsibility)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of persons in scheduled area retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPersonAreaResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List persons in scheduled area",
+        "tags": [
+          "person-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/persons/by-person/{personId}": {
+      "get": {
+        "description": "Retrieves the person-area association for a specific person in a scheduled area. This is useful when you know the person ID but not the association ID.",
+        "operationId": "PersonAreaController_findByPersonId",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "personId",
+            "required": true,
+            "in": "path",
+            "description": "Person unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Person area association retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonAreaResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not associated with this scheduled area, or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get person area by person ID",
+        "tags": [
+          "person-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/persons/{personAreaId}": {
+      "get": {
+        "description": "Retrieves a specific person-area association by its ID.",
+        "operationId": "PersonAreaController_findOne",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "personAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Person area association unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Person area association retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonAreaResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person area association or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get person area association by ID",
+        "tags": [
+          "person-areas"
+        ]
+      },
+      "patch": {
+        "description": "Updates the responsibilities assigned to a person in a scheduled area. Only the responsibilities list will be updated.",
+        "operationId": "PersonAreaController_update",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "personAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Person area association unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePersonAreaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Person responsibilities updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonAreaResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (responsibility not found or does not belong to the area)"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person area association or scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update person responsibilities in area",
+        "tags": [
+          "person-areas"
+        ]
+      },
+      "delete": {
+        "description": "Removes a person from a scheduled area, including all their assigned responsibilities.",
+        "operationId": "PersonAreaController_remove",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "personAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Person area association unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Person removed from scheduled area successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person area association or scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Remove person from scheduled area",
+        "tags": [
+          "person-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups": {
+      "post": {
+        "description": "Creates a new group within a scheduled area.",
+        "operationId": "GroupController_create",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Group created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          },
+          "409": {
+            "description": "Conflict - Group with this name already exists in the scheduled area"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new group",
+        "tags": [
+          "groups"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of all groups within a scheduled area, including their members and member responsibilities.",
+        "operationId": "GroupController_findAll",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filter by group name (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of groups retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedGroupResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List groups in scheduled area",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}": {
+      "get": {
+        "description": "Retrieves a specific group by its ID, including all members and their responsibilities.",
+        "operationId": "GroupController_findOne",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get group by ID",
+        "tags": [
+          "groups"
+        ]
+      },
+      "patch": {
+        "description": "Updates a group's name and description. Only provided fields will be updated.",
+        "operationId": "GroupController_update",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Group updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group or scheduled area not found"
+          },
+          "409": {
+            "description": "Conflict - Group with this name already exists in the scheduled area"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update group",
+        "tags": [
+          "groups"
+        ]
+      },
+      "delete": {
+        "description": "Removes a group and all its member associations. This operation cannot be undone.",
+        "operationId": "GroupController_remove",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Group deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group or scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete group",
+        "tags": [
+          "groups"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}/members": {
+      "post": {
+        "description": "Adds a person to a group within a scheduled area. The person must already be associated with the scheduled area (via Person Area API).",
+        "operationId": "GroupMemberController_create",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Member added to group successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (person not found, person not in scheduled area, responsibility not found, or responsibility does not belong to the area)"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group or scheduled area not found"
+          },
+          "409": {
+            "description": "Conflict - Person is already a member of this group"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add member to group",
+        "tags": [
+          "group-members"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a paginated list of all members in a group, including their responsibilities.",
+        "operationId": "GroupMemberController_findAll",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "personName",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person name (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "personEmail",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person email (partial match, case-insensitive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "responsibilityId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by responsibility ID (show only members with this responsibility)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of group members retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedGroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List members in group",
+        "tags": [
+          "group-members"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}/members/by-person/{personId}": {
+      "get": {
+        "description": "Retrieves the group member association for a specific person in a group. This is useful when you know the person ID but not the member ID.",
+        "operationId": "GroupMemberController_findByPersonId",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "personId",
+            "required": true,
+            "in": "path",
+            "description": "Person unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group member retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not a member of this group, or group/scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get group member by person ID",
+        "tags": [
+          "group-members"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/groups/{groupId}/members/{memberId}": {
+      "get": {
+        "description": "Retrieves a specific group member by their member ID.",
+        "operationId": "GroupMemberController_findOne",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "memberId",
+            "required": true,
+            "in": "path",
+            "description": "Group member unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group member retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group member, group, or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get group member by ID",
+        "tags": [
+          "group-members"
+        ]
+      },
+      "patch": {
+        "description": "Updates the responsibilities assigned to a member within a group. The entire responsibilities list is replaced with the provided list.",
+        "operationId": "GroupMemberController_update",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "memberId",
+            "required": true,
+            "in": "path",
+            "description": "Group member unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateGroupMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Group member responsibilities updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMemberResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (responsibility not found or does not belong to the area)"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group member, group, or scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update group member responsibilities",
+        "tags": [
+          "group-members"
+        ]
+      },
+      "delete": {
+        "description": "Removes a person from a group, including all their responsibility assignments within that group.",
+        "operationId": "GroupMemberController_remove",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "description": "Group unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "memberId",
+            "required": true,
+            "in": "path",
+            "description": "Group member unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Member removed from group successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Group member, group, or scheduled area not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Remove member from group",
+        "tags": [
+          "group-members"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Authentication API",
+    "description": "API de autenticação escalável com suporte a múltiplos métodos (Email/Senha, OAuth, Magic Link, OTP)",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "authentication",
+      "description": "Endpoints de autenticação"
+    },
+    {
+      "name": "persons",
+      "description": "Endpoints de gerenciamento de pessoas"
+    },
+    {
+      "name": "scheduled-absences",
+      "description": "Endpoints de gerenciamento de ausências agendadas"
+    },
+    {
+      "name": "absence-types",
+      "description": "Endpoints de gerenciamento de tipos de ausência"
+    },
+    {
+      "name": "scheduled-areas",
+      "description": "Endpoints de gerenciamento de áreas de escala"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "JWT",
+        "description": "Enter JWT token",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "SignUpEmailPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email do usuário",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Senha do usuário",
+            "example": "password123",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "UserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID do usuário",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email do usuário",
+            "example": "user@example.com"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "Indica se o email foi verificado",
+            "example": true
+          },
+          "phone": {
+            "type": "string",
+            "description": "Telefone do usuário",
+            "example": "+5511999999999"
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "Indica se o telefone foi verificado",
+            "example": false
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Metadados adicionais do usuário",
+            "example": {}
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Data de criação",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Data de atualização",
+            "example": "2024-01-01T00:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "emailVerified",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Access token JWT",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Tempo de expiração em segundos",
+            "example": 3600
+          },
+          "expiresAt": {
+            "type": "number",
+            "description": "Timestamp de expiração",
+            "example": 1704067200
+          },
+          "tokenType": {
+            "type": "string",
+            "description": "Tipo do token",
+            "example": "bearer"
+          },
+          "user": {
+            "description": "Dados do usuário",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "expiresAt",
+          "tokenType",
+          "user"
+        ]
+      },
+      "AuthResultResponseDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "description": "Dados do usuário autenticado",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserResponseDto"
+              }
+            ]
+          },
+          "session": {
+            "description": "Dados da sessão (apenas quando há sessão ativa)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SessionResponseDto"
+              }
+            ]
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "Access token JWT (apenas quando há sessão)",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token (apenas quando há sessão)",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "SignInEmailPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email do usuário",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Senha do usuário",
+            "example": "password123",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "OAuthUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL de autorização OAuth",
+            "example": "https://accounts.google.com/o/oauth2/v2/auth?..."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "SignInMagicLinkDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "Email do usuário",
+            "example": "user@example.com"
+          },
+          "redirectTo": {
+            "type": "string",
+            "description": "URL de redirecionamento após clicar no magic link",
+            "example": "http://localhost:3000/callback"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "MagicLinkSentResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Mensagem de confirmação",
+            "example": "Magic link sent successfully"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email para onde o link foi enviado",
+            "example": "user@example.com"
+          }
+        },
+        "required": [
+          "message",
+          "email"
+        ]
+      },
+      "VerifyMagicLinkDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token do magic link recebido por email",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "SignInOTPDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "Número de telefone do usuário",
+            "example": "+5511999999999"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código OTP recebido por SMS (opcional, se não fornecido, será enviado)",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "phone"
+        ]
+      },
+      "VerifyOTPDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "Número de telefone do usuário",
+            "example": "+5511999999999"
+          },
+          "code": {
+            "type": "string",
+            "description": "Código OTP recebido por SMS",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token para renovar a sessão",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Senha atual do usuário",
+            "example": "currentPassword123",
+            "minLength": 6
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "Nova senha do usuário",
+            "example": "newPassword123",
+            "minLength": 6
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "CreatePersonDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "description": "Full name of the person",
+            "example": "John Doe",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address (must be unique)",
+            "example": "john.doe@example.com",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "description": "Mobile phone number (10-11 digits, without formatting)",
+            "example": "11987654321",
+            "pattern": "^[0-9]{10,11}$"
+          },
+          "cpf": {
+            "type": "string",
+            "description": "CPF number (11 digits, without formatting, must be unique)",
+            "example": "12345678901",
+            "pattern": "^[0-9]{11}$"
+          },
+          "birthDate": {
+            "type": "string",
+            "description": "Date of birth in ISO 8601 format (YYYY-MM-DD)",
+            "example": "1990-01-15"
+          },
+          "emergencyContact": {
+            "type": "string",
+            "description": "Emergency contact phone number (10-11 digits, without formatting)",
+            "example": "11987654322",
+            "pattern": "^[0-9]{10,11}$"
+          },
+          "address": {
+            "type": "string",
+            "description": "Full address including street, number, complement, neighborhood, city, state, and ZIP code",
+            "example": "Rua das Flores, 123, Apto 45, Centro, São Paulo - SP, 01234-567",
+            "minLength": 10,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "fullName"
+        ]
+      },
+      "PersonResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "john.doe@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "11987654321"
+          },
+          "cpf": {
+            "type": "string",
+            "example": "12345678901"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "example": "1990-01-15"
+          },
+          "emergencyContact": {
+            "type": "string",
+            "example": "11987654322"
+          },
+          "address": {
+            "type": "string",
+            "example": "Rua das Flores, 123, Apto 45, Centro, São Paulo - SP, 01234-567"
+          },
+          "photoUrl": {
+            "type": "object",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the person's photo (null if no photo uploaded)",
+            "example": "https://example.com/photos/person-123e4567-e89b-12d3-a456-426614174000.jpg"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "phone",
+          "cpf",
+          "birthDate",
+          "emergencyContact",
+          "address",
+          "photoUrl",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedPersonResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 10
+          },
+          "total": {
+            "type": "number",
+            "example": 100
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 10
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "UpdatePersonDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "description": "Full name of the person",
+            "example": "John Doe",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address (must be unique if changed)",
+            "example": "john.doe@example.com",
+            "maxLength": 255
+          },
+          "phone": {
+            "type": "string",
+            "description": "Mobile phone number (10-11 digits, without formatting)",
+            "example": "11987654321",
+            "pattern": "^[0-9]{10,11}$"
+          },
+          "cpf": {
+            "type": "string",
+            "description": "CPF number (11 digits, without formatting, must be unique if changed)",
+            "example": "12345678901",
+            "pattern": "^[0-9]{11}$"
+          },
+          "birthDate": {
+            "type": "string",
+            "description": "Date of birth in ISO 8601 format (YYYY-MM-DD)",
+            "example": "1990-01-15"
+          },
+          "emergencyContact": {
+            "type": "string",
+            "description": "Emergency contact phone number (10-11 digits, without formatting)",
+            "example": "11987654322",
+            "pattern": "^[0-9]{10,11}$"
+          },
+          "address": {
+            "type": "string",
+            "description": "Full address",
+            "example": "Rua das Flores, 123, Apto 45, Centro, São Paulo - SP, 01234-567",
+            "minLength": 10,
+            "maxLength": 500
+          }
+        }
+      },
+      "PhotoUploadResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Photo uploaded successfully"
+          },
+          "photoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the uploaded photo",
+            "example": "https://example.com/photos/person-123e4567-e89b-12d3-a456-426614174000.jpg"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          }
+        },
+        "required": [
+          "message",
+          "photoUrl",
+          "personId"
+        ]
+      },
+      "CreateScheduledAbsenceDto": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "ID of the person who will be absent",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "absenceTypeId": {
+            "type": "string",
+            "description": "ID of the absence type (e.g., Férias, Feriado, Licença)",
+            "example": "456e7890-e89b-12d3-a456-426614174001",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of the absence in ISO 8601 format (YYYY-MM-DD)",
+            "example": "2024-12-20",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of the absence in ISO 8601 format (YYYY-MM-DD). Must be greater than or equal to startDate",
+            "example": "2025-01-10",
+            "format": "date"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description or notes about the absence",
+            "example": "Férias de fim de ano",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "personId",
+          "absenceTypeId",
+          "startDate",
+          "endDate"
+        ]
+      },
+      "PersonInfoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "joao.silva@example.com"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "email"
+        ]
+      },
+      "AbsenceTypeInfoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "456e7890-e89b-12d3-a456-426614174001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Férias"
+          },
+          "color": {
+            "type": "string",
+            "example": "#79D9C7"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ]
+      },
+      "ScheduledAbsenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "example": "789e0123-e89b-12d3-a456-426614174002",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "description": "ID of the person",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "person": {
+            "description": "Person information (populated when requested)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PersonInfoDto"
+              }
+            ]
+          },
+          "absenceTypeId": {
+            "type": "string",
+            "description": "ID of the absence type",
+            "example": "456e7890-e89b-12d3-a456-426614174001",
+            "format": "uuid"
+          },
+          "absenceType": {
+            "description": "Absence type information (populated when requested)",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AbsenceTypeInfoDto"
+              }
+            ]
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of the absence",
+            "example": "2024-12-20",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of the absence",
+            "example": "2025-01-10",
+            "format": "date"
+          },
+          "description": {
+            "type": "object",
+            "description": "Description or notes about the absence",
+            "example": "Férias de fim de ano",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-12-01T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-12-01T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "personId",
+          "absenceTypeId",
+          "startDate",
+          "endDate",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedScheduledAbsenceResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledAbsenceResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 10
+          },
+          "total": {
+            "type": "number",
+            "example": 50
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "UpdateScheduledAbsenceDto": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "ID of the person who will be absent",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "absenceTypeId": {
+            "type": "string",
+            "description": "ID of the absence type",
+            "example": "456e7890-e89b-12d3-a456-426614174001",
+            "format": "uuid"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Start date of the absence in ISO 8601 format (YYYY-MM-DD)",
+            "example": "2024-12-20",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "End date of the absence in ISO 8601 format (YYYY-MM-DD). Must be greater than or equal to startDate",
+            "example": "2025-01-10",
+            "format": "date"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description or notes about the absence",
+            "example": "Férias de fim de ano",
+            "maxLength": 500
+          }
+        }
+      },
+      "CreateAbsenceTypeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the absence type (e.g., Férias, Feriado, Licença)",
+            "example": "Férias",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the absence type",
+            "example": "Período de férias",
+            "maxLength": 500
+          },
+          "color": {
+            "type": "string",
+            "description": "Hex color code for UI display (format: #RRGGBB)",
+            "example": "#79D9C7",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "default": "#AD82D9"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the absence type is active and can be used",
+            "example": true,
+            "default": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "AbsenceTypeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "example": "456e7890-e89b-12d3-a456-426614174001",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the absence type",
+            "example": "Férias"
+          },
+          "description": {
+            "type": "object",
+            "description": "Description of the absence type",
+            "example": "Período de férias",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "description": "Hex color code for UI display",
+            "example": "#79D9C7"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the absence type is active and can be used",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color",
+          "active",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedAbsenceTypeResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbsenceTypeResponseDto"
+            }
+          },
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 10
+          },
+          "total": {
+            "type": "number",
+            "example": 15
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "data",
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "UpdateAbsenceTypeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the absence type",
+            "example": "Férias",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the absence type",
+            "example": "Período de férias",
+            "maxLength": 500
+          },
+          "color": {
+            "type": "string",
+            "description": "Hex color code for UI display (format: #RRGGBB)",
+            "example": "#79D9C7",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the absence type is active and can be used",
+            "example": true
+          }
+        }
+      },
+      "CreateScheduledAreaDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the scheduled area",
+            "example": "Área de Produção",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the scheduled area (optional)",
+            "example": "Setor responsável pela produção",
+            "maxLength": 1000
+          },
+          "responsiblePersonId": {
+            "type": "string",
+            "description": "ID of the responsible person (must exist)",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "favorite": {
+            "type": "boolean",
+            "description": "Whether the area is marked as favorite",
+            "example": false,
+            "default": false
+          }
+        },
+        "required": [
+          "name",
+          "responsiblePersonId"
+        ]
+      },
+      "ResponsiblePersonDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "fullName": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "joao.silva@example.com"
+          },
+          "photoUrl": {
+            "type": "object",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the responsible person photo",
+            "example": "https://example.com/photos/person-123e4567-e89b-12d3-a456-426614174000.jpg"
+          }
+        },
+        "required": [
+          "id",
+          "fullName",
+          "email",
+          "photoUrl"
+        ]
+      },
+      "ScheduledAreaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "name": {
+            "type": "string",
+            "example": "Área de Produção"
+          },
+          "description": {
+            "type": "object",
+            "example": "Setor responsável pela produção",
+            "nullable": true
+          },
+          "responsiblePersonId": {
+            "type": "string",
+            "description": "ID of the responsible person",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "responsiblePerson": {
+            "description": "Responsible person details (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ResponsiblePersonDto"
+              }
+            ]
+          },
+          "imageUrl": {
+            "type": "object",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the scheduled area image (null if no image uploaded)",
+            "example": "https://example.com/images/area-123e4567-e89b-12d3-a456-426614174000.jpg"
+          },
+          "favorite": {
+            "type": "boolean",
+            "description": "Whether the area is marked as favorite",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "responsiblePersonId",
+          "responsiblePerson",
+          "imageUrl",
+          "favorite",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 10
+          },
+          "total": {
+            "type": "number",
+            "example": 50
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "PaginatedScheduledAreaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledAreaResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdateScheduledAreaDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the scheduled area",
+            "example": "Área de Produção",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the scheduled area",
+            "example": "Setor responsável pela produção",
+            "maxLength": 1000
+          },
+          "responsiblePersonId": {
+            "type": "string",
+            "description": "ID of the responsible person (must exist)",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "favorite": {
+            "type": "boolean",
+            "description": "Whether the area is marked as favorite",
+            "example": false
+          }
+        }
+      },
+      "ImageUploadResponseDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Image uploaded successfully"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the uploaded image",
+            "example": "https://example.com/images/responsibility-123e4567-e89b-12d3-a456-426614174000.jpg"
+          },
+          "responsibilityId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          }
+        },
+        "required": [
+          "message",
+          "imageUrl",
+          "responsibilityId"
+        ]
+      },
+      "ToggleFavoriteDto": {
+        "type": "object",
+        "properties": {
+          "favorite": {
+            "type": "boolean",
+            "description": "Favorite status (true to add to favorites, false to remove)",
+            "example": true
+          }
+        },
+        "required": [
+          "favorite"
+        ]
+      },
+      "CreateResponsibilityDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the responsibility",
+            "example": "Responsabilidade de Produção",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the responsibility (optional)",
+            "example": "Responsável por gerenciar a produção diária",
+            "maxLength": 1000
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area (must exist)",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "URL of the responsibility image (optional)",
+            "example": "https://example.com/images/responsibility.jpg"
+          }
+        },
+        "required": [
+          "name",
+          "scheduledAreaId"
+        ]
+      },
+      "ScheduledAreaDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "name": {
+            "type": "string",
+            "example": "Área de Produção"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ResponsibilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "name": {
+            "type": "string",
+            "example": "Responsabilidade de Produção"
+          },
+          "description": {
+            "type": "object",
+            "example": "Responsável por gerenciar a produção diária",
+            "nullable": true
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "scheduledArea": {
+            "description": "Scheduled area details (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledAreaDto"
+              }
+            ]
+          },
+          "imageUrl": {
+            "type": "object",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the responsibility image (null if no image)",
+            "example": "https://example.com/images/responsibility-123e4567-e89b-12d3-a456-426614174000.jpg"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "scheduledAreaId",
+          "scheduledArea",
+          "imageUrl",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedResponsibilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsibilityResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdateResponsibilityDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the responsibility",
+            "example": "Responsabilidade de Produção",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the responsibility",
+            "example": "Responsável por gerenciar a produção diária",
+            "maxLength": 1000
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area (must exist)",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "URL of the responsibility image",
+            "example": "https://example.com/images/responsibility.jpg"
+          }
+        }
+      },
+      "CreatePersonAreaDto": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "ID of the person to associate with the area",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "responsibilityIds": {
+            "description": "Array of responsibility IDs (must belong to the scheduled area, at least one required)",
+            "example": [
+              "456e7890-e89b-12d3-a456-426614174001",
+              "789e0123-e89b-12d3-a456-426614174002"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "personId",
+          "responsibilityIds"
+        ]
+      },
+      "ResponsibilityInfoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "456e7890-e89b-12d3-a456-426614174001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Operador"
+          },
+          "description": {
+            "type": "object",
+            "example": "Responsável por operar equipamentos",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "object",
+            "format": "uri",
+            "nullable": true,
+            "description": "URL to the responsibility image",
+            "example": "https://example.com/images/responsibility-456e7890-e89b-12d3-a456-426614174001.jpg"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "imageUrl"
+        ]
+      },
+      "PersonAreaResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the person-area association",
+            "format": "uuid",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "personId": {
+            "type": "string",
+            "description": "ID of the associated person",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "person": {
+            "description": "Person information (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PersonInfoDto"
+              }
+            ]
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area",
+            "format": "uuid",
+            "example": "def67890-e89b-12d3-a456-426614174004"
+          },
+          "scheduledArea": {
+            "description": "Scheduled area information (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledAreaDto"
+              }
+            ]
+          },
+          "responsibilities": {
+            "description": "Array of responsibilities assigned to the person in this area",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsibilityInfoDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "personId",
+          "person",
+          "scheduledAreaId",
+          "scheduledArea",
+          "responsibilities",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedPersonAreaResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonAreaResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdatePersonAreaDto": {
+        "type": "object",
+        "properties": {
+          "responsibilityIds": {
+            "description": "Array of responsibility IDs (must belong to the scheduled area, at least one required)",
+            "example": [
+              "456e7890-e89b-12d3-a456-426614174001",
+              "789e0123-e89b-12d3-a456-426614174002",
+              "012e3456-e89b-12d3-a456-426614174005"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "responsibilityIds"
+        ]
+      },
+      "CreateGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the group",
+            "example": "Equipe de Plantão A",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the group (optional)",
+            "example": "Grupo responsável pelo plantão noturno",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "GroupInfoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "name": {
+            "type": "string",
+            "example": "Equipe de Plantão A"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "GroupMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the group member association",
+            "format": "uuid",
+            "example": "xyz98765-e89b-12d3-a456-426614174005"
+          },
+          "personId": {
+            "type": "string",
+            "description": "ID of the associated person",
+            "format": "uuid",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "person": {
+            "description": "Person information (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PersonInfoDto"
+              }
+            ]
+          },
+          "groupId": {
+            "type": "string",
+            "description": "ID of the group",
+            "format": "uuid",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "group": {
+            "description": "Group information (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GroupInfoDto"
+              }
+            ]
+          },
+          "responsibilities": {
+            "description": "Array of responsibilities assigned to the person in this group",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsibilityInfoDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "personId",
+          "person",
+          "groupId",
+          "group",
+          "responsibilities",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "GroupResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the group",
+            "format": "uuid",
+            "example": "abc12345-e89b-12d3-a456-426614174003"
+          },
+          "name": {
+            "type": "string",
+            "example": "Equipe de Plantão A"
+          },
+          "description": {
+            "type": "object",
+            "example": "Grupo responsável pelo plantão noturno",
+            "nullable": true
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "description": "ID of the scheduled area this group belongs to",
+            "format": "uuid",
+            "example": "def67890-e89b-12d3-a456-426614174004"
+          },
+          "scheduledArea": {
+            "description": "Scheduled area information (populated when requested)",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ScheduledAreaDto"
+              }
+            ]
+          },
+          "membersCount": {
+            "type": "number",
+            "description": "Number of members in the group",
+            "example": 5
+          },
+          "members": {
+            "description": "Array of group members (populated when requested)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberResponseDto"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2024-01-15T10:30:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "scheduledAreaId",
+          "scheduledArea",
+          "membersCount",
+          "members",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedGroupResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdateGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the group",
+            "example": "Nome Atualizado",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the group",
+            "example": "Nova descrição",
+            "maxLength": 1000
+          }
+        }
+      },
+      "CreateGroupMemberDto": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "ID of the person to add to the group (must be associated with the scheduled area)",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "responsibilityIds": {
+            "description": "Array of responsibility IDs (must belong to the scheduled area, at least one required)",
+            "example": [
+              "456e7890-e89b-12d3-a456-426614174001",
+              "789e0123-e89b-12d3-a456-426614174002"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "personId",
+          "responsibilityIds"
+        ]
+      },
+      "PaginatedGroupMemberResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdateGroupMemberDto": {
+        "type": "object",
+        "properties": {
+          "responsibilityIds": {
+            "description": "Array of responsibility IDs (must belong to the scheduled area, at least one required)",
+            "example": [
+              "456e7890-e89b-12d3-a456-426614174001",
+              "012e3456-e89b-12d3-a456-426614174005"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "responsibilityIds"
+        ]
+      }
+    }
+  }
+}

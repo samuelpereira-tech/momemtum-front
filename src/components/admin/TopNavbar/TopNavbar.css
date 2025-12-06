@@ -1,0 +1,146 @@
+.top-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  background: var(--white);
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px;
+  z-index: 1000;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.navbar-left .company-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: var(--bg-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sidebar-toggle-button {
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-light);
+  transition: all 0.3s;
+  font-size: 1rem;
+  margin-left: 30px;
+}
+
+.sidebar-toggle-button:hover {
+  background: rgba(173, 130, 216, 0.1);
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+}
+
+.sidebar-toggle-button i {
+  transition: transform 0.3s;
+}
+
+.sidebar-toggle-button i.collapsed {
+  transform: rotate(90deg);
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1.1rem;
+}
+
+.nav-icon:hover {
+  background: #f0f0f0;
+  color: var(--color-purple);
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--color-pink);
+  color: var(--white);
+  font-size: 0.7rem;
+  font-weight: 600;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--white);
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 15px;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-left: 10px;
+}
+
+.user-profile:hover {
+  background: #f0f0f0;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--color-purple);
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+.user-profile i {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+@media (max-width: 768px) {
+  .navbar-right {
+    gap: 10px;
+  }
+
+  .user-name {
+    display: none;
+  }
+}
+

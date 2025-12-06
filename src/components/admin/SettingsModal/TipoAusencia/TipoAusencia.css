@@ -1,0 +1,233 @@
+.tipo-ausencia-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tipo-ausencia-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.tipo-ausencia-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.tipo-ausencia-form-card {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.form-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 20px 0;
+  padding-bottom: 15px;
+  border-bottom: 2px solid var(--color-purple);
+}
+
+.color-picker-group {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.color-input {
+  width: 60px;
+  min-width: 60px;
+  height: 40px;
+  min-height: 40px;
+  border: 1px solid #e0e0e0;
+  border-radius: 0;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-input::-webkit-color-swatch {
+  border: 1px solid #e0e0e0;
+  border-radius: 0;
+}
+
+.color-text-input {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 0;
+  font-size: 0.95rem;
+  font-family: 'Courier New', monospace;
+  color: var(--text-color);
+  background: var(--white);
+  transition: border-color 0.3s;
+  outline: none;
+  height: 40px;
+  box-sizing: border-box;
+  width: auto;
+}
+
+.color-text-input:focus {
+  border-color: var(--color-purple);
+}
+
+.toggle-group {
+  display: flex;
+  align-items: center;
+  height: 40px;
+}
+
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  position: relative;
+}
+
+.toggle-switch input[type="checkbox"] {
+  width: 50px;
+  height: 26px;
+  appearance: none;
+  background: #ccc;
+  border-radius: 13px;
+  outline: none;
+  transition: background 0.3s;
+  cursor: pointer;
+  position: relative;
+}
+
+.toggle-switch input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+}
+
+.toggle-switch input[type="checkbox"]:checked {
+  background: var(--color-purple);
+}
+
+.toggle-switch input[type="checkbox"]:checked::before {
+  transform: translateX(24px);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.tipo-ausencia-table-card {
+  background: var(--white);
+  border: 1px solid #e0e0e0;
+  padding: 25px;
+}
+
+.table-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 15px;
+  color: var(--text-light);
+}
+
+.table-loading i {
+  font-size: 2rem;
+  color: var(--color-purple);
+}
+
+.table-loading span {
+  font-size: 0.95rem;
+}
+
+.color-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid #e0e0e0;
+  display: inline-block;
+}
+
+.color-code {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  font-family: 'Courier New', monospace;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-badge.ativo {
+  background: rgba(169, 217, 121, 0.1);
+  color: var(--color-green);
+}
+
+.status-badge.inativo {
+  background: rgba(158, 158, 158, 0.1);
+  color: #9e9e9e;
+}
+
+.btn-toggle {
+  background: rgba(173, 130, 217, 0.1);
+  color: var(--color-purple);
+}
+
+.btn-toggle:hover {
+  background: var(--color-purple);
+  color: var(--white);
+}
+
+@media (max-width: 768px) {
+  .tipo-ausencia-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .color-picker-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .color-input {
+    width: 100%;
+    height: 50px;
+  }
+}
+

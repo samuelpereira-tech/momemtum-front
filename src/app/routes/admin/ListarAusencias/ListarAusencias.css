@@ -1,0 +1,34 @@
+.badge-tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge-tipo[data-tipo="ferias"] {
+  background: rgba(121, 217, 199, 0.1);
+  color: var(--color-teal);
+}
+
+.badge-tipo[data-tipo="feriado"] {
+  background: rgba(242, 179, 61, 0.1);
+  color: var(--color-yellow);
+}
+
+.badge-tipo[data-tipo="licenca"] {
+  background: rgba(173, 130, 217, 0.1);
+  color: var(--color-purple);
+}
+
+.badge-tipo[data-tipo="outro"] {
+  background: rgba(158, 158, 158, 0.1);
+  color: #9e9e9e;
+}
+
+.badge-tipo i {
+  font-size: 0.75rem;
+}
