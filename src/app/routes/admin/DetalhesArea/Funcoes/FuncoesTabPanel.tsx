@@ -106,17 +106,17 @@ export default function FuncoesTabPanel() {
                     </div>
                   )}
                 </div>
-                <div className="funcao-info">
-                  <h4 className="funcao-title" title={funcao.name}>{funcao.name}</h4>
-                  <p className="funcao-description" title={funcao.description || ''}>
-                    {funcao.description || 'Sem descrição'}
-                  </p>
-                </div>
+              </div>
+              <div className="funcao-info">
+                <h4 className="funcao-title" title={funcao.name}>{funcao.name}</h4>
+                <p className="funcao-description" title={funcao.description || ''}>
+                  {funcao.description || 'Sem descrição'}
+                </p>
               </div>
               <div className="funcao-card-footer">
                 <button
                   type="button"
-                  className="btn-action btn-edit"
+                  className="btn-icon btn-icon-edit"
                   onClick={() => handleEditarFuncao(funcao)}
                   title="Editar função"
                 >
@@ -124,7 +124,7 @@ export default function FuncoesTabPanel() {
                 </button>
                 <button
                   type="button"
-                  className="btn-action btn-delete"
+                  className="btn-icon btn-icon-delete"
                   onClick={() => handleExcluirFuncao(funcao.id, funcao.name)}
                   title="Excluir função"
                 >
