@@ -4,10 +4,11 @@ import '../shared/TabPanel.css'
 import './EscalaTabPanel.css'
 import { getScheduleGroups, getSchedules, type ScheduleGroupDto, type ScheduleDto } from './mockServices'
 import ScheduleDetailsView from './ScheduleDetailsView'
+import ScheduleGroupDetailsView from './ScheduleGroupDetailsView'
 
 export default function EscalaTabPanel() {
   const { id: scheduledAreaId } = useParams<{ id: string }>()
-  const [viewMode, setViewMode] = useState<'groups' | 'all-schedules' | 'group-schedules' | 'schedule-details'>('groups')
+  const [viewMode, setViewMode] = useState<'groups' | 'all-schedules' | 'group-schedules' | 'schedule-details' | 'group-details'>('groups')
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [selectedGroupName, setSelectedGroupName] = useState<string>('')
 
@@ -82,8 +83,14 @@ export default function EscalaTabPanel() {
   const handleGroupClick = (group: ScheduleGroupDto) => {
     setSelectedGroupId(group.id)
     setSelectedGroupName(group.name)
-    setViewMode('group-schedules')
-    setSchedulesPage(1)
+    setViewMode('group-details')
+  }
+
+  const handleViewGroupSchedules = () => {
+    if (selectedGroupId) {
+      setViewMode('group-schedules')
+      setSchedulesPage(1)
+    }
   }
 
   const handleViewAllSchedules = () => {
@@ -157,11 +164,31 @@ export default function EscalaTabPanel() {
     }
   }
 
+  const getWeekdayName = (day: number) => {
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    return days[day]
+  }
+
+  const getPeriodTypeLabel = (type: string) => {
+    switch (type) {
+      case 'fixed':
+        return 'Fixo'
+      case 'daily':
+        return 'Diário'
+      case 'weekly':
+        return 'Semanal'
+      case 'monthly':
+        return 'Mensal'
+      default:
+        return type
+    }
+  }
+
   return (
     <div className="tab-panel">
       <div className="tab-panel-header">
         <h3 className="tab-panel-title">
-          <i className="fa-solid fa-calendar-check"></i> Escalas
+          <i className="fa-solid fa-users"></i> Grupos de Escalas
         </h3>
         <div className="tab-panel-actions">
           {viewMode === 'groups' && (
@@ -191,20 +218,25 @@ export default function EscalaTabPanel() {
               <i className="fa-solid fa-arrow-left"></i> Voltar
             </button>
           )}
+          {viewMode === 'group-details' && (
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => {
+                setViewMode('groups')
+                setSelectedGroupId(null)
+                setSelectedGroupName('')
+              }}
+            >
+              <i className="fa-solid fa-arrow-left"></i> Voltar para Grupos
+            </button>
+          )}
         </div>
       </div>
 
       <div className="tab-panel-body">
         {viewMode === 'groups' && (
           <div className="schedule-groups-container">
-            <div className="schedule-groups-header">
-              <h4 className="section-title">
-                <i className="fa-solid fa-users"></i> Grupos de Escalas
-              </h4>
-              <p className="section-description">
-                Clique em um grupo para visualizar suas escalas
-              </p>
-            </div>
 
             {groupsLoading ? (
               <div className="loading-container">
@@ -219,33 +251,69 @@ export default function EscalaTabPanel() {
             ) : (
               <>
                 <div className="schedule-groups-list">
-                  {groups.map((group) => (
-                    <div
-                      key={group.id}
-                      className="schedule-group-card"
-                      onClick={() => handleGroupClick(group)}
-                    >
-                      <div className="schedule-group-header">
-                        <h5 className="schedule-group-name">
-                          <i className="fa-solid fa-users"></i>
-                          {group.name}
-                        </h5>
-                        <span className="schedule-group-count">
-                          {group.schedulesCount} {group.schedulesCount === 1 ? 'escala' : 'escalas'}
-                        </span>
+                  {groups.map((group) => {
+                    const config = group.configuration
+                    return (
+                      <div
+                        key={group.id}
+                        className="schedule-group-card"
+                        onClick={() => handleGroupClick(group)}
+                      >
+                        {/* Coluna 1: Info Básica */}
+                        <div className="schedule-group-header-col">
+                          <h5 className="schedule-group-name">
+                            <i className="fa-solid fa-users"></i>
+                            {group.name}
+                          </h5>
+                          {group.description && (
+                            <p className="schedule-group-description">{group.description}</p>
+                          )}
+                        </div>
+
+                        {/* Coluna 2: Detalhes e Configuração */}
+                        <div className="schedule-group-config-col">
+                          <div className="config-summary-row">
+                            <span className="config-bubble highlight">
+                              <i className="fa-regular fa-calendar"></i>
+                              {getPeriodTypeLabel(config.periodType)}
+                            </span>
+
+                            <span className="config-bubble">
+                              <i className="fa-solid fa-arrow-right-long"></i>
+                              {formatDate(config.periodStartDate)} até {formatDate(config.periodEndDate)}
+                            </span>
+
+                            {config.selectedTeamName && (
+                              <span className="config-bubble">
+                                <i className="fa-solid fa-user-group"></i>
+                                {config.selectedTeamName}
+                              </span>
+                            )}
+                          </div>
+
+                          {config.weekdays && config.weekdays.length > 0 && (
+                            <div className="config-summary-row" style={{ marginTop: '8px' }}>
+                              <span className="team-info">
+                                <i className="fa-solid fa-calendar-week" style={{ color: 'var(--color-purple)', fontSize: '0.9rem' }}></i>
+                                {config.weekdays.map(d => getWeekdayName(d)).join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Coluna 3: Ações e Meta */}
+                        <div className="schedule-group-meta-col">
+                          <span className="schedule-count-badge">
+                            {group.schedulesCount} {group.schedulesCount === 1 ? 'escala' : 'escalas'}
+                          </span>
+                          <span className="updated-at">
+                            Atualizado {formatDate(group.updatedAt)}
+                          </span>
+                          <i className="fa-solid fa-chevron-right action-arrow"></i>
+                        </div>
                       </div>
-                      {group.description && (
-                        <p className="schedule-group-description">{group.description}</p>
-                      )}
-                      <div className="schedule-group-footer">
-                        <span className="schedule-group-date">
-                          <i className="fa-solid fa-calendar"></i>
-                          Atualizado em {formatDate(group.updatedAt)}
-                        </span>
-                        <i className="fa-solid fa-chevron-right schedule-group-arrow"></i>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {groupsTotalPages > 1 && (
@@ -328,13 +396,26 @@ export default function EscalaTabPanel() {
                           </div>
 
                           <div className="schedule-info-content">
+                            {schedule.date && (
+                              <div className="schedule-full-date">
+                                {new Date(schedule.date).toLocaleDateString('pt-BR', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </div>
+                            )}
                             <div className="schedule-time-range">
                               <i className="fa-regular fa-clock"></i>
                               {formatDateTime(schedule.startDatetime).split(' ')[1]} - {formatDateTime(schedule.endDatetime).split(' ')[1]}
                             </div>
-                            <div className="schedule-date-end">
-                              Até {formatDateTime(schedule.endDatetime)}
-                            </div>
+                            {schedule.dayIndex && (
+                              <div className="schedule-day-info">
+                                <i className="fa-solid fa-calendar-day"></i>
+                                Dia {schedule.dayIndex} do período
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -390,6 +471,18 @@ export default function EscalaTabPanel() {
               </>
             )}
           </div>
+        )}
+
+        {viewMode === 'group-details' && selectedGroupId && (
+          <ScheduleGroupDetailsView
+            groupId={selectedGroupId}
+            onBack={() => {
+              setViewMode('groups')
+              setSelectedGroupId(null)
+              setSelectedGroupName('')
+            }}
+            onViewSchedules={handleViewGroupSchedules}
+          />
         )}
 
         {viewMode === 'schedule-details' && selectedScheduleId && (

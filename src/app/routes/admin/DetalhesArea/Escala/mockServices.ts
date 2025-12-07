@@ -1,11 +1,45 @@
 // Serviços mockados para grupos de escalas e escalas
 
+export interface ScheduleGroupConfiguration {
+  // Período
+  periodStartDate: string
+  periodEndDate: string
+  periodType: 'fixed' | 'daily' | 'weekly' | 'monthly'
+  
+  // Dias da semana (0-6, domingo-sábado)
+  weekdays?: number[]
+  
+  // Horários (para tipo daily)
+  startTime?: string // HH:mm
+  endTime?: string // HH:mm
+  
+  // Grupos selecionados
+  selectedGroupIds?: string[]
+  selectedGroupNames?: string[]
+  
+  // Equipe selecionada
+  selectedTeamId?: string
+  selectedTeamName?: string
+  
+  // Regras
+  considerAbsences: boolean
+  requireResponsibilities?: boolean
+  distributionOrder?: 'sequential' | 'random' | 'balanced'
+  groupsPerSchedule?: number
+  participantSelection?: 'all' | 'all_with_exclusions' | 'by_group' | 'individual'
+  
+  // Datas excluídas/incluídas
+  excludedDates?: string[]
+  includedDates?: string[]
+}
+
 export interface ScheduleGroupDto {
   id: string
   name: string
   description?: string
   scheduledAreaId: string
   schedulesCount: number
+  configuration: ScheduleGroupConfiguration
   createdAt: string
   updatedAt: string
 }
@@ -37,6 +71,9 @@ export interface ScheduleDto {
   endDatetime: string
   status: 'pending' | 'confirmed' | 'cancelled'
   participantsCount: number
+  // Informações sobre o dia específico da escala
+  dayIndex?: number // Índice do dia dentro do período (1, 2, 3...)
+  date?: string // Data específica (YYYY-MM-DD)
   members?: ScheduleMemberDto[]
   comments?: ScheduleCommentDto[]
   createdAt: string
@@ -58,17 +95,66 @@ export interface PaginatedResponse<T> {
   }
 }
 
+// Nomes de grupos e equipes mockados
+const mockGroupNames = [
+  'Grupo A - Manhã', 'Grupo B - Tarde', 'Grupo C - Noite', 'Grupo D - Plantão',
+  'Grupo E - Fins de Semana', 'Grupo F - Especial', 'Grupo G - Rotativo'
+]
+
+const mockTeamNames = [
+  'Equipe de Enfermagem', 'Equipe Médica', 'Equipe Técnica', 'Equipe Administrativa'
+]
+
 // Função para gerar dados mockados dinamicamente baseado no scheduledAreaId
 const generateMockScheduleGroups = (scheduledAreaId: string): ScheduleGroupDto[] => {
-  return Array.from({ length: 25 }, (_, i) => ({
-    id: `group-${scheduledAreaId}-${i + 1}`,
-    name: `Grupo de Escala ${i + 1}`,
-    description: i % 3 === 0 ? `Descrição do grupo de escala ${i + 1}` : undefined,
-    scheduledAreaId: scheduledAreaId,
-    schedulesCount: Math.floor(Math.random() * 20) + 5,
-    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-  }))
+  const weekdaysOptions = [
+    [1, 2, 3, 4, 5], // Segunda a Sexta
+    [0, 6], // Fins de semana
+    [0, 1, 2, 3, 4, 5, 6], // Todos os dias
+    [1, 3, 5], // Segunda, Quarta, Sexta
+  ]
+
+  return Array.from({ length: 25 }, (_, i) => {
+    const periodStart = new Date()
+    periodStart.setDate(periodStart.getDate() - Math.floor(Math.random() * 30))
+    const periodEnd = new Date(periodStart)
+    periodEnd.setDate(periodEnd.getDate() + Math.floor(Math.random() * 30) + 7)
+
+    const periodTypes: Array<'fixed' | 'daily' | 'weekly' | 'monthly'> = ['daily', 'weekly', 'monthly', 'fixed']
+    const periodType = periodTypes[i % periodTypes.length]
+
+    const hasGroups = i % 2 === 0
+    const hasTeam = i % 3 === 0
+
+    const config: ScheduleGroupConfiguration = {
+      periodStartDate: periodStart.toISOString().split('T')[0],
+      periodEndDate: periodEnd.toISOString().split('T')[0],
+      periodType: periodType,
+      weekdays: periodType === 'daily' ? weekdaysOptions[i % weekdaysOptions.length] : undefined,
+      startTime: periodType === 'daily' ? '08:00' : undefined,
+      endTime: periodType === 'daily' ? '17:00' : undefined,
+      selectedGroupIds: hasGroups ? [`group-${scheduledAreaId}-${(i % 3) + 1}`, `group-${scheduledAreaId}-${(i % 3) + 2}`] : undefined,
+      selectedGroupNames: hasGroups ? [mockGroupNames[i % mockGroupNames.length], mockGroupNames[(i + 1) % mockGroupNames.length]] : undefined,
+      selectedTeamId: hasTeam ? `team-${scheduledAreaId}-${(i % 4) + 1}` : undefined,
+      selectedTeamName: hasTeam ? mockTeamNames[i % mockTeamNames.length] : undefined,
+      considerAbsences: i % 2 === 0,
+      requireResponsibilities: hasTeam && i % 4 === 0,
+      distributionOrder: ['sequential', 'random', 'balanced'][i % 3] as 'sequential' | 'random' | 'balanced',
+      groupsPerSchedule: hasGroups ? (i % 3) + 1 : undefined,
+      participantSelection: hasTeam ? (['all', 'by_group', 'individual'][i % 3] as 'all' | 'by_group' | 'individual') : undefined,
+    }
+
+    return {
+      id: `group-${scheduledAreaId}-${i + 1}`,
+      name: `Grupo de Escala ${i + 1}`,
+      description: i % 3 === 0 ? `Descrição do grupo de escala ${i + 1}` : undefined,
+      scheduledAreaId: scheduledAreaId,
+      schedulesCount: Math.floor(Math.random() * 20) + 5,
+      configuration: config,
+      createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+    }
+  })
 }
 
 // Nomes e funções mockadas para membros
@@ -116,29 +202,106 @@ const generateMockComments = (scheduleId: string): ScheduleCommentDto[] => {
   }))
 }
 
-const generateMockSchedules = (scheduledAreaId: string): ScheduleDto[] => {
-  return Array.from({ length: 150 }, (_, i) => {
-    const groupIndex = Math.floor(i / 10)
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() + i)
-    const endDate = new Date(startDate)
-    endDate.setHours(endDate.getHours() + 8)
+const generateMockSchedules = (scheduledAreaId: string, groupConfig?: ScheduleGroupConfiguration, groupId?: string): ScheduleDto[] => {
+  const schedules: ScheduleDto[] = []
+  
+  // Se há configuração de grupo, gerar escalas baseadas nela
+  if (groupConfig) {
+    const startDate = new Date(groupConfig.periodStartDate)
+    const endDate = new Date(groupConfig.periodEndDate)
+    let currentDate = new Date(startDate)
+    let dayIndex = 1
 
-    const scheduleId = `schedule-${scheduledAreaId}-${i + 1}`
-    const participantsCount = Math.floor(Math.random() * 15) + 3
+    while (currentDate <= endDate) {
+      const dateString = currentDate.toISOString().split('T')[0]
+      const dayOfWeek = currentDate.getDay()
 
-    return {
-      id: scheduleId,
-      scheduleGroupId: groupIndex < 15 ? `group-${scheduledAreaId}-${groupIndex + 1}` : undefined,
-      scheduledAreaId: scheduledAreaId,
-      startDatetime: startDate.toISOString(),
-      endDatetime: endDate.toISOString(),
-      status: ['pending', 'confirmed', 'cancelled'][Math.floor(Math.random() * 3)] as 'pending' | 'confirmed' | 'cancelled',
-      participantsCount: participantsCount,
-      createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString(),
-      updatedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      // Verificar se deve gerar escala para este dia
+      let shouldGenerate = true
+
+      // Verificar se está nas datas excluídas
+      if (groupConfig.excludedDates?.includes(dateString)) {
+        shouldGenerate = false
+      }
+
+      // Verificar se está nas datas incluídas (override)
+      if (groupConfig.includedDates?.includes(dateString)) {
+        shouldGenerate = true
+      }
+
+      // Verificar dias da semana (se tipo daily)
+      if (groupConfig.periodType === 'daily' && groupConfig.weekdays && !groupConfig.weekdays.includes(dayOfWeek)) {
+        shouldGenerate = false
+      }
+
+      if (shouldGenerate) {
+        const scheduleStart = new Date(currentDate)
+        if (groupConfig.startTime) {
+          const [hours, minutes] = groupConfig.startTime.split(':').map(Number)
+          scheduleStart.setHours(hours, minutes, 0, 0)
+        } else {
+          scheduleStart.setHours(8, 0, 0, 0)
+        }
+
+        const scheduleEnd = new Date(scheduleStart)
+        if (groupConfig.endTime) {
+          const [hours, minutes] = groupConfig.endTime.split(':').map(Number)
+          scheduleEnd.setHours(hours, minutes, 0, 0)
+        } else {
+          scheduleEnd.setHours(17, 0, 0, 0)
+        }
+
+        const scheduleId = `schedule-${scheduledAreaId}-${schedules.length + 1}`
+        const participantsCount = Math.floor(Math.random() * 15) + 3
+
+        schedules.push({
+          id: scheduleId,
+          scheduleGroupId: groupId,
+          scheduledAreaId: scheduledAreaId,
+          startDatetime: scheduleStart.toISOString(),
+          endDatetime: scheduleEnd.toISOString(),
+          status: ['pending', 'confirmed', 'cancelled'][Math.floor(Math.random() * 3)] as 'pending' | 'confirmed' | 'cancelled',
+          participantsCount: participantsCount,
+          dayIndex: dayIndex,
+          date: dateString,
+          createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+
+        dayIndex++
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1)
     }
-  })
+  } else {
+    // Geração padrão (sem configuração de grupo)
+    return Array.from({ length: 150 }, (_, i) => {
+      const groupIndex = Math.floor(i / 10)
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() + i)
+      const endDate = new Date(startDate)
+      endDate.setHours(endDate.getHours() + 8)
+
+      const scheduleId = `schedule-${scheduledAreaId}-${i + 1}`
+      const participantsCount = Math.floor(Math.random() * 15) + 3
+
+      return {
+        id: scheduleId,
+        scheduleGroupId: groupIndex < 15 ? `group-${scheduledAreaId}-${groupIndex + 1}` : undefined,
+        scheduledAreaId: scheduledAreaId,
+        startDatetime: startDate.toISOString(),
+        endDatetime: endDate.toISOString(),
+        status: ['pending', 'confirmed', 'cancelled'][Math.floor(Math.random() * 3)] as 'pending' | 'confirmed' | 'cancelled',
+        participantsCount: participantsCount,
+        dayIndex: i + 1,
+        date: startDate.toISOString().split('T')[0],
+        createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      }
+    })
+  }
+
+  return schedules
 }
 
 // Armazenar dados detalhados em memória (simulando banco de dados)
@@ -185,6 +348,24 @@ export async function getScheduleGroups(
   }
 }
 
+// Buscar detalhes de um grupo de escala
+export async function getScheduleGroupDetails(groupId: string): Promise<ScheduleGroupDto> {
+  await delay(300)
+  
+  // Buscar em todas as áreas
+  const allGroups: ScheduleGroupDto[] = []
+  for (let i = 0; i < 10; i++) {
+    allGroups.push(...generateMockScheduleGroups(`area-${i}`))
+  }
+  
+  const group = allGroups.find(g => g.id === groupId)
+  if (!group) {
+    throw new Error('Grupo de escala não encontrado')
+  }
+  
+  return group
+}
+
 // Buscar escalas paginadas (com ou sem filtro de grupo)
 export async function getSchedules(
   scheduledAreaId: string,
@@ -195,23 +376,37 @@ export async function getSchedules(
   } = { page: 1, limit: 10 }
 ): Promise<PaginatedResponse<ScheduleDto>> {
   await delay(300) // Simular delay de API
-
-  const mockSchedules = generateMockSchedules(scheduledAreaId)
-  let filtered = mockSchedules.filter(s => s.scheduledAreaId === scheduledAreaId)
-
-  // Se há filtro de grupo, aplicar
+  
+  let filtered: ScheduleDto[] = []
+  
+  // Se há filtro de grupo, buscar configuração e gerar escalas baseadas nela
   if (options.scheduleGroupId) {
-    filtered = filtered.filter(s => s.scheduleGroupId === options.scheduleGroupId)
+    try {
+      const group = await getScheduleGroupDetails(options.scheduleGroupId)
+      filtered = generateMockSchedules(scheduledAreaId, group.configuration, options.scheduleGroupId)
+    } catch (error) {
+      // Se não encontrou o grupo, usar geração padrão
+      filtered = generateMockSchedules(scheduledAreaId, undefined, options.scheduleGroupId)
+      filtered = filtered.filter(s => s.scheduleGroupId === options.scheduleGroupId)
+    }
+  } else {
+    // Sem filtro de grupo, gerar escalas padrão
+    filtered = generateMockSchedules(scheduledAreaId)
+    filtered = filtered.filter(s => s.scheduledAreaId === scheduledAreaId)
   }
-
-  // Ordenar por data de início (mais recentes primeiro)
-  filtered.sort((a, b) => new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime())
-
+  
+  // Ordenar por data (mais antigas primeiro para ver sequência)
+  filtered.sort((a, b) => {
+    const dateA = a.date || a.startDatetime.split('T')[0]
+    const dateB = b.date || b.startDatetime.split('T')[0]
+    return dateA.localeCompare(dateB)
+  })
+  
   const start = (options.page - 1) * options.limit
   const end = start + options.limit
   const paginated = filtered.slice(start, end)
   const totalPages = Math.ceil(filtered.length / options.limit)
-
+  
   return {
     data: paginated,
     meta: {
