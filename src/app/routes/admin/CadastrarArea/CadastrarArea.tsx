@@ -41,7 +41,7 @@ export default function CadastrarArea() {
       while (temMaisPaginas) {
         const response = await personService.getAllPersons(pagina, limitePorRequisicao)
         todasPessoas = [...todasPessoas, ...response.data]
-        
+
         if (pagina >= response.totalPages || response.data.length === 0) {
           temMaisPaginas = false
         } else {
@@ -58,18 +58,18 @@ export default function CadastrarArea() {
 
   const loadAreaData = async () => {
     if (!id) return
-    
+
     setIsLoadingData(true)
     try {
       const data = await scheduledAreaService.getScheduledAreaById(id)
-      
+
       // Preencher formulário
       if (formRef.current) {
         const form = formRef.current
-        ;(form.querySelector('[name="nome"]') as HTMLInputElement).value = data.name || ''
-        ;(form.querySelector('[name="descricao"]') as HTMLTextAreaElement).value = data.description || ''
-        ;(form.querySelector('[name="pessoaResponsavelId"]') as HTMLSelectElement).value = data.responsiblePersonId || ''
-        ;(form.querySelector('[name="favorito"]') as HTMLInputElement).checked = data.favorite || false
+          ; (form.querySelector('[name="nome"]') as HTMLInputElement).value = data.name || ''
+          ; (form.querySelector('[name="descricao"]') as HTMLTextAreaElement).value = data.description || ''
+          ; (form.querySelector('[name="pessoaResponsavelId"]') as HTMLSelectElement).value = data.responsiblePersonId || ''
+          ; (form.querySelector('[name="favorito"]') as HTMLInputElement).checked = data.favorite || false
       }
 
       // Carregar imagem existente
@@ -143,7 +143,7 @@ export default function CadastrarArea() {
         }
 
         toast.showSuccess('Área cadastrada com sucesso!')
-        
+
         // Resetar formulário
         if (formRef.current) {
           formRef.current.reset()
@@ -151,7 +151,7 @@ export default function CadastrarArea() {
         setImagemPreview(null)
         setImagemFile(null)
       }
-      
+
       // Navegar de volta para a lista
       setTimeout(() => {
         navigate('/Dashboard/escala/areas')
@@ -177,7 +177,7 @@ export default function CadastrarArea() {
       }
 
       setImagemFile(file)
-      
+
       // Criar preview
       try {
         const preview = await createImagePreview(file)
@@ -251,23 +251,32 @@ export default function CadastrarArea() {
           <div className="form-card">
             <form ref={formRef} onSubmit={handleSubmit}>
               {/* Imagem à esquerda e campos à direita */}
-              <div className="form-row form-row-photo-name">
+              <div className="form-row-photo-name">
                 <div className="form-group-photo-compact">
-                  <label htmlFor="imagem">
-                    <i className="fa-solid fa-image"></i> Imagem
-                  </label>
+                  <div className="photo-label-container">
+                    <label htmlFor="imagem">
+                      <i className="fa-solid fa-image"></i> Imagem
+                    </label>
+                    {imagemPreview && (
+                      <button
+                        type="button"
+                        className="btn-remove-photo-compact"
+                        onClick={handleRemoverImagem}
+                        title="Remover imagem"
+                      >
+                        <i className="fa-solid fa-times"></i>
+                      </button>
+                    )}
+                  </div>
                   <div className="photo-upload-compact">
                     {imagemPreview ? (
-                      <div className="photo-preview-compact">
+                      <div 
+                        className="photo-preview-compact" 
+                        onClick={handlePlaceholderClick}
+                        style={{ cursor: 'pointer' }}
+                        title="Clique para alterar a imagem"
+                      >
                         <img src={imagemPreview} alt="Preview" />
-                        <button
-                          type="button"
-                          className="btn-remove-photo-compact"
-                          onClick={handleRemoverImagem}
-                          title="Remover imagem"
-                        >
-                          <i className="fa-solid fa-times"></i>
-                        </button>
                       </div>
                     ) : (
                       <div 
@@ -286,11 +295,6 @@ export default function CadastrarArea() {
                       onChange={handleImagemChange}
                       className="photo-input"
                     />
-                    {imagemPreview && (
-                      <label htmlFor="imagem" className="btn-upload-photo-compact">
-                        <i className="fa-solid fa-upload"></i> Alterar
-                      </label>
-                    )}
                   </div>
                 </div>
                 <div className="form-group-name-email">
@@ -299,11 +303,11 @@ export default function CadastrarArea() {
                     <label htmlFor="nome">
                       <i className="fa-solid fa-tag"></i> Nome da Área
                     </label>
-                    <input 
-                      type="text" 
-                      id="nome" 
-                      name="nome" 
-                      placeholder="Digite o nome da área" 
+                    <input
+                      type="text"
+                      id="nome"
+                      name="nome"
+                      placeholder="Digite o nome da área"
                       required
                       disabled={isLoadingData}
                     />
@@ -314,9 +318,9 @@ export default function CadastrarArea() {
                     <label htmlFor="pessoaResponsavelId">
                       <i className="fa-solid fa-user"></i> Pessoa Responsável
                     </label>
-                    <select 
-                      id="pessoaResponsavelId" 
-                      name="pessoaResponsavelId" 
+                    <select
+                      id="pessoaResponsavelId"
+                      name="pessoaResponsavelId"
                       required
                       disabled={isLoadingData}
                     >
@@ -332,9 +336,9 @@ export default function CadastrarArea() {
                   {/* Favorito */}
                   <div className="form-group">
                     <label htmlFor="favorito" className="checkbox-label">
-                      <input 
-                        type="checkbox" 
-                        id="favorito" 
+                      <input
+                        type="checkbox"
+                        id="favorito"
                         name="favorito"
                         className="checkbox-input"
                         disabled={isLoadingData}
@@ -357,13 +361,13 @@ export default function CadastrarArea() {
                   <label htmlFor="descricao">
                     <i className="fa-solid fa-file-text"></i> Descrição
                   </label>
-                    <textarea 
-                      id="descricao" 
-                      name="descricao" 
-                      rows={4} 
-                      placeholder="Descreva a área (opcional)"
-                      disabled={isLoadingData}
-                    ></textarea>
+                  <textarea
+                    id="descricao"
+                    name="descricao"
+                    rows={4}
+                    placeholder="Descreva a área (opcional)"
+                    disabled={isLoadingData}
+                  ></textarea>
                   <small className="form-help">
                     Informações adicionais sobre a área
                   </small>
@@ -371,16 +375,16 @@ export default function CadastrarArea() {
               </div>
 
               <div className="form-actions">
-                <button 
-                  type="button" 
-                  className="btn-secondary" 
+                <button
+                  type="button"
+                  className="btn-secondary"
                   onClick={() => navigate('/Dashboard/escala/areas')}
                 >
                   <i className="fa-solid fa-times"></i> Cancelar
                 </button>
-                <button 
-                  type="submit" 
-                  className="btn-primary" 
+                <button
+                  type="submit"
+                  className="btn-primary"
                   disabled={isLoading || isLoadingData}
                 >
                   {isLoading ? (

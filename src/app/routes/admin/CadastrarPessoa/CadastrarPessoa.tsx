@@ -30,22 +30,22 @@ export default function CadastrarPessoa() {
 
   const loadPersonData = async () => {
     if (!id) return
-    
+
     setIsLoadingData(true)
     try {
       const data = await personService.getPersonById(id)
-      
+
       // Preencher formulário
       if (formRef.current) {
         const form = formRef.current
 
-        ;(form.querySelector('[name="fullName"]') as HTMLInputElement).value = data.fullName || ''
-        ;(form.querySelector('[name="email"]') as HTMLInputElement).value = data.email || ''
-        ;(form.querySelector('[name="phone"]') as HTMLInputElement).value = data.phone ? formatPhoneFromRaw(data.phone) : ''
-        ;(form.querySelector('[name="cpf"]') as HTMLInputElement).value = data.cpf ? formatCPFFromRaw(data.cpf) : ''
-        ;(form.querySelector('[name="birthDate"]') as HTMLInputElement).value = data.birthDate || ''
-        ;(form.querySelector('[name="emergencyContact"]') as HTMLInputElement).value = data.emergencyContact ? formatPhoneFromRaw(data.emergencyContact) : ''
-        ;(form.querySelector('[name="address"]') as HTMLTextAreaElement).value = data.address || ''
+          ; (form.querySelector('[name="fullName"]') as HTMLInputElement).value = data.fullName || ''
+          ; (form.querySelector('[name="email"]') as HTMLInputElement).value = data.email || ''
+          ; (form.querySelector('[name="phone"]') as HTMLInputElement).value = data.phone ? formatPhoneFromRaw(data.phone) : ''
+          ; (form.querySelector('[name="cpf"]') as HTMLInputElement).value = data.cpf ? formatCPFFromRaw(data.cpf) : ''
+          ; (form.querySelector('[name="birthDate"]') as HTMLInputElement).value = data.birthDate || ''
+          ; (form.querySelector('[name="emergencyContact"]') as HTMLInputElement).value = data.emergencyContact ? formatPhoneFromRaw(data.emergencyContact) : ''
+          ; (form.querySelector('[name="address"]') as HTMLTextAreaElement).value = data.address || ''
       }
 
       // Carregar foto existente com cache-busting
@@ -71,12 +71,12 @@ export default function CadastrarPessoa() {
 
     try {
       const formData = new FormData(form)
-      
+
       // Remover máscaras dos campos numéricos (apenas se preenchidos)
       const phoneValue = (formData.get('phone') as string) || ''
       const cpfValue = (formData.get('cpf') as string) || ''
       const emergencyContactValue = (formData.get('emergencyContact') as string) || ''
-      
+
       const phone = phoneValue ? removeMask(phoneValue) : ''
       const cpf = cpfValue ? removeMask(cpfValue) : ''
       const emergencyContact = emergencyContactValue ? removeMask(emergencyContactValue) : ''
@@ -131,7 +131,7 @@ export default function CadastrarPessoa() {
         }
 
         toast.showSuccess('Pessoa cadastrada com sucesso!')
-        
+
         // Resetar formulário antes de navegar
         if (formRef.current) {
           formRef.current.reset()
@@ -139,7 +139,7 @@ export default function CadastrarPessoa() {
         setFotoPreview(null)
         setFotoFile(null)
       }
-      
+
       // Pequeno delay antes de navegar
       setTimeout(() => {
         navigate('/Dashboard/listar-pessoas')
@@ -174,7 +174,7 @@ export default function CadastrarPessoa() {
       }
 
       setFotoFile(file)
-      
+
       // Criar preview
       try {
         const preview = await createImagePreview(file)
@@ -245,11 +245,11 @@ export default function CadastrarPessoa() {
         <main className="main-content">
           <div className="form-card">
             {error && (
-              <div style={{ 
-                padding: '12px', 
-                marginBottom: '20px', 
-                backgroundColor: '#fee', 
-                color: '#c33', 
+              <div style={{
+                padding: '12px',
+                marginBottom: '20px',
+                backgroundColor: '#fee',
+                color: '#c33',
                 borderRadius: '4px',
                 border: '1px solid #fcc'
               }}>
@@ -258,7 +258,7 @@ export default function CadastrarPessoa() {
             )}
             <form ref={formRef} onSubmit={handleSubmit}>
               {/* Foto + Nome e Email */}
-              <div className="form-row form-row-photo-name">
+              <div className="form-row-photo-name">
                 <div className="form-group-photo-compact">
                   <label htmlFor="foto">
                     <i className="fa-solid fa-image"></i> Foto
@@ -277,8 +277,8 @@ export default function CadastrarPessoa() {
                         </button>
                       </div>
                     ) : (
-                      <div 
-                        className="photo-placeholder-compact" 
+                      <div
+                        className="photo-placeholder-compact"
                         onClick={handlePlaceholderClick}
                         style={{ cursor: 'pointer' }}
                       >
@@ -305,23 +305,23 @@ export default function CadastrarPessoa() {
                     <label htmlFor="fullName">
                       <i className="fa-solid fa-user"></i> Nome Completo
                     </label>
-                    <input 
-                      type="text" 
-                      id="fullName" 
-                      name="fullName" 
-                      placeholder="Digite o nome completo" 
-                      required 
+                    <input
+                      type="text"
+                      id="fullName"
+                      name="fullName"
+                      placeholder="Digite o nome completo"
+                      required
                     />
                   </div>
                   <div className="form-group">
                     <label htmlFor="email">
                       <i className="fa-solid fa-envelope"></i> E-mail
                     </label>
-                    <input 
-                      type="email" 
-                      id="email" 
-                      name="email" 
-                      placeholder="exemplo@email.com" 
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      placeholder="exemplo@email.com"
                     />
                   </div>
                 </div>
@@ -333,11 +333,11 @@ export default function CadastrarPessoa() {
                   <label htmlFor="phone">
                     <i className="fa-solid fa-phone"></i> Telefone Celular
                   </label>
-                  <input 
-                    type="tel" 
-                    id="phone" 
-                    name="phone" 
-                    placeholder="(00) 00000-0000" 
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    placeholder="(00) 00000-0000"
                     maxLength={15}
                     onChange={handlePhoneChange}
                   />
@@ -346,11 +346,11 @@ export default function CadastrarPessoa() {
                   <label htmlFor="cpf">
                     <i className="fa-solid fa-id-card"></i> CPF
                   </label>
-                  <input 
-                    type="text" 
-                    id="cpf" 
-                    name="cpf" 
-                    placeholder="000.000.000-00" 
+                  <input
+                    type="text"
+                    id="cpf"
+                    name="cpf"
+                    placeholder="000.000.000-00"
                     maxLength={14}
                     onChange={handleCPFChange}
                   />
@@ -363,21 +363,21 @@ export default function CadastrarPessoa() {
                   <label htmlFor="birthDate">
                     <i className="fa-solid fa-calendar"></i> Data de Nascimento
                   </label>
-                  <input 
-                    type="date" 
-                    id="birthDate" 
-                    name="birthDate" 
+                  <input
+                    type="date"
+                    id="birthDate"
+                    name="birthDate"
                   />
                 </div>
                 <div className="form-group">
                   <label htmlFor="emergencyContact">
                     <i className="fa-solid fa-phone-volume"></i> Contato de Emergência
                   </label>
-                  <input 
-                    type="tel" 
-                    id="emergencyContact" 
-                    name="emergencyContact" 
-                    placeholder="(00) 00000-0000" 
+                  <input
+                    type="tel"
+                    id="emergencyContact"
+                    name="emergencyContact"
+                    placeholder="(00) 00000-0000"
                     maxLength={15}
                     onChange={handlePhoneChange}
                   />
@@ -391,10 +391,10 @@ export default function CadastrarPessoa() {
                   <label htmlFor="address">
                     <i className="fa-solid fa-location-dot"></i> Endereço
                   </label>
-                  <textarea 
-                    id="address" 
-                    name="address" 
-                    rows={3} 
+                  <textarea
+                    id="address"
+                    name="address"
+                    rows={3}
                     placeholder="Rua, número, complemento, bairro, cidade - UF, CEP"
                   ></textarea>
                 </div>

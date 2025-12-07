@@ -1,9 +1,9 @@
 // Tipos para geração automática de escalas
 
-export type GenerationType = 'group' | 'team_without_restriction' | 'team_with_restriction'
+export type GenerationType = 'group' | 'people' | 'team_without_restriction' | 'team_with_restriction'
 export type PeriodType = 'fixed' | 'monthly' | 'weekly' | 'daily'
 export type DistributionOrder = 'sequential' | 'random' | 'balanced'
-export type ParticipantSelection = 'all' | 'by_group' | 'individual'
+export type ParticipantSelection = 'all' | 'by_group' | 'individual' | 'all_with_exclusions'
 
 export interface SchedulePreview {
   id: string
@@ -47,6 +47,12 @@ export interface GenerationConfiguration {
     groupsPerSchedule: number
     distributionOrder: DistributionOrder
     considerAbsences: boolean
+    excludedPersonIds?: string[] // IDs de pessoas a excluir (mesmo que estejam nos grupos)
+  }
+  
+  peopleConfig?: {
+    excludedPersonIds?: string[] // IDs de pessoas a excluir (todas as outras são incluídas)
+    considerAbsences: boolean
   }
   
   teamConfig?: {
@@ -54,6 +60,7 @@ export interface GenerationConfiguration {
     participantSelection: ParticipantSelection
     selectedGroupIds?: string[]
     selectedPersonIds?: string[]
+    excludedPersonIds?: string[] // IDs de pessoas a excluir (usado com 'all_with_exclusions')
     considerAbsences: boolean
     requireResponsibilities: boolean
   }

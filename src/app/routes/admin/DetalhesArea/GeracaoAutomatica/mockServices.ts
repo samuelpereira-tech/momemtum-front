@@ -28,6 +28,90 @@ export async function generatePreview(
   // Rastrear atribuições anteriores para balanceamento
   const assignmentHistory = new Map<string, Map<string, number>>() // roleId -> personId -> count
   
+  // Função auxiliar para normalizar data para início do dia (evitar problemas de timezone)
+  const normalizeDate = (date: Date | string): Date => {
+    const d = typeof date === 'string' ? new Date(date) : date
+    // Criar nova data com apenas ano, mês e dia (sem hora)
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  }
+  
+  // Função auxiliar para verificar se um grupo pode ser usado (sem membros ausentes)
+  const canUseGroup = (groupId: string, scheduleStart: Date, scheduleEnd: Date): boolean => {
+    if (!config.groupConfig?.considerAbsences || absences.length === 0) {
+      return true // Se não considerar ausências ou não há ausências, pode usar
+    }
+    
+    // Buscar membros do grupo
+    const groupMembersList = groupMembers.filter(m => m.groupId === groupId)
+    
+    // Normalizar datas da escala para início do dia
+    const normalizedScheduleStart = normalizeDate(scheduleStart)
+    const normalizedScheduleEnd = normalizeDate(scheduleEnd)
+    
+    // Verificar se algum membro tem ausência que sobrepõe o período da escala
+    for (const member of groupMembersList) {
+      const memberAbsences = absences.filter(a => {
+        if (a.personId !== member.personId) return false
+        
+        // Normalizar datas de ausência para início do dia
+        const absenceStart = normalizeDate(a.startDate)
+        const absenceEnd = normalizeDate(a.endDate)
+        
+        // Verificar sobreposição: ausência.start <= escala.end && ausência.end >= escala.start
+        // Usar getTime() para comparação numérica precisa
+        return absenceStart.getTime() <= normalizedScheduleEnd.getTime() && 
+               absenceEnd.getTime() >= normalizedScheduleStart.getTime()
+      })
+      
+      if (memberAbsences.length > 0) {
+        return false // Grupo tem membro ausente, não pode usar
+      }
+    }
+    
+    return true // Grupo pode ser usado
+  }
+  
+  // Função auxiliar para selecionar grupos válidos (sem membros ausentes)
+  const selectValidGroups = (
+    availableGroups: GroupResponseDto[],
+    scheduleStart: Date,
+    scheduleEnd: Date,
+    groupsPerSchedule: number,
+    scheduleIndex: number,
+    distributionOrder: DistributionOrder
+  ): string[] => {
+    if (availableGroups.length === 0) return []
+    
+    // Filtrar grupos que podem ser usados (sem membros ausentes)
+    const validGroups = availableGroups.filter(g => canUseGroup(g.id, scheduleStart, scheduleEnd))
+    
+    if (validGroups.length === 0) {
+      // Se não há grupos válidos, retornar grupos mesmo com ausências (com aviso)
+      return availableGroups.slice(0, groupsPerSchedule).map(g => g.id)
+    }
+    
+    // Selecionar grupos baseado na ordem de distribuição
+    let selectedGroups: GroupResponseDto[] = []
+    
+    if (distributionOrder === 'sequential') {
+      const startIndex = (scheduleIndex - 1) % validGroups.length
+      for (let i = 0; i < groupsPerSchedule; i++) {
+        selectedGroups.push(validGroups[(startIndex + i) % validGroups.length])
+      }
+    } else if (distributionOrder === 'random') {
+      const shuffled = [...validGroups].sort(() => Math.random() - 0.5)
+      selectedGroups = shuffled.slice(0, groupsPerSchedule)
+    } else { // balanced
+      // Distribuição balanceada: usar rotação baseada no índice
+      const startIndex = (scheduleIndex - 1) % validGroups.length
+      for (let i = 0; i < groupsPerSchedule; i++) {
+        selectedGroups.push(validGroups[(startIndex + i) % validGroups.length])
+      }
+    }
+    
+    return selectedGroups.map(g => g.id)
+  }
+  
   // Função auxiliar para enriquecer grupos com membros
   const enrichGroupsWithMembers = (groupIds: string[]): Array<{ 
     id: string
@@ -41,6 +125,9 @@ export async function generatePreview(
   }> => {
     const enrichedGroups = []
     
+    // Obter lista de pessoas excluídas (se houver)
+    const excludedPersonIds = new Set(config.groupConfig?.excludedPersonIds || [])
+    
     for (const groupId of groupIds) {
       const group = groups.find(g => g.id === groupId)
       if (!group) continue
@@ -48,22 +135,24 @@ export async function generatePreview(
       // Buscar membros do grupo nos groupMembers
       const groupMembersList = groupMembers.filter(m => m.groupId === groupId)
       
-      const members = groupMembersList.map(member => {
-        // Tentar encontrar a pessoa no array persons primeiro, depois usar member.person como fallback
-        const personArea = persons.find(p => p.personId === member.personId)
-        const person = personArea?.person || member.person
-        
-        return {
-          personId: member.personId,
-          personName: person?.fullName || member.personId,
-          personPhotoUrl: person?.photoUrl || null,
-          responsibilities: member.responsibilities?.map(r => ({
-            id: r.id,
-            name: r.name,
-            imageUrl: r.imageUrl,
-          })) || [],
-        }
-      })
+      const members = groupMembersList
+        .filter(member => !excludedPersonIds.has(member.personId)) // Filtrar pessoas excluídas
+        .map(member => {
+          // Tentar encontrar a pessoa no array persons primeiro, depois usar member.person como fallback
+          const personArea = persons.find(p => p.personId === member.personId)
+          const person = personArea?.person || member.person
+          
+          return {
+            personId: member.personId,
+            personName: person?.fullName || member.personId,
+            personPhotoUrl: person?.photoUrl || null,
+            responsibilities: member.responsibilities?.map(r => ({
+              id: r.id,
+              name: r.name,
+              imageUrl: r.imageUrl,
+            })) || [],
+          }
+        })
       
       enrichedGroups.push({
         id: group.id,
@@ -75,14 +164,79 @@ export async function generatePreview(
     return enrichedGroups
   }
   
+  // Função auxiliar para gerar lista de pessoas selecionadas
+  const generatePeopleList = (scheduleStart: Date, scheduleEnd: Date): Array<{
+    personId: string
+    personName: string
+    personPhotoUrl: string | null
+    responsibilities: Array<{ id: string; name: string; imageUrl: string | null }>
+  }> => {
+    if (config.generationType !== 'people' || !config.peopleConfig) return []
+    
+    // Obter pessoas excluídas
+    const excludedPersonIds = new Set(config.peopleConfig.excludedPersonIds || [])
+    
+    // Filtrar pessoas (todas exceto as excluídas)
+    let availablePersons = persons.filter(p => !excludedPersonIds.has(p.personId))
+    
+    // Filtrar pessoas ausentes se necessário
+    if (config.peopleConfig.considerAbsences && absences.length > 0) {
+      const absentPersonIds = new Set<string>()
+      for (const absence of absences) {
+        const absenceStart = normalizeDate(absence.startDate)
+        const absenceEnd = normalizeDate(absence.endDate)
+        const normalizedScheduleStart = normalizeDate(scheduleStart)
+        const normalizedScheduleEnd = normalizeDate(scheduleEnd)
+        
+        if (absenceStart.getTime() <= normalizedScheduleEnd.getTime() && 
+            absenceEnd.getTime() >= normalizedScheduleStart.getTime()) {
+          absentPersonIds.add(absence.personId)
+        }
+      }
+      availablePersons = availablePersons.filter(p => !absentPersonIds.has(p.personId))
+    }
+    
+    // Retornar lista formatada
+    return availablePersons.map(person => ({
+      personId: person.personId,
+      personName: person.person?.fullName || person.personId,
+      personPhotoUrl: person.person?.photoUrl || null,
+      responsibilities: person.responsibilities?.map(r => ({
+        id: r.id,
+        name: r.name,
+        imageUrl: r.imageUrl,
+      })) || [],
+    }))
+  }
+  
   // Gerar escalas baseado no tipo de período
   if (config.periodType === 'fixed') {
     const scheduleStart = new Date(config.periodConfig?.baseDateTime || config.periodStartDate)
     const scheduleEnd = new Date(config.periodEndDate)
     
-    const selectedGroupIds = config.generationType === 'group' && config.groupConfig
-      ? config.groupConfig.groupIds
-      : []
+    let selectedGroupIds: string[] = []
+    if (config.generationType === 'group' && config.groupConfig) {
+      const availableGroups = groups.filter(g => config.groupConfig!.groupIds.includes(g.id))
+      selectedGroupIds = selectValidGroups(
+        availableGroups,
+        scheduleStart,
+        scheduleEnd,
+        config.groupConfig.groupsPerSchedule,
+        1,
+        config.groupConfig.distributionOrder
+      )
+    }
+    
+    // Para geração por pessoas, criar um grupo virtual com todas as pessoas
+    let peopleList: Array<{
+      personId: string
+      personName: string
+      personPhotoUrl: string | null
+      responsibilities: Array<{ id: string; name: string; imageUrl: string | null }>
+    }> = []
+    if (config.generationType === 'people') {
+      peopleList = generatePeopleList(scheduleStart, scheduleEnd)
+    }
     
     schedules.push({
       id: 's1',
@@ -90,11 +244,17 @@ export async function generatePreview(
       endDatetime: scheduleEnd.toISOString(),
       groups: selectedGroupIds.length > 0
         ? enrichGroupsWithMembers(selectedGroupIds)
+        : config.generationType === 'people' && peopleList.length > 0
+        ? [{
+            id: 'all-people',
+            name: 'Todas as Pessoas',
+            members: peopleList,
+          }]
         : undefined,
-      team: config.generationType !== 'group' && config.teamConfig
+      team: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig
         ? teams.find(t => t.id === config.teamConfig!.teamId) ? { id: teams.find(t => t.id === config.teamConfig!.teamId)!.id, name: teams.find(t => t.id === config.teamConfig!.teamId)!.name } : undefined
         : undefined,
-        assignments: config.generationType !== 'group' && config.teamConfig
+        assignments: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig
         ? generateAssignments(config, teams, persons, 1, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
         : undefined,
       warnings: ['Repetição consecutiva detectada'],
@@ -108,31 +268,72 @@ export async function generatePreview(
       const scheduleEnd = new Date(currentDate)
       scheduleEnd.setDate(scheduleEnd.getDate() + (config.periodConfig?.duration || 7) - 1)
       
-      const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
-      const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
-      
-      const selectedGroupIds = config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
-        ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length].id]
-        : []
-      
-      schedules.push({
-        id: `s${scheduleIndex}`,
-        startDatetime: scheduleStart.toISOString(),
-        endDatetime: scheduleEnd.toISOString(),
-        groups: selectedGroupIds.length > 0
-          ? await enrichGroupsWithMembers(selectedGroupIds)
-          : undefined,
-        team: config.generationType !== 'group' && config.teamConfig && selectedTeam
-          ? { id: selectedTeam.id, name: selectedTeam.name }
-          : undefined,
-        assignments: config.generationType !== 'group' && config.teamConfig
-          ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
-          : undefined,
-        warnings: scheduleIndex % 3 === 0 ? ['Repetição consecutiva'] : undefined,
+      // Verificar se alguma data do período está excluída
+      const scheduleStartString = scheduleStart.toISOString().split('T')[0]
+      const scheduleEndString = scheduleEnd.toISOString().split('T')[0]
+      const hasExcludedDate = config.periodConfig?.excludedDates?.some(excludedDate => {
+        const excluded = new Date(excludedDate)
+        return excluded >= scheduleStart && excluded <= scheduleEnd
+      })
+      const hasIncludedDate = config.periodConfig?.includedDates?.some(includedDate => {
+        const included = new Date(includedDate)
+        return included >= scheduleStart && included <= scheduleEnd
       })
       
+      // Se não há data excluída ou há data incluída, gerar escala
+      if (!hasExcludedDate || hasIncludedDate) {
+        const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+        
+        let selectedGroupIds: string[] = []
+        if (config.generationType === 'group' && config.groupConfig) {
+          const availableGroups = groups.filter(g => config.groupConfig!.groupIds.includes(g.id))
+          selectedGroupIds = selectValidGroups(
+            availableGroups,
+            scheduleStart,
+            scheduleEnd,
+            config.groupConfig.groupsPerSchedule,
+            scheduleIndex,
+            config.groupConfig.distributionOrder
+          )
+        }
+        
+        // Para geração por pessoas, criar um grupo virtual com todas as pessoas
+        let peopleList: Array<{
+          personId: string
+          personName: string
+          personPhotoUrl: string | null
+          responsibilities: Array<{ id: string; name: string; imageUrl: string | null }>
+        }> = []
+        if (config.generationType === 'people') {
+          peopleList = generatePeopleList(scheduleStart, scheduleEnd)
+        }
+        
+        schedules.push({
+          id: `s${scheduleIndex}`,
+          startDatetime: scheduleStart.toISOString(),
+          endDatetime: scheduleEnd.toISOString(),
+          groups: selectedGroupIds.length > 0
+            ? await enrichGroupsWithMembers(selectedGroupIds)
+            : config.generationType === 'people' && peopleList.length > 0
+            ? [{
+                id: 'all-people',
+                name: 'Todas as Pessoas',
+                members: peopleList,
+              }]
+            : undefined,
+          team: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig && selectedTeam
+            ? { id: selectedTeam.id, name: selectedTeam.name }
+            : undefined,
+          assignments: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig
+            ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
+            : undefined,
+          warnings: scheduleIndex % 3 === 0 ? ['Repetição consecutiva'] : undefined,
+        })
+        
+        scheduleIndex++
+      }
+      
       currentDate.setDate(currentDate.getDate() + (config.periodConfig?.interval || 7))
-      scheduleIndex++
     }
   } else if (config.periodType === 'monthly') {
     let currentDate = new Date(startDate)
@@ -142,30 +343,64 @@ export async function generatePreview(
       const scheduleStart = new Date(currentDate)
       const scheduleEnd = new Date(currentDate.getTime() + (config.periodConfig?.duration || 1) * 24 * 60 * 60 * 1000)
       
-      const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
-      const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+      // Verificar se alguma data do período está excluída
+      const scheduleStartString = scheduleStart.toISOString().split('T')[0]
+      const hasExcludedDate = config.periodConfig?.excludedDates?.includes(scheduleStartString)
+      const hasIncludedDate = config.periodConfig?.includedDates?.includes(scheduleStartString)
       
-      const selectedGroupIds = config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
-        ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length].id]
-        : []
-      
-      schedules.push({
-        id: `s${scheduleIndex}`,
-        startDatetime: scheduleStart.toISOString(),
-        endDatetime: scheduleEnd.toISOString(),
-        groups: selectedGroupIds.length > 0
-          ? await enrichGroupsWithMembers(selectedGroupIds)
-          : undefined,
-        team: config.generationType !== 'group' && config.teamConfig && selectedTeam
-          ? { id: selectedTeam.id, name: selectedTeam.name }
-          : undefined,
-        assignments: config.generationType !== 'group' && config.teamConfig
-          ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
-          : undefined,
-      })
+      // Se não há data excluída ou há data incluída, gerar escala
+      if (!hasExcludedDate || hasIncludedDate) {
+        const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
+        
+        let selectedGroupIds: string[] = []
+        if (config.generationType === 'group' && config.groupConfig) {
+          const availableGroups = groups.filter(g => config.groupConfig!.groupIds.includes(g.id))
+          selectedGroupIds = selectValidGroups(
+            availableGroups,
+            scheduleStart,
+            scheduleEnd,
+            config.groupConfig.groupsPerSchedule,
+            scheduleIndex,
+            config.groupConfig.distributionOrder
+          )
+        }
+        
+        // Para geração por pessoas, criar um grupo virtual com todas as pessoas
+        let peopleList: Array<{
+          personId: string
+          personName: string
+          personPhotoUrl: string | null
+          responsibilities: Array<{ id: string; name: string; imageUrl: string | null }>
+        }> = []
+        if (config.generationType === 'people') {
+          peopleList = generatePeopleList(scheduleStart, scheduleEnd)
+        }
+        
+        schedules.push({
+          id: `s${scheduleIndex}`,
+          startDatetime: scheduleStart.toISOString(),
+          endDatetime: scheduleEnd.toISOString(),
+          groups: selectedGroupIds.length > 0
+            ? await enrichGroupsWithMembers(selectedGroupIds)
+            : config.generationType === 'people' && peopleList.length > 0
+            ? [{
+                id: 'all-people',
+                name: 'Todas as Pessoas',
+                members: peopleList,
+              }]
+            : undefined,
+          team: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig && selectedTeam
+            ? { id: selectedTeam.id, name: selectedTeam.name }
+            : undefined,
+          assignments: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig
+            ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
+            : undefined,
+        })
+        
+        scheduleIndex++
+      }
       
       currentDate.setMonth(currentDate.getMonth() + 1)
-      scheduleIndex++
     }
   } else if (config.periodType === 'daily') {
     let currentDate = new Date(startDate)
@@ -173,8 +408,17 @@ export async function generatePreview(
     
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay()
+      const dateString = currentDate.toISOString().split('T')[0]
       
-      if (!config.periodConfig?.weekdays || config.periodConfig.weekdays.includes(dayOfWeek)) {
+      // Verificar se a data está excluída
+      const isExcluded = config.periodConfig?.excludedDates?.includes(dateString)
+      // Verificar se a data está incluída (override de exclusão)
+      const isIncluded = config.periodConfig?.includedDates?.includes(dateString)
+      
+      // Verificar se deve gerar escala para este dia
+      const shouldGenerate = (isIncluded || (!isExcluded && (!config.periodConfig?.weekdays || config.periodConfig.weekdays.includes(dayOfWeek))))
+      
+      if (shouldGenerate) {
         const scheduleStart = new Date(currentDate)
         if (config.periodConfig?.startTime) {
           const [hours, minutes] = config.periodConfig.startTime.split(':').map(Number)
@@ -189,12 +433,31 @@ export async function generatePreview(
           scheduleEnd.setHours(scheduleStart.getHours() + 2, 0, 0, 0)
         }
         
-        const selectedGroups = groups.filter(g => config.groupConfig?.groupIds.includes(g.id))
         const selectedTeam = teams.find(t => t.id === config.teamConfig?.teamId)
         
-        const selectedGroupIds = config.generationType === 'group' && config.groupConfig && selectedGroups.length > 0
-          ? [selectedGroups[(scheduleIndex - 1) % selectedGroups.length].id]
-          : []
+        let selectedGroupIds: string[] = []
+        if (config.generationType === 'group' && config.groupConfig) {
+          const availableGroups = groups.filter(g => config.groupConfig!.groupIds.includes(g.id))
+          selectedGroupIds = selectValidGroups(
+            availableGroups,
+            scheduleStart,
+            scheduleEnd,
+            config.groupConfig.groupsPerSchedule,
+            scheduleIndex,
+            config.groupConfig.distributionOrder
+          )
+        }
+        
+        // Para geração por pessoas, criar um grupo virtual com todas as pessoas
+        let peopleList: Array<{
+          personId: string
+          personName: string
+          personPhotoUrl: string | null
+          responsibilities: Array<{ id: string; name: string; imageUrl: string | null }>
+        }> = []
+        if (config.generationType === 'people') {
+          peopleList = generatePeopleList(scheduleStart, scheduleEnd)
+        }
         
         schedules.push({
           id: `s${scheduleIndex}`,
@@ -202,11 +465,17 @@ export async function generatePreview(
           endDatetime: scheduleEnd.toISOString(),
           groups: selectedGroupIds.length > 0
             ? await enrichGroupsWithMembers(selectedGroupIds)
+            : config.generationType === 'people' && peopleList.length > 0
+            ? [{
+                id: 'all-people',
+                name: 'Todas as Pessoas',
+                members: peopleList,
+              }]
             : undefined,
-          team: config.generationType !== 'group' && config.teamConfig && selectedTeam
+          team: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig && selectedTeam
             ? { id: selectedTeam.id, name: selectedTeam.name }
             : undefined,
-          assignments: config.generationType !== 'group' && config.teamConfig
+          assignments: config.generationType !== 'group' && config.generationType !== 'people' && config.teamConfig
             ? generateAssignments(config, teams, persons, scheduleIndex, groupMembers, absences, scheduleStart, scheduleEnd, assignmentHistory)
             : undefined,
         })
@@ -315,16 +584,34 @@ export async function generatePreview(
     }
   }
   
+  // Calcular total de participantes únicos
+  const uniqueParticipants = new Set<string>()
+  for (const schedule of schedules) {
+    if (schedule.groups) {
+      // Para grupos, contar membros únicos de todos os grupos
+      for (const group of schedule.groups) {
+        if (group.members) {
+          for (const member of group.members) {
+            uniqueParticipants.add(member.personId)
+          }
+        }
+      }
+    } else if (schedule.assignments) {
+      // Para equipes, contar pessoas atribuídas (excluindo "[Não atribuído]")
+      for (const assignment of schedule.assignments) {
+        if (assignment.personId && assignment.personName !== '[Não atribuído]') {
+          uniqueParticipants.add(assignment.personId)
+        }
+      }
+    }
+  }
+  
   return {
     configuration: config,
     schedules,
     summary: {
       totalSchedules: schedules.length,
-      totalParticipants: schedules.reduce((acc, s) => {
-        if (s.groups) return acc + s.groups.length
-        if (s.assignments) return acc + s.assignments.length
-        return acc
-      }, 0),
+      totalParticipants: uniqueParticipants.size,
       warnings: warnings.length,
       errors: errors.length,
       distributionBalance: warnings.length > schedules.length / 2 ? 'unbalanced' : 'balanced',
@@ -397,6 +684,12 @@ function generateAssignments(
     // Incluir pessoas selecionadas + pessoas fixas (mesmo que não estejam selecionadas)
     availablePersons = persons.filter(p => 
       config.teamConfig!.selectedPersonIds!.includes(p.personId) || fixedPersonIds.has(p.personId)
+    )
+  } else if (config.teamConfig.participantSelection === 'all_with_exclusions') {
+    // Modo "Por Pessoas" - todas as pessoas exceto as excluídas + pessoas fixas (mesmo que excluídas)
+    const excludedPersonIds = new Set(config.teamConfig.excludedPersonIds || [])
+    availablePersons = persons.filter(p => 
+      !excludedPersonIds.has(p.personId) || fixedPersonIds.has(p.personId)
     )
   } else {
     // Modo "TODOS" - já inclui todas as pessoas, mas garantir que fixas estejam

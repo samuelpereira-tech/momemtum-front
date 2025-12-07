@@ -47,6 +47,11 @@
   color: var(--white);
 }
 
+.checkbox-input:checked + .checkbox-custom::after {
+  display: none !important;
+  content: '' !important;
+}
+
 .checkbox-text {
   font-weight: 500;
   color: var(--text-color);

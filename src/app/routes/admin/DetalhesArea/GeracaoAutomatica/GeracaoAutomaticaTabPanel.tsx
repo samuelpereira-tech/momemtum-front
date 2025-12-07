@@ -37,13 +37,16 @@ export default function GeracaoAutomaticaTabPanel() {
   const [config, setConfig] = useState<GenerationConfiguration>({
     scheduledAreaId: scheduledAreaId || '',
     generationType: 'group',
-    periodType: 'weekly',
+    periodType: 'daily',
     periodStartDate: new Date().toISOString().split('T')[0],
     periodEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     groupConfig: {
       groupIds: [],
       groupsPerSchedule: 1,
       distributionOrder: 'balanced',
+      considerAbsences: true,
+    },
+    peopleConfig: {
       considerAbsences: true,
     },
     teamConfig: {
@@ -54,8 +57,10 @@ export default function GeracaoAutomaticaTabPanel() {
     },
     periodConfig: {
       baseDateTime: new Date().toISOString(),
-      duration: 7,
-      interval: 7,
+      duration: 1,
+      startTime: '08:00',
+      endTime: '17:00',
+      weekdays: [0, 1, 2, 3, 4, 5, 6], // Todos os dias da semana por padrão
     },
   })
   
@@ -319,13 +324,16 @@ export default function GeracaoAutomaticaTabPanel() {
       setConfig({
         scheduledAreaId: scheduledAreaId || '',
         generationType: 'group',
-        periodType: 'weekly',
+        periodType: 'daily',
         periodStartDate: new Date().toISOString().split('T')[0],
         periodEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         groupConfig: {
           groupIds: [],
           groupsPerSchedule: 1,
           distributionOrder: 'balanced',
+          considerAbsences: true,
+        },
+        peopleConfig: {
           considerAbsences: true,
         },
         teamConfig: {
@@ -336,8 +344,10 @@ export default function GeracaoAutomaticaTabPanel() {
         },
         periodConfig: {
           baseDateTime: new Date().toISOString(),
-          duration: 7,
-          interval: 7,
+          duration: 1,
+          startTime: '08:00',
+          endTime: '17:00',
+          weekdays: [0, 1, 2, 3, 4, 5, 6], // Todos os dias da semana por padrão
         },
       })
     } catch (error: any) {
@@ -486,7 +496,17 @@ export default function GeracaoAutomaticaTabPanel() {
 // Step 1: Tipo de Geração
 function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfiguration; onUpdate: (updates: Partial<GenerationConfiguration>) => void }) {
   const handleTypeSelect = (type: GenerationType) => {
-    onUpdate({ generationType: type })
+    const updates: Partial<GenerationConfiguration> = { generationType: type }
+    
+    // Se selecionar "Por Equipe (Com Restrição)", marcar "Validar responsabilidades obrigatoriamente" por padrão
+    if (type === 'team_with_restriction') {
+      updates.teamConfig = {
+        ...config.teamConfig,
+        requireResponsibilities: true,
+      }
+    }
+    
+    onUpdate(updates)
   }
   
   return (
@@ -495,7 +515,7 @@ function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfigurat
         <i className="fa-solid fa-list"></i> Selecione o Tipo de Geração
       </h4>
       <p className="form-section-description">
-        Escolha como as escalas serão geradas: por grupos, por equipe sem restrição de papéis, ou por equipe com restrição de papéis.
+        Escolha como as escalas serão geradas: por grupos, por pessoas, por equipe sem restrição de papéis, ou por equipe com restrição de papéis.
       </p>
       
       <div className="type-selection-grid">
@@ -509,6 +529,19 @@ function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfigurat
           <h5 className="type-option-title">Por Grupos</h5>
           <p className="type-option-description">
             Gera escalas atribuindo grupos completos a cada período. Ideal para escalas onde grupos inteiros trabalham juntos.
+          </p>
+        </div>
+        
+        <div
+          className={`type-option ${config.generationType === 'people' ? 'selected' : ''}`}
+          onClick={() => handleTypeSelect('people')}
+        >
+          <div className="type-option-icon">
+            <i className="fa-solid fa-user-friends"></i>
+          </div>
+          <h5 className="type-option-title">Por Pessoas</h5>
+          <p className="type-option-description">
+            Gera escalas com todas as pessoas da área selecionadas por padrão. Você pode remover pessoas específicas que não devem participar.
           </p>
         </div>
         
@@ -553,6 +586,48 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
   onNext: () => void
   isLoading: boolean
 }) {
+  if (config.generationType === 'people') {
+    return (
+      <div className="form-card">
+        <h4 className="form-section-title">
+          <i className="fa-solid fa-cog"></i> Configurações de Pessoas
+        </h4>
+        
+        <div className="form-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={config.peopleConfig?.considerAbsences || false}
+              onChange={(e) => onUpdate({
+                peopleConfig: {
+                  ...config.peopleConfig!,
+                  considerAbsences: e.target.checked,
+                },
+              })}
+              aria-label="Considerar ausências ao escalar pessoas"
+            />
+            <span className="checkbox-custom"></span>
+            <span className="checkbox-text">
+              Considerar ausências ao escalar pessoas
+              <span className="tooltip-trigger" title="Se habilitado, pessoas com ausências agendadas no período da escala não serão incluídas.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
+            </span>
+          </label>
+        </div>
+        
+        <div className="form-actions">
+          <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
+            <i className="fa-solid fa-arrow-left"></i> Voltar
+          </button>
+          <button type="button" className="btn-primary" onClick={onNext} aria-label="Avançar para próxima etapa">
+            <i className="fa-solid fa-arrow-right"></i> Próximo
+          </button>
+        </div>
+      </div>
+    )
+  }
+  
   if (config.generationType === 'group') {
     return (
       <div className="form-card">
@@ -606,6 +681,9 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
           <div className="form-group">
             <label>
               <i className="fa-solid fa-hashtag"></i> Quantidade de Grupos por Escala
+              <span className="tooltip-trigger" title="Define quantos grupos serão atribuídos a cada escala gerada.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
             </label>
             <input
               type="number"
@@ -617,12 +695,16 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
                   groupsPerSchedule: parseInt(e.target.value) || 1,
                 },
               })}
+              aria-label="Quantidade de grupos por escala"
             />
           </div>
           
           <div className="form-group">
             <label>
               <i className="fa-solid fa-sort"></i> Ordem de Distribuição
+              <span className="tooltip-trigger" title="Sequencial: ordem fixa | Aleatória: ordem aleatória | Balanceada: distribuição equilibrada evitando repetições">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
             </label>
             <select
               value={config.groupConfig?.distributionOrder || 'balanced'}
@@ -632,6 +714,7 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
                   distributionOrder: e.target.value as DistributionOrder,
                 },
               })}
+              aria-label="Ordem de distribuição dos grupos"
             >
               <option value="sequential">Sequencial</option>
               <option value="random">Aleatória</option>
@@ -651,17 +734,23 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
                   considerAbsences: e.target.checked,
                 },
               })}
+              aria-label="Considerar ausências ao escalar grupos"
             />
             <span className="checkbox-custom"></span>
-            <span className="checkbox-text">Considerar ausências ao escalar grupos</span>
+            <span className="checkbox-text">
+              Considerar ausências ao escalar grupos
+              <span className="tooltip-trigger" title="Se habilitado, grupos com membros ausentes no período da escala não serão selecionados.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
+            </span>
           </label>
         </div>
         
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={onBack}>
+          <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
             <i className="fa-solid fa-arrow-left"></i> Voltar
           </button>
-          <button type="button" className="btn-primary" onClick={onNext} disabled={!config.groupConfig?.groupIds.length}>
+          <button type="button" className="btn-primary" onClick={onNext} disabled={!config.groupConfig?.groupIds.length} aria-label="Avançar para próxima etapa">
             <i className="fa-solid fa-arrow-right"></i> Próximo
           </button>
         </div>
@@ -742,6 +831,8 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
                           src={addCacheBusting(roleImage)}
                           alt={role.responsibilityName}
                           className="role-image"
+                          loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div className="role-image-placeholder">
@@ -811,10 +902,10 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
       </div>
       
       <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onBack}>
+        <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
           <i className="fa-solid fa-arrow-left"></i> Voltar
         </button>
-        <button type="button" className="btn-primary" onClick={onNext} disabled={!config.teamConfig?.teamId}>
+        <button type="button" className="btn-primary" onClick={onNext} disabled={!config.teamConfig?.teamId} aria-label="Avançar para próxima etapa">
           <i className="fa-solid fa-arrow-right"></i> Próximo
         </button>
       </div>
@@ -832,21 +923,243 @@ function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, 
   onNext: () => void
   isLoading: boolean
 }) {
+  if (config.generationType === 'people') {
+    // Para pessoas, todas selecionadas por padrão, pode remover
+    return (
+      <div className="form-card">
+        <h4 className="form-section-title">
+          <i className="fa-solid fa-user-check"></i> Seleção de Pessoas
+        </h4>
+        <p className="form-section-description">
+          Todas as pessoas da área estão selecionadas por padrão. Desmarque as pessoas que deseja excluir da geração.
+        </p>
+        
+        <div className="form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <label style={{ margin: 0 }}>
+              <i className="fa-solid fa-users"></i> Pessoas (Todas selecionadas - desmarque para remover)
+              <span className="tooltip-trigger" title="Todas as pessoas da área estão selecionadas por padrão. Desmarque as pessoas que deseja excluir da geração.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
+            </label>
+            {!isLoading && persons.length > 0 && (
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => {
+                  const allExcluded = persons.map(p => p.personId)
+                  const hasExcluded = (config.peopleConfig?.excludedPersonIds?.length || 0) > 0
+                  onUpdate({
+                    peopleConfig: {
+                      ...config.peopleConfig!,
+                      excludedPersonIds: hasExcluded ? undefined : allExcluded,
+                    },
+                  })
+                }}
+                style={{ fontSize: '0.9rem', padding: '4px 8px' }}
+              >
+                {(config.peopleConfig?.excludedPersonIds?.length || 0) > 0 ? (
+                  <>
+                    <i className="fa-solid fa-check-double"></i> Marcar Todos
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-square"></i> Desmarcar Todos
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Carregando pessoas...
+            </div>
+          ) : persons.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              <i className="fa-solid fa-info-circle"></i> Nenhuma pessoa cadastrada nesta área
+            </div>
+          ) : (
+            <div className="checkbox-group checkbox-group-with-photos">
+              {persons.map(person => {
+                const isExcluded = config.peopleConfig?.excludedPersonIds?.includes(person.personId) || false
+                return (
+                  <label key={person.id} className="checkbox-label checkbox-label-with-photo">
+                    <input
+                      type="checkbox"
+                      checked={!isExcluded}
+                      onChange={(e) => {
+                        const currentExcluded = config.peopleConfig?.excludedPersonIds || []
+                        const newExcluded = e.target.checked
+                          ? currentExcluded.filter(id => id !== person.personId)
+                          : [...currentExcluded, person.personId]
+                        onUpdate({
+                          peopleConfig: {
+                            ...config.peopleConfig!,
+                            excludedPersonIds: newExcluded.length > 0 ? newExcluded : undefined,
+                          },
+                        })
+                      }}
+                    />
+                    <span className="checkbox-custom"></span>
+                    <div className="person-photo-container-small">
+                      {person.person?.photoUrl ? (
+                        <img
+                          src={addCacheBusting(person.person.photoUrl)}
+                          alt={person.person?.fullName || person.personId}
+                          className="person-photo-small"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="person-photo-placeholder-small">
+                          {person.person?.fullName?.charAt(0).toUpperCase() || person.personId.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="checkbox-text-container">
+                      <span className="checkbox-text">
+                        {person.person?.fullName || person.personId}
+                      </span>
+                      {person.responsibilities && person.responsibilities.length > 0 && (
+                        <span className="checkbox-text-meta">
+                          {person.responsibilities.map(r => r.name).join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        
+        <div className="form-actions">
+          <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
+            <i className="fa-solid fa-arrow-left"></i> Voltar
+          </button>
+          <button type="button" className="btn-primary" onClick={onNext} aria-label="Avançar para próxima etapa">
+            <i className="fa-solid fa-arrow-right"></i> Próximo
+          </button>
+        </div>
+      </div>
+    )
+  }
+  
   if (config.generationType === 'group') {
-    // Para grupos, não precisa selecionar participantes
+    // Para grupos, permite excluir pessoas específicas
     return (
       <div className="form-card">
         <h4 className="form-section-title">
           <i className="fa-solid fa-user-check"></i> Participantes
         </h4>
         <p className="form-section-description">
-          Para geração por grupos, todos os membros dos grupos selecionados participarão automaticamente.
+          Para geração por grupos, todos os membros dos grupos selecionados participarão automaticamente. Você pode excluir pessoas específicas abaixo.
         </p>
+        
+        <div className="form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <label style={{ margin: 0 }}>
+              <i className="fa-solid fa-users"></i> Pessoas (Todas incluídas - desmarque para excluir)
+              <span className="tooltip-trigger" title="Todas as pessoas dos grupos selecionados estão incluídas por padrão. Desmarque as pessoas que deseja excluir da geração.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
+            </label>
+            {!isLoading && persons.length > 0 && (
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => {
+                  const allExcluded = persons.map(p => p.personId)
+                  const hasExcluded = (config.groupConfig?.excludedPersonIds?.length || 0) > 0
+                  onUpdate({
+                    groupConfig: {
+                      ...config.groupConfig!,
+                      excludedPersonIds: hasExcluded ? undefined : allExcluded,
+                    },
+                  })
+                }}
+                style={{ fontSize: '0.9rem', padding: '4px 8px' }}
+              >
+                {(config.groupConfig?.excludedPersonIds?.length || 0) > 0 ? (
+                  <>
+                    <i className="fa-solid fa-check-double"></i> Marcar Todos
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-square"></i> Desmarcar Todos
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Carregando pessoas...
+            </div>
+          ) : persons.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              <i className="fa-solid fa-info-circle"></i> Nenhuma pessoa cadastrada nesta área
+            </div>
+          ) : (
+            <div className="checkbox-group checkbox-group-with-photos">
+              {persons.map(person => {
+                const isExcluded = config.groupConfig?.excludedPersonIds?.includes(person.personId) || false
+                return (
+                  <label key={person.id} className="checkbox-label checkbox-label-with-photo">
+                    <input
+                      type="checkbox"
+                      checked={!isExcluded}
+                      onChange={(e) => {
+                        const currentExcluded = config.groupConfig?.excludedPersonIds || []
+                        const newExcluded = e.target.checked
+                          ? currentExcluded.filter(id => id !== person.personId)
+                          : [...currentExcluded, person.personId]
+                        onUpdate({
+                          groupConfig: {
+                            ...config.groupConfig!,
+                            excludedPersonIds: newExcluded.length > 0 ? newExcluded : undefined,
+                          },
+                        })
+                      }}
+                    />
+                    <span className="checkbox-custom"></span>
+                    <div className="person-photo-container-small">
+                      {person.person?.photoUrl ? (
+                        <img
+                          src={addCacheBusting(person.person.photoUrl)}
+                          alt={person.person?.fullName || person.personId}
+                          className="person-photo-small"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="person-photo-placeholder-small">
+                          {person.person?.fullName?.charAt(0).toUpperCase() || person.personId.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="checkbox-text-container">
+                      <span className="checkbox-text">
+                        {person.person?.fullName || person.personId}
+                      </span>
+                      {person.responsibilities && person.responsibilities.length > 0 && (
+                        <span className="checkbox-text-meta">
+                          {person.responsibilities.map(r => r.name).join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={onBack}>
+          <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
             <i className="fa-solid fa-arrow-left"></i> Voltar
           </button>
-          <button type="button" className="btn-primary" onClick={onNext}>
+          <button type="button" className="btn-primary" onClick={onNext} disabled={!config.groupConfig?.groupIds.length} aria-label="Avançar para próxima etapa">
             <i className="fa-solid fa-arrow-right"></i> Próximo
           </button>
         </div>
@@ -863,6 +1176,9 @@ function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, 
       <div className="form-group">
         <label>
           <i className="fa-solid fa-users"></i> Modo de Seleção
+          <span className="tooltip-trigger" title="TODOS: inclui todas as pessoas da área | Por Pessoas: todas selecionadas (pode remover) | Por Grupo: filtra por grupos específicos | Individual: seleção manual de pessoas">
+            <i className="fa-solid fa-circle-question"></i>
+          </span>
         </label>
         <select
           value={config.teamConfig?.participantSelection || 'all'}
@@ -874,11 +1190,14 @@ function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, 
                 participantSelection: selection,
                 selectedGroupIds: selection === 'by_group' ? [] : undefined,
                 selectedPersonIds: selection === 'individual' ? [] : undefined,
+                excludedPersonIds: selection === 'all_with_exclusions' ? [] : undefined,
               },
             })
           }}
+          aria-label="Modo de seleção de participantes"
         >
           <option value="all">TODOS - Todas as pessoas da área</option>
+          <option value="all_with_exclusions">Por Pessoas - Todas selecionadas (pode remover)</option>
           <option value="by_group">Por Grupo - Filtrar por grupos específicos</option>
           <option value="individual">Individual - Seleção manual de pessoas</option>
         </select>
@@ -926,11 +1245,43 @@ function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, 
         </div>
       )}
       
-      {config.teamConfig?.participantSelection === 'individual' && (
+      {config.teamConfig?.participantSelection === 'all_with_exclusions' && (
         <div className="form-group">
-          <label>
-            <i className="fa-solid fa-user"></i> Pessoas
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <label style={{ margin: 0 }}>
+              <i className="fa-solid fa-users"></i> Pessoas (Todas selecionadas - desmarque para remover)
+              <span className="tooltip-trigger" title="Todas as pessoas da área estão selecionadas por padrão. Desmarque as pessoas que deseja excluir da geração.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
+            </label>
+            {!isLoading && persons.length > 0 && (
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => {
+                  const allExcluded = persons.map(p => p.personId)
+                  const hasExcluded = (config.teamConfig?.excludedPersonIds?.length || 0) > 0
+                  onUpdate({
+                    teamConfig: {
+                      ...config.teamConfig!,
+                      excludedPersonIds: hasExcluded ? undefined : allExcluded,
+                    },
+                  })
+                }}
+                style={{ fontSize: '0.9rem', padding: '4px 8px' }}
+              >
+                {(config.teamConfig?.excludedPersonIds?.length || 0) > 0 ? (
+                  <>
+                    <i className="fa-solid fa-check-double"></i> Marcar Todos
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-square"></i> Desmarcar Todos
+                  </>
+                )}
+              </button>
+            )}
+          </div>
           {isLoading ? (
             <div style={{ padding: '20px', textAlign: 'center' }}>
               <i className="fa-solid fa-spinner fa-spin"></i> Carregando pessoas...
@@ -940,9 +1291,107 @@ function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, 
               <i className="fa-solid fa-info-circle"></i> Nenhuma pessoa cadastrada nesta área
             </div>
           ) : (
-            <div className="checkbox-group">
+            <div className="checkbox-group checkbox-group-with-photos">
+              {persons.map(person => {
+                const isExcluded = config.teamConfig?.excludedPersonIds?.includes(person.personId) || false
+                return (
+                  <label key={person.id} className="checkbox-label checkbox-label-with-photo">
+                    <input
+                      type="checkbox"
+                      checked={!isExcluded}
+                      onChange={(e) => {
+                        const currentExcluded = config.teamConfig?.excludedPersonIds || []
+                        const newExcluded = e.target.checked
+                          ? currentExcluded.filter(id => id !== person.personId)
+                          : [...currentExcluded, person.personId]
+                        onUpdate({
+                          teamConfig: {
+                            ...config.teamConfig!,
+                            excludedPersonIds: newExcluded.length > 0 ? newExcluded : undefined,
+                          },
+                        })
+                      }}
+                    />
+                    <span className="checkbox-custom"></span>
+                    <div className="person-photo-container-small">
+                      {person.person?.photoUrl ? (
+                        <img
+                          src={addCacheBusting(person.person.photoUrl)}
+                          alt={person.person?.fullName || person.personId}
+                          className="person-photo-small"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <div className="person-photo-placeholder-small">
+                          {person.person?.fullName?.charAt(0).toUpperCase() || person.personId.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="checkbox-text-container">
+                      <span className="checkbox-text">
+                        {person.person?.fullName || person.personId}
+                      </span>
+                      {person.responsibilities && person.responsibilities.length > 0 && (
+                        <span className="checkbox-text-meta">
+                          {person.responsibilities.map(r => r.name).join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {config.teamConfig?.participantSelection === 'individual' && (
+        <div className="form-group">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <label style={{ margin: 0 }}>
+              <i className="fa-solid fa-user"></i> Pessoas
+            </label>
+            {!isLoading && persons.length > 0 && (
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => {
+                  const allSelected = persons.map(p => p.personId)
+                  const hasSelected = (config.teamConfig?.selectedPersonIds?.length || 0) > 0
+                  onUpdate({
+                    teamConfig: {
+                      ...config.teamConfig!,
+                      selectedPersonIds: hasSelected ? [] : allSelected,
+                    },
+                  })
+                }}
+                style={{ fontSize: '0.9rem', padding: '4px 8px' }}
+              >
+                {(config.teamConfig?.selectedPersonIds?.length || 0) > 0 ? (
+                  <>
+                    <i className="fa-solid fa-square"></i> Desmarcar Todos
+                  </>
+                ) : (
+                  <>
+                    <i className="fa-solid fa-check-double"></i> Selecionar Todos
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+          {isLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <i className="fa-solid fa-spinner fa-spin"></i> Carregando pessoas...
+            </div>
+          ) : persons.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-light)' }}>
+              <i className="fa-solid fa-info-circle"></i> Nenhuma pessoa cadastrada nesta área
+            </div>
+          ) : (
+            <div className="checkbox-group checkbox-group-with-photos">
               {persons.map(person => (
-                <label key={person.id} className="checkbox-label">
+                <label key={person.id} className="checkbox-label checkbox-label-with-photo">
                   <input
                     type="checkbox"
                     checked={config.teamConfig?.selectedPersonIds?.includes(person.personId) || false}
@@ -960,14 +1409,31 @@ function Step3Participants({ config, groups, persons, onUpdate, onBack, onNext, 
                     }}
                   />
                   <span className="checkbox-custom"></span>
-                  <span className="checkbox-text">
-                    {person.person?.fullName || person.personId}
+                  <div className="person-photo-container-small">
+                    {person.person?.photoUrl ? (
+                      <img
+                        src={addCacheBusting(person.person.photoUrl)}
+                        alt={person.person?.fullName || person.personId}
+                        className="person-photo-small"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div className="person-photo-placeholder-small">
+                        {person.person?.fullName?.charAt(0).toUpperCase() || person.personId.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="checkbox-text-container">
+                    <span className="checkbox-text">
+                      {person.person?.fullName || person.personId}
+                    </span>
                     {person.responsibilities && person.responsibilities.length > 0 && (
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginLeft: '8px' }}>
-                        ({person.responsibilities.map(r => r.name).join(', ')})
+                      <span className="checkbox-text-meta">
+                        {person.responsibilities.map(r => r.name).join(', ')}
                       </span>
                     )}
-                  </span>
+                  </div>
                 </label>
               ))}
             </div>
@@ -1219,8 +1685,113 @@ function Step4Period({ config, onUpdate, onBack, onGeneratePreview, isGenerating
         </>
       )}
       
+      {/* Exceções de Datas */}
+      {(config.periodType === 'daily' || config.periodType === 'weekly' || config.periodType === 'monthly') && (
+        <div className="form-group">
+          <label>
+            <i className="fa-solid fa-calendar-xmark"></i> Datas a Excluir
+            <span className="tooltip-trigger" title="Datas que serão excluídas da geração de escalas. Útil para feriados ou dias específicos.">
+              <i className="fa-solid fa-circle-question"></i>
+            </span>
+          </label>
+          <div className="dates-list">
+            {(config.periodConfig?.excludedDates || []).map((date, index) => (
+              <div key={index} className="date-tag">
+                <span>{new Date(date).toLocaleDateString('pt-BR')}</span>
+                <button
+                  type="button"
+                  className="date-tag-remove"
+                  onClick={() => {
+                    const newExcluded = (config.periodConfig?.excludedDates || []).filter((_, i) => i !== index)
+                    onUpdate({
+                      periodConfig: {
+                        ...config.periodConfig!,
+                        excludedDates: newExcluded.length > 0 ? newExcluded : undefined,
+                      },
+                    })
+                  }}
+                  aria-label={`Remover data ${date}`}
+                >
+                  <i className="fa-solid fa-times"></i>
+                </button>
+              </div>
+            ))}
+            <input
+              type="date"
+              className="date-input-inline"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  const newExcluded = [...(config.periodConfig?.excludedDates || []), e.target.value]
+                  onUpdate({
+                    periodConfig: {
+                      ...config.periodConfig!,
+                      excludedDates: newExcluded,
+                    },
+                  })
+                  e.target.value = ''
+                }
+              }}
+              aria-label="Adicionar data a excluir"
+            />
+          </div>
+        </div>
+      )}
+      
+      {(config.periodType === 'daily' || config.periodType === 'weekly' || config.periodType === 'monthly') && (
+        <div className="form-group">
+          <label>
+            <i className="fa-solid fa-calendar-check"></i> Datas a Incluir (Opcional)
+            <span className="tooltip-trigger" title="Datas específicas que serão incluídas mesmo que não estejam no padrão configurado. Útil para incluir dias especiais.">
+              <i className="fa-solid fa-circle-question"></i>
+            </span>
+          </label>
+          <div className="dates-list">
+            {(config.periodConfig?.includedDates || []).map((date, index) => (
+              <div key={index} className="date-tag">
+                <span>{new Date(date).toLocaleDateString('pt-BR')}</span>
+                <button
+                  type="button"
+                  className="date-tag-remove"
+                  onClick={() => {
+                    const newIncluded = (config.periodConfig?.includedDates || []).filter((_, i) => i !== index)
+                    onUpdate({
+                      periodConfig: {
+                        ...config.periodConfig!,
+                        includedDates: newIncluded.length > 0 ? newIncluded : undefined,
+                      },
+                    })
+                  }}
+                  aria-label={`Remover data ${date}`}
+                >
+                  <i className="fa-solid fa-times"></i>
+                </button>
+              </div>
+            ))}
+            <input
+              type="date"
+              className="date-input-inline"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  const newIncluded = [...(config.periodConfig?.includedDates || []), e.target.value]
+                  onUpdate({
+                    periodConfig: {
+                      ...config.periodConfig!,
+                      includedDates: newIncluded,
+                    },
+                  })
+                  e.target.value = ''
+                }
+              }}
+              aria-label="Adicionar data a incluir"
+            />
+          </div>
+        </div>
+      )}
+      
       <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onBack}>
+        <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
           <i className="fa-solid fa-arrow-left"></i> Voltar
         </button>
         <button
@@ -1228,6 +1799,7 @@ function Step4Period({ config, onUpdate, onBack, onGeneratePreview, isGenerating
           className="btn-primary"
           onClick={onGeneratePreview}
           disabled={isGenerating}
+          aria-label="Gerar preview das escalas"
         >
           {isGenerating ? (
             <>
@@ -1474,6 +2046,8 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
                                       src={addCacheBusting(member.personPhotoUrl)}
                                       alt={member.personName}
                                       className="schedule-member-photo"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                   ) : (
                                     <div className="schedule-member-photo-placeholder">
@@ -1492,6 +2066,8 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
                                               src={addCacheBusting(responsibility.imageUrl)}
                                               alt={responsibility.name}
                                               className="schedule-member-role-image"
+                                              loading="lazy"
+                                              decoding="async"
                                             />
                                           ) : null}
                                           <span className="schedule-member-role-name">{responsibility.name}</span>
@@ -1537,6 +2113,8 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
                                   src={addCacheBusting(personImage)}
                                   alt={assignment.personName}
                                   className="assignment-person-image"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : (
                                 <div className="assignment-image-placeholder">
@@ -1556,6 +2134,8 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
                                   src={addCacheBusting(roleImage)}
                                   alt={assignment.roleName}
                                   className="assignment-role-image"
+                                  loading="lazy"
+                                  decoding="async"
                                 />
                               ) : (
                                 <div className="assignment-image-placeholder">
@@ -1577,7 +2157,7 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
       </div>
       
       <div className="form-actions">
-        <button type="button" className="btn-secondary" onClick={onBack}>
+        <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
           <i className="fa-solid fa-arrow-left"></i> Voltar
         </button>
         <button
@@ -1586,6 +2166,7 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
           className="btn-primary"
           onClick={onConfirm}
           disabled={isConfirming || preview.summary.errors > 0}
+          aria-label="Confirmar geração das escalas"
         >
           {isConfirming ? (
             <>

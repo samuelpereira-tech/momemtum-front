@@ -292,8 +292,8 @@ export default function PessoasTabPanel() {
   }
 
   const filteredAvailablePersons: PersonResponseDto[] = availablePersons.filter(person =>
-    (person.fullName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (person.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+    person.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    person.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const isPersonSelected = (personId: string): boolean => {
