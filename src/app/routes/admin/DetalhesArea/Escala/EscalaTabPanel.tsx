@@ -259,55 +259,151 @@ export default function EscalaTabPanel() {
                         className="schedule-group-card"
                         onClick={() => handleGroupClick(group)}
                       >
-                        {/* Coluna 1: Info Básica */}
-                        <div className="schedule-group-header-col">
-                          <h5 className="schedule-group-name">
-                            <i className="fa-solid fa-users"></i>
-                            {group.name}
-                          </h5>
-                          {group.description && (
-                            <p className="schedule-group-description">{group.description}</p>
-                          )}
+                        {/* Header do Card */}
+                        <div className="schedule-group-card-header">
+                          <div className="schedule-group-title-section">
+                            <h5 className="schedule-group-name">
+                              <i className="fa-solid fa-users"></i>
+                              {group.name}
+                            </h5>
+                            {group.description && (
+                              <p className="schedule-group-description">{group.description}</p>
+                            )}
+                          </div>
+                          <div className="schedule-group-badge-section">
+                            <span className="schedule-count-badge">
+                              {group.schedulesCount} {group.schedulesCount === 1 ? 'escala' : 'escalas'}
+                            </span>
+                          </div>
                         </div>
 
-                        {/* Coluna 2: Detalhes e Configuração */}
-                        <div className="schedule-group-config-col">
-                          <div className="config-summary-row">
-                            <span className="config-bubble highlight">
-                              <i className="fa-regular fa-calendar"></i>
-                              {getPeriodTypeLabel(config.periodType)}
+                        {/* Configurações Principais */}
+                        <div className="schedule-group-main-config">
+                          <div className="config-item">
+                            <span className="config-item-label">
+                              <i className="fa-solid fa-calendar-alt"></i> Período
                             </span>
-
-                            <span className="config-bubble">
-                              <i className="fa-solid fa-arrow-right-long"></i>
-                              {formatDate(config.periodStartDate)} até {formatDate(config.periodEndDate)}
-                            </span>
-
-                            {config.selectedTeamName && (
-                              <span className="config-bubble">
-                                <i className="fa-solid fa-user-group"></i>
-                                {config.selectedTeamName}
+                            <div className="config-item-value">
+                              <span className="config-badge highlight">
+                                {getPeriodTypeLabel(config.periodType)}
                               </span>
-                            )}
+                              <span className="config-badge">
+                                {formatDate(config.periodStartDate)} - {formatDate(config.periodEndDate)}
+                              </span>
+                            </div>
                           </div>
 
                           {config.weekdays && config.weekdays.length > 0 && (
-                            <div className="config-summary-row" style={{ marginTop: '8px' }}>
-                              <span className="team-info">
-                                <i className="fa-solid fa-calendar-week" style={{ color: 'var(--color-purple)', fontSize: '0.9rem' }}></i>
-                                {config.weekdays.map(d => getWeekdayName(d)).join(', ')}
+                            <div className="config-item">
+                              <span className="config-item-label">
+                                <i className="fa-solid fa-calendar-week"></i> Dias da Semana
                               </span>
+                              <div className="config-item-value">
+                                <span className="config-badge">
+                                  {config.weekdays.map(d => getWeekdayName(d)).join(', ')}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {(config.startTime || config.endTime) && (
+                            <div className="config-item">
+                              <span className="config-item-label">
+                                <i className="fa-solid fa-clock"></i> Horário
+                              </span>
+                              <div className="config-item-value">
+                                <span className="config-badge">
+                                  {config.startTime || '--:--'} - {config.endTime || '--:--'}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          {config.selectedGroupNames && config.selectedGroupNames.length > 0 && (
+                            <div className="config-item">
+                              <span className="config-item-label">
+                                <i className="fa-solid fa-users"></i> Grupos
+                              </span>
+                              <div className="config-item-value">
+                                {config.selectedGroupNames.map((name, idx) => (
+                                  <span key={idx} className="config-badge group-badge">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {config.selectedTeamName && (
+                            <div className="config-item">
+                              <span className="config-item-label">
+                                <i className="fa-solid fa-user-group"></i> Equipe
+                              </span>
+                              <div className="config-item-value">
+                                <span className="config-badge team-badge">
+                                  {config.selectedTeamName}
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
 
-                        {/* Coluna 3: Ações e Meta */}
-                        <div className="schedule-group-meta-col">
-                          <span className="schedule-count-badge">
-                            {group.schedulesCount} {group.schedulesCount === 1 ? 'escala' : 'escalas'}
-                          </span>
+                        {/* Regras e Configurações Avançadas */}
+                        <div className="schedule-group-rules">
+                          <div className="rules-header">
+                            <i className="fa-solid fa-cog"></i> Regras de Geração
+                          </div>
+                          <div className="rules-list">
+                            {config.considerAbsences && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-check-circle"></i> Considerar Ausências
+                              </span>
+                            )}
+                            {config.requireResponsibilities && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-check-circle"></i> Exigir Responsabilidades
+                              </span>
+                            )}
+                            {config.distributionOrder && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-sort"></i> Distribuição: {
+                                  config.distributionOrder === 'sequential' ? 'Sequencial' :
+                                  config.distributionOrder === 'random' ? 'Aleatória' : 'Balanceada'
+                                }
+                              </span>
+                            )}
+                            {config.groupsPerSchedule && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-hashtag"></i> {config.groupsPerSchedule} grupo(s) por escala
+                              </span>
+                            )}
+                            {config.participantSelection && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-user-check"></i> Participantes: {
+                                  config.participantSelection === 'all' ? 'Todos' :
+                                  config.participantSelection === 'all_with_exclusions' ? 'Todos (com exclusões)' :
+                                  config.participantSelection === 'by_group' ? 'Por Grupo' : 'Individual'
+                                }
+                              </span>
+                            )}
+                            {config.excludedDates && config.excludedDates.length > 0 && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-calendar-xmark"></i> {config.excludedDates.length} data(s) excluída(s)
+                              </span>
+                            )}
+                            {config.includedDates && config.includedDates.length > 0 && (
+                              <span className="rule-tag">
+                                <i className="fa-solid fa-calendar-plus"></i> {config.includedDates.length} data(s) incluída(s)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Footer do Card */}
+                        <div className="schedule-group-card-footer">
                           <span className="updated-at">
-                            Atualizado {formatDate(group.updatedAt)}
+                            <i className="fa-solid fa-clock"></i>
+                            Atualizado em {formatDate(group.updatedAt)}
                           </span>
                           <i className="fa-solid fa-chevron-right action-arrow"></i>
                         </div>
