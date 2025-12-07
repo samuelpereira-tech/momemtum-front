@@ -1,0 +1,350 @@
+.schedule-groups-container,
+.schedules-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.schedule-groups-header,
+.schedules-header {
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title i {
+  color: var(--color-purple);
+}
+
+.section-description {
+  font-size: 0.95rem;
+  color: var(--text-light);
+  margin: 0;
+}
+
+.loading-container,
+.empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-light);
+}
+
+.loading-container i,
+.empty-container i {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  color: var(--color-purple);
+  opacity: 0.5;
+}
+
+.loading-container i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-container p,
+.loading-container p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Lista de grupos */
+.schedule-groups-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.schedule-group-card {
+  background: var(--white);
+  border: 1px solid #e0e0e0;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.schedule-group-card:hover {
+  border-color: var(--color-purple);
+  box-shadow: 0 4px 12px rgba(173, 130, 217, 0.15);
+  transform: translateY(-2px);
+}
+
+.schedule-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.schedule-group-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.schedule-group-name i {
+  color: var(--color-purple);
+  font-size: 1rem;
+}
+
+.schedule-group-count {
+  background: rgba(173, 130, 217, 0.1);
+  color: var(--color-purple);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.schedule-group-description {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.schedule-group-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.schedule-group-date {
+  font-size: 0.85rem;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-group-date i {
+  font-size: 0.8rem;
+}
+
+.schedule-group-arrow {
+  color: var(--color-purple);
+  font-size: 0.9rem;
+  transition: transform 0.3s;
+}
+
+.schedule-group-card:hover .schedule-group-arrow {
+  transform: translateX(4px);
+}
+
+/* Lista de escalas */
+.schedules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.schedule-card {
+  background: var(--white);
+  border: 1px solid #e0e0e0;
+  padding: 20px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.schedule-card:hover {
+  border-color: var(--color-purple);
+  box-shadow: 0 2px 8px rgba(173, 130, 217, 0.1);
+  transform: translateY(-2px);
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.schedule-dates {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.schedule-dates i {
+  color: var(--color-purple);
+  font-size: 1.2rem;
+  margin-top: 2px;
+}
+
+.schedule-date-start,
+.schedule-date-end {
+  font-size: 0.95rem;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+
+.schedule-date-end {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.schedule-meta {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ff9800;
+}
+
+.status-confirmed {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.status-cancelled {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.schedule-participants {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.schedule-participants i {
+  color: var(--color-purple);
+  font-size: 0.85rem;
+}
+
+/* Paginação */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 0;
+  margin-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.btn-pagination {
+  padding: 10px 20px;
+  background: var(--white);
+  border: 1px solid #e0e0e0;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Poppins', sans-serif;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: rgba(173, 130, 217, 0.05);
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+}
+
+.btn-pagination:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 0.95rem;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.tab-panel-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .schedule-groups-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .schedule-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .schedule-meta {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .btn-pagination {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .tab-panel-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .tab-panel-actions .btn-sm {
+    width: 100%;
+  }
+}
+

@@ -1,0 +1,582 @@
+/* ScheduleDetailsView.css */
+
+/* --- Variáveis e Configurações Gerais --- */
+.schedule-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Poppins', sans-serif;
+  color: var(--text-color);
+  padding: 20px;
+}
+
+/* --- Cabeçalho --- */
+.schedule-details-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.schedule-details-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+  flex: 1;
+}
+
+/* --- Botão Voltar (Estilo aprimorado) --- */
+.schedule-details-header .btn-secondary {
+  background: var(--white);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-light);
+}
+
+.schedule-details-header .btn-secondary:hover {
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+  background: rgba(173, 130, 217, 0.05);
+  transform: translateX(-2px);
+}
+
+/* --- Layout Principal (Grid System) --- */
+.schedule-details-body {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 25px;
+  align-items: start;
+}
+
+/* --- Cartões Gerais --- */
+.detail-card {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.detail-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* --- Coluna Lateral (Info e Filtros/Status) --- */
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.info-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.info-card-title i {
+  color: var(--color-purple);
+  background: rgba(173, 130, 217, 0.1);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+/* --- Cards de Data/Hora --- */
+.date-time-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+}
+
+.date-time-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fcfcfc;
+  border: 1px solid #f0f0f0;
+}
+
+.date-time-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(173, 130, 217, 0.1);
+  color: var(--color-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.date-time-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.date-time-label {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.date-time-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* --- Status Badge (Grande) --- */
+.status-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.status-label-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.status-confirmed-large {
+  background: rgba(121, 217, 199, 0.15);
+  color: #5abcb0;
+  border: 1px solid rgba(121, 217, 199, 0.3);
+}
+
+.status-cancelled-large {
+  background: rgba(242, 156, 148, 0.15);
+  color: #e07c72;
+  border: 1px solid rgba(242, 156, 148, 0.3);
+}
+
+.status-pending-large {
+  background: rgba(242, 179, 61, 0.15);
+  color: #dda54a;
+  border: 1px solid rgba(242, 179, 61, 0.3);
+}
+
+/* --- Coluna Principal (Conteúdo) --- */
+.main-content-section {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+/* --- Seção de Membros (Grid) --- */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.member-card {
+  background: var(--white);
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.member-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border-color: rgba(173, 130, 217, 0.3);
+}
+
+.member-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(135deg, rgba(173, 130, 217, 0.1), rgba(121, 217, 199, 0.1));
+  z-index: 0;
+}
+
+.member-photo-wrapper {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  margin-bottom: 15px;
+}
+
+.member-card-photo,
+.member-card-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid var(--white);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.member-card-placeholder {
+  background: linear-gradient(135deg, var(--color-purple), var(--color-teal));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-size: 2rem;
+}
+
+.member-card-name {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 5px;
+  font-size: 1.05rem;
+  z-index: 1;
+}
+
+.member-card-role {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  background: #f8f8f8;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  z-index: 1;
+}
+
+.member-status-badge {
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  z-index: 1;
+}
+
+.member-status-badge.status-accepted {
+  background: rgba(121, 217, 199, 0.15);
+  color: #5abcb0;
+}
+
+.member-status-badge.status-rejected {
+  background: rgba(242, 156, 148, 0.15);
+  color: #e07c72;
+}
+
+.member-status-badge.status-pending {
+  background: rgba(242, 179, 61, 0.15);
+  color: #dda54a;
+}
+
+.member-card-actions {
+  display: flex;
+  gap: 8px;
+  z-index: 1;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.member-card:hover .member-card-actions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.btn-card-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  background: var(--white);
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-card-action:hover {
+  background: var(--color-purple);
+  color: var(--white);
+  border-color: var(--color-purple);
+}
+
+.btn-card-action.danger:hover {
+  background: var(--color-pink);
+  color: var(--white);
+  border-color: var(--color-pink);
+}
+
+/* Edit Mode for Member Card */
+.member-edit-mode {
+  width: 100%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.edit-label {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-left: 2px;
+  font-weight: 500;
+}
+
+.member-edit-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.member-edit-select:focus {
+  border-color: var(--color-purple);
+}
+
+/* --- Comentários (Estilo Chat) --- */
+.comments-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.comment-bubble {
+  display: flex;
+  gap: 15px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.comment-avatar,
+.comment-avatar-placeholder {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.comment-avatar-placeholder {
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #757575;
+  font-weight: 600;
+}
+
+.comment-body {
+  flex: 1;
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 0 16px 16px 16px;
+  position: relative;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.comment-author-name {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.comment-timestamp {
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.comment-text {
+  color: #4a4a4a;
+  line-height: 1.5;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+}
+
+.comment-footer-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.comment-action-link {
+  color: var(--text-light);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.comment-action-link:hover {
+  color: var(--color-purple);
+  text-decoration: underline;
+}
+
+.comment-action-link.danger:hover {
+  color: var(--color-pink);
+}
+
+/* Add Comment Area */
+.add-comment-area {
+  margin-top: 25px;
+  background: #fcfcfc;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.comment-textarea {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.comment-textarea:focus {
+  outline: none;
+  border-color: var(--color-purple);
+  box-shadow: 0 0 0 3px rgba(173, 130, 217, 0.1);
+}
+
+.comment-submit-btn {
+  background: var(--color-purple);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  margin-top: 10px;
+  cursor: pointer;
+  float: right;
+  transition: background 0.2s;
+}
+
+.comment-submit-btn:hover {
+  background: #966ec0;
+}
+
+.comment-submit-btn:disabled {
+  background: #d1c4e9;
+  cursor: not-allowed;
+}
+
+/* Empty States */
+.empty-members,
+.empty-comments {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-light);
+  background: #fcfcfc;
+  border-radius: 12px;
+  border: 2px dashed #e0e0e0;
+}
+
+.empty-members i,
+.empty-comments i {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  color: #ddd;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+  .schedule-details-body {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .sidebar-section>* {
+    flex: 1;
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 600px) {
+  .members-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .member-card {
+    padding: 15px;
+  }
+
+  .member-card-photo,
+  .member-card-placeholder {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5rem;
+  }
+}

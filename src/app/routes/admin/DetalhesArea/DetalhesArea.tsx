@@ -11,6 +11,7 @@ import FuncoesTabPanel from './Funcoes/FuncoesTabPanel'
 import GruposTabPanel from './Grupos/GruposTabPanel'
 import EquipesTabPanel from './Equipes/EquipesTabPanel'
 import GeracaoAutomaticaTabPanel from './GeracaoAutomatica/GeracaoAutomaticaTabPanel'
+import EscalaTabPanel from './Escala/EscalaTabPanel'
 import type { TabType } from './shared/types'
 import '../../../../components/admin/admin.css'
 import '../ListarAreas/ListarAreas.css'
@@ -30,6 +31,7 @@ export default function DetalhesArea() {
     if (path.includes('/funcoes')) return 'funcoes'
     if (path.includes('/equipes')) return 'equipes'
     if (path.includes('/geracao-automatica')) return 'geracao-automatica'
+    if (path.includes('/escala')) return 'escala'
     return 'pessoas' // padrão
   }
   
@@ -137,7 +139,8 @@ export default function DetalhesArea() {
     { id: 'grupos' as TabType, label: 'Grupos', icon: 'fa-solid fa-users' },
     { id: 'funcoes' as TabType, label: 'Função', icon: 'fa-solid fa-briefcase' },
     { id: 'equipes' as TabType, label: 'Equipes', icon: 'fa-solid fa-user-group' },
-    { id: 'geracao-automatica' as TabType, label: 'Geração de Escala Automática', icon: 'fa-solid fa-robot' }
+    { id: 'geracao-automatica' as TabType, label: 'Geração de Escala Automática', icon: 'fa-solid fa-robot' },
+    { id: 'escala' as TabType, label: 'Escala', icon: 'fa-solid fa-calendar-check' }
   ]
 
   if (isLoading) {
@@ -302,6 +305,7 @@ export default function DetalhesArea() {
               {activeTab === 'funcoes' && <FuncoesTabPanel key="funcoes" />}
               {activeTab === 'equipes' && <EquipesTabPanel key="equipes" />}
               {activeTab === 'geracao-automatica' && <GeracaoAutomaticaTabPanel key="geracao-automatica" />}
+              {activeTab === 'escala' && <EscalaTabPanel key="escala" />}
             </div>
           </div>
         </main>
