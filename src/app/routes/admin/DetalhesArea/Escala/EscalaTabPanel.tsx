@@ -474,59 +474,79 @@ export default function EscalaTabPanel() {
             ) : (
               <>
                 <div className="schedules-list">
-                  {schedules.map((schedule) => (
-                    <div
-                      key={schedule.id}
-                      className="schedule-card"
-                      onClick={() => handleScheduleClick(schedule.id)}
-                    >
-                      <div className="schedule-header">
-                        <div className="schedule-main-info">
-                          <div className="schedule-date-block">
-                            <span className="date-day">
-                              {new Date(schedule.startDatetime).getDate()}
-                            </span>
-                            <span className="date-month">
-                              {new Date(schedule.startDatetime).toLocaleDateString('pt-BR', { month: 'short' })}
-                            </span>
-                          </div>
-
-                          <div className="schedule-info-content">
-                            {schedule.date && (
-                              <div className="schedule-full-date">
-                                {new Date(schedule.date).toLocaleDateString('pt-BR', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                })}
-                              </div>
-                            )}
-                            <div className="schedule-time-range">
-                              <i className="fa-regular fa-clock"></i>
-                              {formatDateTime(schedule.startDatetime).split(' ')[1]} - {formatDateTime(schedule.endDatetime).split(' ')[1]}
+                  {schedules.map((schedule) => {
+                    const scheduleDate = schedule.date ? new Date(schedule.date) : new Date(schedule.startDatetime)
+                    return (
+                      <div
+                        key={schedule.id}
+                        className="schedule-card"
+                        onClick={() => handleScheduleClick(schedule.id)}
+                      >
+                        {/* Header com Data Destacada */}
+                        <div className="schedule-card-header">
+                          <div className="schedule-date-display">
+                            <div className="schedule-date-block">
+                              <span className="date-day">
+                                {scheduleDate.getDate()}
+                              </span>
+                              <span className="date-month">
+                                {scheduleDate.toLocaleDateString('pt-BR', { month: 'short' })}
+                              </span>
+                              <span className="date-year">
+                                {scheduleDate.getFullYear()}
+                              </span>
                             </div>
-                            {schedule.dayIndex && (
-                              <div className="schedule-day-info">
-                                <i className="fa-solid fa-calendar-day"></i>
-                                Dia {schedule.dayIndex} do período
+                            <div className="schedule-date-info">
+                              <div className="schedule-weekday">
+                                {scheduleDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
                               </div>
-                            )}
+                              {schedule.dayIndex && (
+                                <div className="schedule-day-index">
+                                  <i className="fa-solid fa-calendar-day"></i>
+                                  Dia {schedule.dayIndex} do período
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="schedule-meta-row">
                           <span className={getStatusBadgeClass(schedule.status)}>
                             {getStatusLabel(schedule.status)}
                           </span>
-                          <span className="schedule-participants">
+                        </div>
+
+                        {/* Informações Principais */}
+                        <div className="schedule-card-body">
+                          <div className="schedule-time-section">
+                            <div className="schedule-time-item">
+                              <i className="fa-solid fa-clock"></i>
+                              <div className="time-details">
+                                <span className="time-label">Início</span>
+                                <span className="time-value">{formatDateTime(schedule.startDatetime).split(' ')[1]}</span>
+                              </div>
+                            </div>
+                            <div className="time-separator">
+                              <i className="fa-solid fa-arrow-right"></i>
+                            </div>
+                            <div className="schedule-time-item">
+                              <i className="fa-solid fa-clock"></i>
+                              <div className="time-details">
+                                <span className="time-label">Fim</span>
+                                <span className="time-value">{formatDateTime(schedule.endDatetime).split(' ')[1]}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer com Meta Informações */}
+                        <div className="schedule-card-footer">
+                          <div className="schedule-participants-info">
                             <i className="fa-solid fa-users"></i>
-                            {schedule.participantsCount} {schedule.participantsCount === 1 ? 'part.' : 'participantes'}
-                          </span>
+                            <span>{schedule.participantsCount} {schedule.participantsCount === 1 ? 'participante' : 'participantes'}</span>
+                          </div>
+                          <i className="fa-solid fa-chevron-right schedule-action-arrow"></i>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {schedulesTotalPages > 1 && (
