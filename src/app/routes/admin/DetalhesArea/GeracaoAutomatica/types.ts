@@ -63,6 +63,7 @@ export interface GenerationConfiguration {
     excludedPersonIds?: string[] // IDs de pessoas a excluir (usado com 'all_with_exclusions')
     considerAbsences: boolean
     requireResponsibilities: boolean
+    repeatPersonsWhenInsufficient?: boolean // Repetir pessoas disponíveis quando não houver pessoas suficientes
   }
   
   // Configurações de período

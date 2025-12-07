@@ -834,8 +834,79 @@ function generateAssignments(
         return true
       })
       
-      // Se não há pessoas elegíveis, deixar vazio
+      // Se não há pessoas elegíveis
       if (eligiblePersons.length === 0) {
+        // Se repeatPersonsWhenInsufficient estiver habilitado e houver pessoas disponíveis (mesmo que já usadas), repetir
+        if (config.teamConfig?.repeatPersonsWhenInsufficient && availablePersons.length > 0) {
+          // Usar todas as pessoas disponíveis, permitindo repetição
+          const allAvailablePersons = availablePersons.filter(person => {
+            // Não pode ser pessoa fixa (já foi atribuída acima)
+            if (role.fixedPersonIds && role.fixedPersonIds.includes(person.personId)) return false
+            
+            // Verificar responsabilidade se necessário
+            if (config.generationType === 'team_with_restriction') {
+              const personResponsibilities = personResponsibilitiesMap.get(person.personId) || new Set<string>()
+              return personResponsibilities.has(role.responsibilityId)
+            }
+            
+            return true
+          })
+          
+          if (allAvailablePersons.length > 0) {
+            // Obter histórico de atribuições para este papel
+            const roleHistory = assignmentHistory.get(role.id) || new Map<string, number>()
+            
+            // Contar quantas atribuições já foram feitas no total (para rotação global)
+            const totalAssignmentsSoFar = assignments.length
+            
+            // Atribuir pessoas repetindo e alternando de forma circular
+            // A cada iteração, escolhe a pessoa com menor contagem
+            // Se houver empate, usa rotação circular global baseada no total de atribuições
+            for (let i = 0; i < remainingSlots; i++) {
+              // Criar lista com contagens atualizadas
+              const personsWithCount = allAvailablePersons.map((person, originalIndex) => ({
+                person,
+                count: roleHistory.get(person.personId) || 0,
+                originalIndex,
+              }))
+              
+              // Encontrar a menor contagem
+              const minCount = Math.min(...personsWithCount.map(p => p.count))
+              
+              // Filtrar pessoas com menor contagem
+              const candidates = personsWithCount.filter(p => p.count === minCount)
+              
+              // Se há empate (múltiplas pessoas com mesma contagem), usar rotação circular global
+              // Baseado no total de atribuições já feitas para garantir alternância entre todos os papéis
+              let selected
+              if (candidates.length > 1) {
+                // Ordenar candidatos pelo índice original para garantir ordem consistente
+                candidates.sort((a, b) => a.originalIndex - b.originalIndex)
+                // Usar rotação circular global: (totalAssignmentsSoFar + i) % candidates.length
+                // Isso garante que a alternância seja consistente entre todos os papéis
+                const rotationIndex = (totalAssignmentsSoFar + i) % candidates.length
+                selected = candidates[rotationIndex]
+              } else {
+                selected = candidates[0]
+              }
+              
+              assignments.push({
+                personId: selected.person.personId,
+                personName: selected.person.person?.fullName || selected.person.personId,
+                roleId: role.id,
+                roleName: role.responsibilityName,
+              })
+              
+              // Atualizar histórico imediatamente para próxima iteração
+              const currentCount = roleHistory.get(selected.person.personId) || 0
+              roleHistory.set(selected.person.personId, currentCount + 1)
+            }
+            assignmentHistory.set(role.id, roleHistory)
+            continue
+          }
+        }
+        
+        // Se não houver pessoas ou a opção não estiver habilitada, deixar vazio
         for (let i = 0; i < remainingSlots; i++) {
           assignments.push({
             personId: '',
@@ -884,13 +955,56 @@ function generateAssignments(
           roleHistory.set(selected.person.personId, currentCount + 1)
           assignmentHistory.set(role.id, roleHistory)
         } else {
-          // Não há pessoas suficientes, deixar vazio
-          assignments.push({
-            personId: '',
-            personName: '[Não atribuído]',
-            roleId: role.id,
-            roleName: role.responsibilityName,
-          })
+          // Não há pessoas suficientes
+          if (config.teamConfig?.repeatPersonsWhenInsufficient && personsWithCount.length > 0) {
+            // Recalcular contagens considerando atribuições já feitas nesta iteração
+            const updatedPersonsWithCount = personsWithCount.map((p) => ({
+              ...p,
+              count: roleHistory.get(p.person.personId) || 0,
+            }))
+            
+            // Encontrar a menor contagem
+            const minCount = Math.min(...updatedPersonsWithCount.map(p => p.count))
+            
+            // Filtrar pessoas com a menor contagem
+            const candidates = updatedPersonsWithCount.filter(p => p.count === minCount)
+            
+            // Contar quantas atribuições já foram feitas no total (para rotação global)
+            const totalAssignmentsSoFar = assignments.length
+            
+            // Se há empate, usar rotação circular global baseada no total de atribuições
+            let selected
+            if (candidates.length > 1) {
+              // Ordenar candidatos pelo índice original
+              candidates.sort((a, b) => a.originalIndex - b.originalIndex)
+              // Usar rotação circular global: (totalAssignmentsSoFar + i) % candidates.length
+              // Isso garante que a alternância seja consistente entre todos os papéis
+              const rotationIndex = (totalAssignmentsSoFar + i) % candidates.length
+              selected = candidates[rotationIndex]
+            } else {
+              selected = candidates[0]
+            }
+            
+            assignments.push({
+              personId: selected.person.personId,
+              personName: selected.person.person?.fullName || selected.person.personId,
+              roleId: role.id,
+              roleName: role.responsibilityName,
+            })
+            
+            // Atualizar histórico imediatamente
+            const currentCount = roleHistory.get(selected.person.personId) || 0
+            roleHistory.set(selected.person.personId, currentCount + 1)
+            assignmentHistory.set(role.id, roleHistory)
+          } else {
+            // Deixar vazio
+            assignments.push({
+              personId: '',
+              personName: '[Não atribuído]',
+              roleId: role.id,
+              roleName: role.responsibilityName,
+            })
+          }
         }
       }
     }

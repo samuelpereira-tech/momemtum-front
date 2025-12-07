@@ -901,6 +901,30 @@ function Step2Configurations({ config, groups, teams, getResponsibilityImage, on
         </label>
       </div>
       
+      {config.generationType === 'team_without_restriction' && (
+        <div className="form-group" style={{ marginTop: '16px' }}>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={config.teamConfig?.repeatPersonsWhenInsufficient || false}
+              onChange={(e) => onUpdate({
+                teamConfig: {
+                  ...config.teamConfig!,
+                  repeatPersonsWhenInsufficient: e.target.checked,
+                },
+              })}
+            />
+            <span className="checkbox-custom"></span>
+            <span className="checkbox-text">
+              Na falta de pessoa para preencher as funções, repetir as pessoas disponíveis
+              <span className="tooltip-trigger" title="Quando habilitado, se não houver pessoas suficientes para preencher todas as funções, as pessoas disponíveis serão repetidas para preencher as vagas restantes.">
+                <i className="fa-solid fa-circle-question"></i>
+              </span>
+            </span>
+          </label>
+        </div>
+      )}
+      
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onBack} aria-label="Voltar para etapa anterior">
           <i className="fa-solid fa-arrow-left"></i> Voltar
