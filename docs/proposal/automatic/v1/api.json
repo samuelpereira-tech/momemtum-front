@@ -1,0 +1,2261 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Automatic Schedule Generation and Schedule Management API",
+    "version": "1.0.0",
+    "description": "API for automatic schedule generation and schedule management within scheduled areas. Supports generation by groups, people, and teams with various distribution rules and period configurations."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/api/scheduled-areas/{scheduledAreaId}/schedule-generations/preview": {
+      "post": {
+        "summary": "Generate schedule preview",
+        "description": "Generates a preview of schedules that will be created based on the provided configuration. This endpoint does not create schedules, only returns a preview for validation.",
+        "operationId": "ScheduleGenerationController_preview",
+        "tags": ["schedule-generations"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationConfigurationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preview generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerationPreviewDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid configuration or insufficient data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedule-generations": {
+      "post": {
+        "summary": "Confirm and create schedule generation",
+        "description": "Confirms the generation configuration and creates all schedules. This endpoint creates a schedule generation record and multiple schedule records based on the configuration.",
+        "operationId": "ScheduleGenerationController_create",
+        "tags": ["schedule-generations"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerationConfigurationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Schedule generation created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleGenerationResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid configuration or validation errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area, groups, teams, or persons not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List schedule generations",
+        "description": "Retrieves a paginated list of all schedule generations for a scheduled area.",
+        "operationId": "ScheduleGenerationController_findAll",
+        "tags": ["schedule-generations"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number (starts at 1)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedule generations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScheduleGenerationResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedule-generations/{generationId}": {
+      "get": {
+        "summary": "Get schedule generation by ID",
+        "description": "Retrieves a specific schedule generation with all its associated schedules.",
+        "operationId": "ScheduleGenerationController_findOne",
+        "tags": ["schedule-generations"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "generationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule generation unique identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule generation retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleGenerationResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule generation or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete schedule generation and all its schedules",
+        "description": "Deletes a schedule generation and all schedules associated with it. This action cannot be undone.",
+        "operationId": "ScheduleGenerationController_remove",
+        "tags": ["schedule-generations"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "generationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule generation unique identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Schedule generation and all schedules deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule generation or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules": {
+      "get": {
+        "summary": "List schedules",
+        "description": "Retrieves a paginated list of schedules for a scheduled area. Supports filtering by schedule generation, date range, person, group, team, and status.",
+        "operationId": "ScheduleController_findAll",
+        "tags": ["schedules"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number (starts at 1)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          },
+          {
+            "name": "scheduleGenerationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by schedule generation ID"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by start date (inclusive)"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by end date (inclusive)"
+          },
+          {
+            "name": "personId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by person ID (schedules where this person participates)"
+          },
+          {
+            "name": "groupId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by group ID (schedules with this group)"
+          },
+          {
+            "name": "teamId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by team ID (schedules with this team)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "confirmed", "cancelled"]
+            },
+            "description": "Filter by schedule status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedules retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScheduleResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create manual schedule",
+        "description": "Creates a manual schedule (not generated automatically).",
+        "operationId": "ScheduleController_create",
+        "tags": ["schedules"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Schedule created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area, groups, teams, or persons not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}": {
+      "get": {
+        "summary": "Get schedule by ID",
+        "description": "Retrieves a specific schedule with all its details including members, assignments, and comments.",
+        "operationId": "ScheduleController_findOne",
+        "tags": ["schedules"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleDetailsResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update schedule",
+        "description": "Updates a schedule. Only manual schedules can be fully updated. Automatically generated schedules can only have their status and members updated.",
+        "operationId": "ScheduleController_update",
+        "tags": ["schedules"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schedule updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleDetailsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete schedule",
+        "description": "Deletes a schedule. Only manual schedules can be deleted. Automatically generated schedules should be deleted through their schedule generation.",
+        "operationId": "ScheduleController_remove",
+        "tags": ["schedules"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Schedule deleted successfully"
+          },
+          "400": {
+            "description": "Cannot delete automatically generated schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/members": {
+      "post": {
+        "summary": "Add member to schedule",
+        "description": "Adds a person to a schedule with a specific responsibility.",
+        "operationId": "ScheduleMemberController_create",
+        "tags": ["schedule-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduleMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Member added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleMemberResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or person already in schedule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule, person, or responsibility not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/members/{memberId}": {
+      "patch": {
+        "summary": "Update schedule member",
+        "description": "Updates a schedule member's responsibility or status.",
+        "operationId": "ScheduleMemberController_update",
+        "tags": ["schedule-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule member unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduleMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Member updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleMemberResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule member, schedule, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove member from schedule",
+        "description": "Removes a person from a schedule.",
+        "operationId": "ScheduleMemberController_remove",
+        "tags": ["schedule-members"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule member unique identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Member removed successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule member, schedule, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/comments": {
+      "post": {
+        "summary": "Add comment to schedule",
+        "description": "Adds a comment to a schedule.",
+        "operationId": "ScheduleCommentController_create",
+        "tags": ["schedule-comments"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScheduleCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleCommentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Schedule or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/comments/{commentId}": {
+      "patch": {
+        "summary": "Update schedule comment",
+        "description": "Updates a comment on a schedule. Only the comment author can update their comment.",
+        "operationId": "ScheduleCommentController_update",
+        "tags": ["schedule-comments"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          },
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Comment unique identifier"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScheduleCommentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleCommentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or unauthorized to update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Comment, schedule, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete schedule comment",
+        "description": "Deletes a comment from a schedule. Only the comment author or administrators can delete comments.",
+        "operationId": "ScheduleCommentController_remove",
+        "tags": ["schedule-comments"],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Scheduled area unique identifier"
+          },
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Schedule unique identifier"
+          },
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Comment unique identifier"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Comment deleted successfully"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Not authorized to delete this comment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Comment, schedule, or scheduled area not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "GenerationConfigurationDto": {
+        "type": "object",
+        "required": ["scheduledAreaId", "generationType", "periodType", "periodStartDate", "periodEndDate"],
+        "properties": {
+          "scheduledAreaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Scheduled area where schedules will be generated"
+          },
+          "generationType": {
+            "type": "string",
+            "enum": ["group", "people", "team_without_restriction", "team_with_restriction"],
+            "description": "Type of generation: 'group' (by groups), 'people' (by people), 'team_without_restriction' (team without responsibility validation), 'team_with_restriction' (team with responsibility validation)"
+          },
+          "periodType": {
+            "type": "string",
+            "enum": ["fixed", "monthly", "weekly", "daily"],
+            "description": "Type of period: 'fixed' (single schedule), 'monthly' (repeats monthly), 'weekly' (repeats weekly), 'daily' (repeats daily with restrictions)"
+          },
+          "periodStartDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Start date of the generation period"
+          },
+          "periodEndDate": {
+            "type": "string",
+            "format": "date",
+            "description": "End date of the generation period"
+          },
+          "groupConfig": {
+            "$ref": "#/components/schemas/GroupGenerationConfigDto"
+          },
+          "peopleConfig": {
+            "$ref": "#/components/schemas/PeopleGenerationConfigDto"
+          },
+          "teamConfig": {
+            "$ref": "#/components/schemas/TeamGenerationConfigDto"
+          },
+          "periodConfig": {
+            "$ref": "#/components/schemas/PeriodConfigDto"
+          }
+        }
+      },
+      "GroupGenerationConfigDto": {
+        "type": "object",
+        "required": ["groupIds", "groupsPerSchedule", "distributionOrder", "considerAbsences"],
+        "properties": {
+          "groupIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "description": "Array of group IDs to use in generation"
+          },
+          "groupsPerSchedule": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Number of groups to assign per schedule"
+          },
+          "distributionOrder": {
+            "type": "string",
+            "enum": ["sequential", "random", "balanced"],
+            "description": "Distribution order: 'sequential' (fixed order), 'random' (random order), 'balanced' (balanced distribution avoiding repetitions)"
+          },
+          "considerAbsences": {
+            "type": "boolean",
+            "description": "Whether to consider absences when selecting groups (groups with absent members will be excluded)"
+          },
+          "excludedPersonIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of person IDs to exclude from groups (even if they are group members)"
+          }
+        }
+      },
+      "PeopleGenerationConfigDto": {
+        "type": "object",
+        "required": ["considerAbsences"],
+        "properties": {
+          "considerAbsences": {
+            "type": "boolean",
+            "description": "Whether to consider absences when selecting people"
+          },
+          "excludedPersonIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of person IDs to exclude (all other people in the area are included by default)"
+          }
+        }
+      },
+      "TeamGenerationConfigDto": {
+        "type": "object",
+        "required": ["teamId", "participantSelection", "considerAbsences", "requireResponsibilities"],
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Team ID to use in generation"
+          },
+          "participantSelection": {
+            "type": "string",
+            "enum": ["all", "by_group", "individual", "all_with_exclusions"],
+            "description": "Participant selection mode: 'all' (all people in area), 'by_group' (filter by groups), 'individual' (manual selection), 'all_with_exclusions' (all except excluded)"
+          },
+          "selectedGroupIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of group IDs (required when participantSelection is 'by_group')"
+          },
+          "selectedPersonIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of person IDs (required when participantSelection is 'individual')"
+          },
+          "excludedPersonIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of person IDs to exclude (used when participantSelection is 'all_with_exclusions')"
+          },
+          "considerAbsences": {
+            "type": "boolean",
+            "description": "Whether to consider absences when selecting people"
+          },
+          "requireResponsibilities": {
+            "type": "boolean",
+            "description": "Whether to require responsibilities (only people with matching responsibilities can be assigned to roles)"
+          },
+          "repeatPersonsWhenInsufficient": {
+            "type": "boolean",
+            "default": false,
+            "description": "When enabled, if there are not enough people to fill all roles, available people will be repeated to fill remaining slots"
+          }
+        }
+      },
+      "PeriodConfigDto": {
+        "type": "object",
+        "properties": {
+          "baseDateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Base date/time for the first schedule (used for fixed, weekly, monthly, daily)"
+          },
+          "duration": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Duration of each schedule in days (for weekly, monthly) or hours (for fixed)"
+          },
+          "interval": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Interval between schedules in days (for weekly period type, default: 7)"
+          },
+          "weekdays": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "description": "Days of the week (0=Sunday, 1=Monday, ..., 6=Saturday) for daily period type"
+          },
+          "startTime": {
+            "type": "string",
+            "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$",
+            "description": "Start time in HH:mm format (for daily period type)"
+          },
+          "endTime": {
+            "type": "string",
+            "pattern": "^([0-1][0-9]|2[0-3]):[0-5][0-9]$",
+            "description": "End time in HH:mm format (for daily period type)"
+          },
+          "excludedDates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Array of dates to exclude from generation (useful for holidays)"
+          },
+          "includedDates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Array of specific dates to include even if they don't match the pattern (useful for special days)"
+          }
+        }
+      },
+      "GenerationPreviewDto": {
+        "type": "object",
+        "required": ["configuration", "schedules", "summary"],
+        "properties": {
+          "configuration": {
+            "$ref": "#/components/schemas/GenerationConfigurationDto"
+          },
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SchedulePreviewDto"
+            },
+            "description": "Array of preview schedules that will be created"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/GenerationSummaryDto"
+          }
+        }
+      },
+      "SchedulePreviewDto": {
+        "type": "object",
+        "required": ["id", "startDatetime", "endDatetime"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Temporary ID for preview (not a real schedule ID)"
+          },
+          "startDatetime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start date/time of the schedule"
+          },
+          "endDatetime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End date/time of the schedule"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupPreviewDto"
+            },
+            "description": "Groups assigned to this schedule (for group generation type)"
+          },
+          "team": {
+            "$ref": "#/components/schemas/TeamPreviewDto",
+            "description": "Team assigned to this schedule (for team generation types)"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentPreviewDto"
+            },
+            "description": "Person-role assignments (for team generation types)"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of warning messages (e.g., consecutive repetitions, unbalanced distribution)"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of error messages (e.g., absent people, missing responsibilities, unassigned roles)"
+          }
+        }
+      },
+      "GroupPreviewDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberPreviewDto"
+            },
+            "description": "Members of the group (populated when requested)"
+          }
+        }
+      },
+      "MemberPreviewDto": {
+        "type": "object",
+        "required": ["personId", "personName"],
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personName": {
+            "type": "string"
+          },
+          "personPhotoUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "responsibilities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponsibilityInfoDto"
+            }
+          }
+        }
+      },
+      "TeamPreviewDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "AssignmentPreviewDto": {
+        "type": "object",
+        "required": ["personId", "personName", "roleId", "roleName"],
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Person ID (empty string if not assigned)"
+          },
+          "personName": {
+            "type": "string",
+            "description": "Person name ('[Não atribuído]' if not assigned)"
+          },
+          "roleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roleName": {
+            "type": "string"
+          }
+        }
+      },
+      "GenerationSummaryDto": {
+        "type": "object",
+        "required": ["totalSchedules", "totalParticipants", "warnings", "errors", "distributionBalance"],
+        "properties": {
+          "totalSchedules": {
+            "type": "number",
+            "description": "Total number of schedules that will be created"
+          },
+          "totalParticipants": {
+            "type": "number",
+            "description": "Total number of unique participants across all schedules"
+          },
+          "warnings": {
+            "type": "number",
+            "description": "Total number of warnings"
+          },
+          "errors": {
+            "type": "number",
+            "description": "Total number of errors"
+          },
+          "distributionBalance": {
+            "type": "string",
+            "enum": ["balanced", "unbalanced", "critical"],
+            "description": "Distribution balance status: 'balanced' (good distribution), 'unbalanced' (some issues), 'critical' (many issues)"
+          }
+        }
+      },
+      "ScheduleGenerationResponseDto": {
+        "type": "object",
+        "required": ["id", "scheduledAreaId", "generationType", "periodType", "periodStartDate", "periodEndDate", "totalSchedulesGenerated", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Schedule generation unique identifier"
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generationType": {
+            "type": "string",
+            "enum": ["group", "people", "team_without_restriction", "team_with_restriction"]
+          },
+          "periodType": {
+            "type": "string",
+            "enum": ["fixed", "monthly", "weekly", "daily"]
+          },
+          "periodStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEndDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "configuration": {
+            "type": "object",
+            "description": "Full configuration used for generation (JSON object)"
+          },
+          "totalSchedulesGenerated": {
+            "type": "number",
+            "description": "Total number of schedules created"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID of the person who created the generation"
+          }
+        }
+      },
+      "CreateScheduleDto": {
+        "type": "object",
+        "required": ["scheduledAreaId", "startDatetime", "endDatetime", "scheduleType"],
+        "properties": {
+          "scheduledAreaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDatetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDatetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scheduleType": {
+            "type": "string",
+            "enum": ["group", "team", "individual"],
+            "description": "Type of schedule: 'group' (assigned to groups), 'team' (assigned to team with roles), 'individual' (assigned to individual people)"
+          },
+          "groupIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of group IDs (required when scheduleType is 'group')"
+          },
+          "teamId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Team ID (required when scheduleType is 'team')"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateScheduleAssignmentDto"
+            },
+            "description": "Array of person-role assignments (required when scheduleType is 'team')"
+          },
+          "memberIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Array of person IDs (required when scheduleType is 'individual')"
+          }
+        }
+      },
+      "CreateScheduleAssignmentDto": {
+        "type": "object",
+        "required": ["personId", "teamRoleId"],
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamRoleId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Team role ID"
+          }
+        }
+      },
+      "UpdateScheduleDto": {
+        "type": "object",
+        "properties": {
+          "startDatetime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Start date/time (only for manual schedules)"
+          },
+          "endDatetime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End date/time (only for manual schedules)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "confirmed", "cancelled"]
+          }
+        }
+      },
+      "ScheduleResponseDto": {
+        "type": "object",
+        "required": ["id", "scheduledAreaId", "startDatetime", "endDatetime", "scheduleType", "status", "participantsCount", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "scheduleGenerationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID of the schedule generation (null for manual schedules)"
+          },
+          "scheduledAreaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startDatetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDatetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scheduleType": {
+            "type": "string",
+            "enum": ["group", "team", "individual"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "confirmed", "cancelled"]
+          },
+          "participantsCount": {
+            "type": "number",
+            "description": "Number of participants in the schedule"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ScheduleDetailsResponseDto": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ScheduleResponseDto"
+          },
+          {
+            "type": "object",
+            "required": ["groups", "team", "assignments", "members", "comments"],
+            "properties": {
+              "groups": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/GroupInfoDto"
+                },
+                "description": "Groups assigned to this schedule (when scheduleType is 'group')"
+              },
+              "team": {
+                "$ref": "#/components/schemas/TeamInfoDto",
+                "nullable": true,
+                "description": "Team assigned to this schedule (when scheduleType is 'team')"
+              },
+              "assignments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ScheduleAssignmentResponseDto"
+                },
+                "description": "Person-role assignments (when scheduleType is 'team')"
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ScheduleMemberResponseDto"
+                },
+                "description": "Schedule members (when scheduleType is 'individual' or for group schedules)"
+              },
+              "comments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ScheduleCommentResponseDto"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "GroupInfoDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "TeamInfoDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ScheduleAssignmentResponseDto": {
+        "type": "object",
+        "required": ["id", "personId", "teamRoleId", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonInfoDto",
+            "nullable": true
+          },
+          "teamRoleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "teamRole": {
+            "$ref": "#/components/schemas/TeamRoleInfoDto",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamRoleInfoDto": {
+        "type": "object",
+        "required": ["id", "responsibilityId", "responsibilityName", "priority", "quantity", "isFree"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responsibilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responsibilityName": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "number",
+            "description": "Priority order (lower number = higher priority)"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Number of people needed for this role"
+          },
+          "isFree": {
+            "type": "boolean",
+            "description": "Whether this role is free (can be assigned) or fixed (has fixed persons)"
+          }
+        }
+      },
+      "CreateScheduleMemberDto": {
+        "type": "object",
+        "required": ["personId", "responsibilityId"],
+        "properties": {
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responsibilityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Responsibility ID for this member"
+          }
+        }
+      },
+      "UpdateScheduleMemberDto": {
+        "type": "object",
+        "properties": {
+          "responsibilityId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "New responsibility ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "accepted", "rejected"],
+            "description": "Member status"
+          }
+        }
+      },
+      "ScheduleMemberResponseDto": {
+        "type": "object",
+        "required": ["id", "personId", "responsibilityId", "status", "createdAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "personId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "person": {
+            "$ref": "#/components/schemas/PersonInfoDto",
+            "nullable": true
+          },
+          "responsibilityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "responsibility": {
+            "$ref": "#/components/schemas/ResponsibilityInfoDto",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "accepted", "rejected"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateScheduleCommentDto": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Comment content"
+          }
+        }
+      },
+      "UpdateScheduleCommentDto": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 5000,
+            "description": "Updated comment content"
+          }
+        }
+      },
+      "ScheduleCommentResponseDto": {
+        "type": "object",
+        "required": ["id", "content", "authorId", "authorName", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PersonInfoDto": {
+        "type": "object",
+        "required": ["id", "fullName", "email", "photoUrl"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "photoUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          }
+        }
+      },
+      "ResponsibilityInfoDto": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          }
+        }
+      },
+      "PaginatedScheduleGenerationResponseDto": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleGenerationResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        }
+      },
+      "PaginatedScheduleResponseDto": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        }
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "required": ["page", "limit", "total", "totalPages"],
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "number"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
+
