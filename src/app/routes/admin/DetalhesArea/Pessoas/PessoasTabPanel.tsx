@@ -30,6 +30,7 @@ export default function PessoasTabPanel() {
   const [editingPerson, setEditingPerson] = useState<PersonWithRoles | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPerson, setSelectedPerson] = useState<PersonResponseDto | null>(null)
+  const [selectedPersons, setSelectedPersons] = useState<PersonResponseDto[]>([])
   const [pessoaParaRemover, setPessoaParaRemover] = useState<{ personAreaId: string; personName: string } | null>(null)
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([])
 
@@ -147,6 +148,7 @@ export default function PessoasTabPanel() {
   const handleAdicionarPessoa = () => {
     setEditingPerson(null)
     setSelectedPerson(null)
+    setSelectedPersons([])
     setSelectedRoleIds([])
     setSearchTerm('')
     setShowModal(true)
@@ -199,23 +201,37 @@ export default function PessoasTabPanel() {
   }
 
   const handleSelectPerson = (person: PersonResponseDto) => {
-    setSelectedPerson(person)
-    setSearchTerm('')
+    if (editingPerson) {
+      // No modo de edição, seleciona apenas uma pessoa
+      setSelectedPerson(person)
+      setSearchTerm('')
+    } else {
+      // No modo de adicionar, permite seleção múltipla
+      setSelectedPersons(prev => {
+        const isSelected = prev.some(p => p.id === person.id)
+        if (isSelected) {
+          return prev.filter(p => p.id !== person.id)
+        } else {
+          return [...prev, person]
+        }
+      })
+    }
   }
 
   const handleSavePerson = async () => {
-    if (!scheduledAreaId || !selectedPerson) {
-      toast.showError('Selecione uma pessoa')
-      return
-    }
+    if (editingPerson) {
+      // Modo de edição: apenas uma pessoa
+      if (!scheduledAreaId || !selectedPerson) {
+        toast.showError('Selecione uma pessoa')
+        return
+      }
 
-    if (selectedRoleIds.length === 0) {
-      toast.showError('Selecione pelo menos uma função')
-      return
-    }
+      if (selectedRoleIds.length === 0) {
+        toast.showError('Selecione pelo menos uma função')
+        return
+      }
 
-    try {
-      if (editingPerson) {
+      try {
         // Atualizar responsabilidades da pessoa na área
         const updatedPersonArea = await personAreaService.updatePersonArea(
           scheduledAreaId,
@@ -246,58 +262,133 @@ export default function PessoasTabPanel() {
         clearCache(`person-areas-${scheduledAreaId}`)
         
         toast.showSuccess('Pessoa atualizada com sucesso!')
-      } else {
-        // Adicionar nova pessoa à área
-        const newPersonArea = await personAreaService.addPersonToArea(scheduledAreaId, {
-          personId: selectedPerson.id,
-          responsibilityIds: selectedRoleIds
+        
+        setShowModal(false)
+        setEditingPerson(null)
+        setSelectedPerson(null)
+        setSelectedRoleIds([])
+      } catch (error: any) {
+        console.error('Erro ao salvar pessoa:', error)
+        const errorMessage = error.message || 'Erro ao salvar pessoa'
+        
+        // Tratar erros específicos da API
+        if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
+          toast.showError('Esta pessoa já está associada à área')
+        } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+          toast.showError('Dados inválidos. Verifique se as funções pertencem à área')
+        } else {
+          toast.showError(errorMessage)
+        }
+      }
+    } else {
+      // Modo de adicionar: múltiplas pessoas
+      if (!scheduledAreaId || selectedPersons.length === 0) {
+        toast.showError('Selecione pelo menos uma pessoa')
+        return
+      }
+
+      if (selectedRoleIds.length === 0) {
+        toast.showError('Selecione pelo menos uma função')
+        return
+      }
+
+      try {
+        const personsToAdd = selectedPersons.length
+        let successCount = 0
+        let errorCount = 0
+        const errors: string[] = []
+
+        // Adicionar todas as pessoas selecionadas
+        const addPromises = selectedPersons.map(async (person) => {
+          try {
+            const newPersonArea = await personAreaService.addPersonToArea(scheduledAreaId, {
+              personId: person.id,
+              responsibilityIds: selectedRoleIds
+            })
+
+            // Buscar a pessoa completa
+            const personData = availablePersons.find(p => p.id === person.id) || person
+
+            // Converter para PersonWithRoles
+            const newPersonWithRoles: PersonWithRoles = {
+              personAreaId: newPersonArea.id,
+              person: personData,
+              roles: newPersonArea.responsibilities
+            }
+
+            return newPersonWithRoles
+          } catch (error: any) {
+            errorCount++
+            const errorMessage = error.message || 'Erro ao adicionar pessoa'
+            if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
+              errors.push(`${person.fullName}: já está associada à área`)
+            } else {
+              errors.push(`${person.fullName}: ${errorMessage}`)
+            }
+            return null
+          }
         })
 
-        // Buscar a pessoa completa
-        const person = availablePersons.find(p => p.id === selectedPerson.id) || selectedPerson
+        const results = await Promise.all(addPromises)
+        const successfulPersons = results.filter((p): p is PersonWithRoles => p !== null)
+        successCount = successfulPersons.length
 
-        // Converter para PersonWithRoles
-        const newPersonWithRoles: PersonWithRoles = {
-          personAreaId: newPersonArea.id,
-          person: person,
-          roles: newPersonArea.responsibilities
+        // Adicionar pessoas bem-sucedidas à lista
+        if (successfulPersons.length > 0) {
+          setPersonsWithRoles(prev => [...prev, ...successfulPersons])
+          clearCache(`person-areas-${scheduledAreaId}`)
         }
 
-        // Adicionar à lista (a ordenação será feita pelo useMemo)
-        setPersonsWithRoles(prev => [...prev, newPersonWithRoles])
-        
-        // Invalidar cache para garantir dados atualizados na próxima vez
-        clearCache(`person-areas-${scheduledAreaId}`)
-        
-        toast.showSuccess('Pessoa adicionada à área com sucesso!')
-      }
-      
-      setShowModal(false)
-      setEditingPerson(null)
-      setSelectedPerson(null)
-      setSelectedRoleIds([])
-    } catch (error: any) {
-      console.error('Erro ao salvar pessoa:', error)
-      const errorMessage = error.message || 'Erro ao salvar pessoa'
-      
-      // Tratar erros específicos da API
-      if (errorMessage.includes('409') || errorMessage.includes('Conflict')) {
-        toast.showError('Esta pessoa já está associada à área')
-      } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
-        toast.showError('Dados inválidos. Verifique se as funções pertencem à área')
-      } else {
-        toast.showError(errorMessage)
+        // Mostrar mensagens de sucesso/erro
+        if (successCount === personsToAdd) {
+          toast.showSuccess(`${successCount} pessoa(s) adicionada(s) à área com sucesso!`)
+        } else if (successCount > 0) {
+          toast.showError(
+            `${successCount} pessoa(s) adicionada(s), ${errorCount} erro(s). ${errors.join('; ')}`
+          )
+        } else {
+          toast.showError(`Erro ao adicionar pessoas: ${errors.join('; ')}`)
+        }
+
+        setShowModal(false)
+        setSelectedPersons([])
+        setSelectedRoleIds([])
+        setSearchTerm('')
+      } catch (error: any) {
+        console.error('Erro ao salvar pessoas:', error)
+        toast.showError(error.message || 'Erro ao adicionar pessoas')
       }
     }
   }
 
-  const filteredAvailablePersons: PersonResponseDto[] = availablePersons.filter(person =>
-    person.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Filtrar pessoas disponíveis (excluir as que já estão na área quando não estiver editando)
+  const filteredAvailablePersons: PersonResponseDto[] = useMemo(() => {
+    const personsInAreaIds = new Set(personsWithRoles.map(p => p.person.id))
+    const searchTermLower = searchTerm.toLowerCase()
+    
+    return availablePersons.filter(person => {
+      // Filtrar por termo de busca (com verificação de null/undefined)
+      const fullName = person.fullName || ''
+      const email = person.email || ''
+      const matchesSearch = fullName.toLowerCase().includes(searchTermLower) ||
+        email.toLowerCase().includes(searchTermLower)
+      
+      if (!matchesSearch) return false
+      
+      // Se estiver editando, mostrar todas as pessoas (incluindo a que está sendo editada)
+      if (editingPerson) return true
+      
+      // Se não estiver editando, excluir pessoas que já estão na área
+      return !personsInAreaIds.has(person.id)
+    })
+  }, [availablePersons, searchTerm, personsWithRoles, editingPerson])
 
   const isPersonSelected = (personId: string): boolean => {
-    return selectedPerson !== null && selectedPerson.id === personId
+    if (editingPerson) {
+      return selectedPerson !== null && selectedPerson.id === personId
+    } else {
+      return selectedPersons.some(p => p.id === personId)
+    }
   }
 
   // Ordenar pessoas alfabeticamente usando useMemo para evitar re-ordenação desnecessária
@@ -409,6 +500,7 @@ export default function PessoasTabPanel() {
             setShowModal(false)
             setEditingPerson(null)
             setSelectedPerson(null)
+            setSelectedPersons([])
             setSelectedRoleIds([])
             setSearchTerm('')
           }}
@@ -417,10 +509,13 @@ export default function PessoasTabPanel() {
             e.preventDefault()
             handleSavePerson()
           }}>
-            {!editingPerson && !selectedPerson && (
+            {!editingPerson && (
               <div className="form-group">
                 <label>
                   <i className="fa-solid fa-user"></i> Buscar Pessoa *
+                  {selectedPersons.length > 0 && (
+                    <span className="selected-count">({selectedPersons.length} selecionada(s))</span>
+                  )}
                 </label>
                 <div className="person-select-container">
                   <input
@@ -466,17 +561,47 @@ export default function PessoasTabPanel() {
                     )}
                   </div>
                 </div>
+                {selectedPersons.length > 0 && (
+                  <div className="selected-persons-preview">
+                    <div className="selected-persons-list">
+                      {selectedPersons.map((person) => (
+                        <div key={person.id} className="selected-person-chip">
+                          <div className="selected-person-chip-photo">
+                            {person.photoUrl ? (
+                              <img src={addCacheBusting(person.photoUrl)} alt={person.fullName} />
+                            ) : (
+                              <div className="selected-person-chip-photo-placeholder">
+                                {person.fullName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <span className="selected-person-chip-name">{person.fullName}</span>
+                          <button
+                            type="button"
+                            className="selected-person-chip-remove"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedPersons(prev => prev.filter(p => p.id !== person.id))
+                            }}
+                          >
+                            <i className="fa-solid fa-times"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {(editingPerson || selectedPerson) && (
+            {editingPerson && selectedPerson && (
               <div className="form-group">
                 <label>
                   <i className="fa-solid fa-user"></i> Pessoa
                 </label>
                 <div className="person-display">
                   <div className="person-display-photo">
-                    {(editingPerson?.person.photoUrl || selectedPerson?.photoUrl) ? (
+                    {editingPerson?.person.photoUrl || selectedPerson?.photoUrl ? (
                       <img 
                         src={addCacheBusting(editingPerson?.person.photoUrl || selectedPerson!.photoUrl!)} 
                         alt={editingPerson?.person.fullName || selectedPerson!.fullName} 
@@ -495,18 +620,6 @@ export default function PessoasTabPanel() {
                       {editingPerson?.person.email || selectedPerson?.email}
                     </div>
                   </div>
-                  {!editingPerson && (
-                    <button
-                      type="button"
-                      className="btn-secondary btn-change-person"
-                      onClick={() => {
-                        setSelectedPerson(null)
-                        setSearchTerm('')
-                      }}
-                    >
-                      <i className="fa-solid fa-arrow-left"></i> Trocar
-                    </button>
-                  )}
                 </div>
               </div>
             )}
@@ -559,6 +672,7 @@ export default function PessoasTabPanel() {
                   setShowModal(false)
                   setEditingPerson(null)
                   setSelectedPerson(null)
+                  setSelectedPersons([])
                   setSelectedRoleIds([])
                   setSearchTerm('')
                 }}
@@ -568,9 +682,13 @@ export default function PessoasTabPanel() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={(!editingPerson && !selectedPerson) || selectedRoleIds.length === 0 || availableRoles.length === 0}
+                disabled={
+                  (editingPerson ? !selectedPerson : selectedPersons.length === 0) || 
+                  selectedRoleIds.length === 0 || 
+                  availableRoles.length === 0
+                }
               >
-                <i className="fa-solid fa-check"></i> {editingPerson ? 'Salvar' : 'Adicionar'}
+                <i className="fa-solid fa-check"></i> {editingPerson ? 'Salvar' : `Adicionar ${selectedPersons.length > 0 ? `(${selectedPersons.length})` : ''}`}
               </button>
             </div>
           </form>
