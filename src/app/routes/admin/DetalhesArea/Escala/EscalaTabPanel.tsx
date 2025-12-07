@@ -317,24 +317,34 @@ export default function EscalaTabPanel() {
                       onClick={() => handleScheduleClick(schedule.id)}
                     >
                       <div className="schedule-header">
-                        <div className="schedule-dates">
-                          <i className="fa-solid fa-calendar"></i>
-                          <div>
-                            <div className="schedule-date-start">
-                              Início: {formatDateTime(schedule.startDatetime)}
+                        <div className="schedule-main-info">
+                          <div className="schedule-date-block">
+                            <span className="date-day">
+                              {new Date(schedule.startDatetime).getDate()}
+                            </span>
+                            <span className="date-month">
+                              {new Date(schedule.startDatetime).toLocaleDateString('pt-BR', { month: 'short' })}
+                            </span>
+                          </div>
+
+                          <div className="schedule-info-content">
+                            <div className="schedule-time-range">
+                              <i className="fa-regular fa-clock"></i>
+                              {formatDateTime(schedule.startDatetime).split(' ')[1]} - {formatDateTime(schedule.endDatetime).split(' ')[1]}
                             </div>
                             <div className="schedule-date-end">
-                              Fim: {formatDateTime(schedule.endDatetime)}
+                              Até {formatDateTime(schedule.endDatetime)}
                             </div>
                           </div>
                         </div>
-                        <div className="schedule-meta">
+
+                        <div className="schedule-meta-row">
                           <span className={getStatusBadgeClass(schedule.status)}>
                             {getStatusLabel(schedule.status)}
                           </span>
                           <span className="schedule-participants">
                             <i className="fa-solid fa-users"></i>
-                            {schedule.participantsCount} {schedule.participantsCount === 1 ? 'participante' : 'participantes'}
+                            {schedule.participantsCount} {schedule.participantsCount === 1 ? 'part.' : 'participantes'}
                           </span>
                         </div>
                       </div>
