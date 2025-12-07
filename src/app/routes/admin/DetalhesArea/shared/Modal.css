@@ -63,6 +63,26 @@
   flex: 1;
 }
 
+/* Estilos compactos para empty-state dentro de modais */
+.modal-body .empty-state {
+  padding: 20px 15px !important;
+  min-height: auto;
+}
+
+.modal-body .empty-state i {
+  font-size: 2rem !important;
+  margin-bottom: 10px !important;
+}
+
+.modal-body .empty-state p {
+  font-size: 0.95rem !important;
+  margin: 0 0 10px 0 !important;
+}
+
+.modal-body .empty-state small {
+  font-size: 0.85rem !important;
+}
+
 @media (max-width: 768px) {
   .modal-content {
     max-width: 100%;

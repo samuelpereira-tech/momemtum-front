@@ -226,11 +226,6 @@ export default function PessoasTabPanel() {
         return
       }
 
-      if (selectedRoleIds.length === 0) {
-        toast.showError('Selecione pelo menos uma função')
-        return
-      }
-
       try {
         // Atualizar responsabilidades da pessoa na área
         const updatedPersonArea = await personAreaService.updatePersonArea(
@@ -284,11 +279,6 @@ export default function PessoasTabPanel() {
       // Modo de adicionar: múltiplas pessoas
       if (!scheduledAreaId || selectedPersons.length === 0) {
         toast.showError('Selecione pelo menos uma pessoa')
-        return
-      }
-
-      if (selectedRoleIds.length === 0) {
-        toast.showError('Selecione pelo menos uma função')
         return
       }
 
@@ -626,14 +616,14 @@ export default function PessoasTabPanel() {
 
             <div className="form-group" style={{ marginTop: '20px' }}>
               <label>
-                <i className="fa-solid fa-briefcase"></i> Funções *
+                <i className="fa-solid fa-briefcase"></i> Funções (opcional)
               </label>
               {availableRoles.length === 0 ? (
-                <div className="empty-state" style={{ padding: '20px' }}>
+                <div className="empty-state">
                   <i className="fa-solid fa-briefcase"></i>
                   <p>Nenhuma função cadastrada na área</p>
                   <small className="form-help-text">
-                    Cadastre funções na aba "Função" primeiro
+                    Você pode adicionar a pessoa sem funções ou cadastrar funções na aba "Função"
                   </small>
                 </div>
               ) : (
@@ -651,8 +641,8 @@ export default function PessoasTabPanel() {
                     ))}
                   </div>
                   {selectedRoleIds.length === 0 && (
-                    <small className="form-help-text" style={{ color: 'var(--color-pink)' }}>
-                      Selecione pelo menos uma função
+                    <small className="form-help-text">
+                      Nenhuma função selecionada (opcional)
                     </small>
                   )}
                   {selectedRoleIds.length > 0 && (
@@ -683,9 +673,7 @@ export default function PessoasTabPanel() {
                 type="submit"
                 className="btn-primary"
                 disabled={
-                  (editingPerson ? !selectedPerson : selectedPersons.length === 0) || 
-                  selectedRoleIds.length === 0 || 
-                  availableRoles.length === 0
+                  (editingPerson ? !selectedPerson : selectedPersons.length === 0)
                 }
               >
                 <i className="fa-solid fa-check"></i> {editingPerson ? 'Salvar' : `Adicionar ${selectedPersons.length > 0 ? `(${selectedPersons.length})` : ''}`}

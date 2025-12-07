@@ -36,6 +36,7 @@ export default function EquipesTabPanel() {
   // Form States
   const [novaEquipeNome, setNovaEquipeNome] = useState('')
   const [novaEquipeDescricao, setNovaEquipeDescricao] = useState('')
+  const [adicionarTodosPapeis, setAdicionarTodosPapeis] = useState(false)
   const [editEquipeNome, setEditEquipeNome] = useState('')
   const [editEquipeDescricao, setEditEquipeDescricao] = useState('')
 
@@ -151,18 +152,31 @@ export default function EquipesTabPanel() {
     }
 
     try {
+      // Se adicionarTodosPapeis estiver marcado, criar roles para todas as funções disponíveis
+      let roles: any[] = []
+      if (adicionarTodosPapeis && availableFunctions.length > 0) {
+        roles = availableFunctions.map((funcao, index) => ({
+          responsibilityId: funcao.id,
+          quantity: 1,
+          priority: index + 1,
+          isFree: true,
+          fixedPersonIds: []
+        }))
+      }
+
       const newTeam = await teamService.createTeam(scheduledAreaId, {
         name: novaEquipeNome.trim(),
         description: novaEquipeDescricao.trim() || undefined,
         scheduledAreaId,
-        roles: []
+        roles: roles
       })
 
       setEquipes([...equipes, newTeam])
       setNovaEquipeNome('')
       setNovaEquipeDescricao('')
+      setAdicionarTodosPapeis(false)
       setShowAddEquipeModal(false)
-      toast.showSuccess('Equipe criada com sucesso!')
+      toast.showSuccess(`Equipe criada com sucesso!${roles.length > 0 ? ` ${roles.length} papel(éis) adicionado(s).` : ''}`)
     } catch (error: any) {
       console.error('Erro ao criar equipe:', error)
       toast.showError(error.message || 'Erro ao criar equipe')
@@ -708,6 +722,7 @@ export default function EquipesTabPanel() {
             setShowAddEquipeModal(false)
             setNovaEquipeNome('')
             setNovaEquipeDescricao('')
+            setAdicionarTodosPapeis(false)
           }}
         >
           <form onSubmit={(e) => {
@@ -739,6 +754,26 @@ export default function EquipesTabPanel() {
                 rows={3}
               />
             </div>
+            {availableFunctions.length > 0 && (
+              <div className="form-group" style={{ marginTop: '20px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={adicionarTodosPapeis}
+                    onChange={(e) => setAdicionarTodosPapeis(e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span>
+                    <i className="fa-solid fa-briefcase"></i> Adicionar todos os papéis ({availableFunctions.length})
+                  </span>
+                </label>
+                {adicionarTodosPapeis && (
+                  <small className="form-help-text" style={{ marginTop: '8px', display: 'block', color: 'var(--text-light)' }}>
+                    Todas as funções da área serão adicionadas à equipe com quantidade 1, prioridade sequencial e como papéis livres (sem pessoas fixas atribuídas).
+                  </small>
+                )}
+              </div>
+            )}
             <div className="form-actions">
               <button
                 type="button"
@@ -747,6 +782,7 @@ export default function EquipesTabPanel() {
                   setShowAddEquipeModal(false)
                   setNovaEquipeNome('')
                   setNovaEquipeDescricao('')
+                  setAdicionarTodosPapeis(false)
                 }}
               >
                 <i className="fa-solid fa-times"></i> Cancelar

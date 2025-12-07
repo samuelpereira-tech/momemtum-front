@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
+import { scheduledAreaService, type ScheduledAreaResponseDto } from '../../../../../services/basic/scheduledAreaService'
 import { validateImageFile, createImagePreview, addCacheBusting } from '../../../../../utils/fileUtils'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
 import Modal from '../shared/Modal'
@@ -14,6 +15,7 @@ export default function FuncoesTabPanel() {
   const [funcoes, setFuncoes] = useState<ResponsibilityResponseDto[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showCloneModal, setShowCloneModal] = useState(false)
   const [showDeleteFuncaoModal, setShowDeleteFuncaoModal] = useState(false)
   const [funcaoEditando, setFuncaoEditando] = useState<ResponsibilityResponseDto | null>(null)
   const [funcaoParaDeletar, setFuncaoParaDeletar] = useState<{ id: string; nome: string } | null>(null)
@@ -72,15 +74,24 @@ export default function FuncoesTabPanel() {
     setShowModal(true)
   }
 
+  const handleClonarFuncoes = () => {
+    setShowCloneModal(true)
+  }
+
   return (
     <div className="tab-panel">
       <div className="tab-panel-header">
         <h3 className="tab-panel-title">
           <i className="fa-solid fa-briefcase"></i> Funções
         </h3>
-        <button className="btn-primary" onClick={handleAdicionarFuncao}>
-          <i className="fa-solid fa-plus"></i> Adicionar Função
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-secondary" onClick={handleClonarFuncoes}>
+            <i className="fa-solid fa-copy"></i> Clonar Funções
+          </button>
+          <button className="btn-primary" onClick={handleAdicionarFuncao}>
+            <i className="fa-solid fa-plus"></i> Adicionar Função
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -202,6 +213,17 @@ export default function FuncoesTabPanel() {
               console.error('Erro ao salvar função:', error)
               toast.showError(error.message || 'Erro ao salvar função')
             }
+          }}
+        />
+      )}
+
+      {showCloneModal && scheduledAreaId && (
+        <CloneFuncoesModal
+          currentAreaId={scheduledAreaId}
+          onClose={() => setShowCloneModal(false)}
+          onCloneSuccess={() => {
+            setShowCloneModal(false)
+            loadFuncoes()
           }}
         />
       )}
@@ -389,6 +411,241 @@ function FuncaoModal({
           </button>
         </div>
       </form>
+    </Modal>
+  )
+}
+
+// Componente Modal para clonar funções de outra área
+function CloneFuncoesModal({
+  currentAreaId,
+  onClose,
+  onCloneSuccess
+}: {
+  currentAreaId: string
+  onClose: () => void
+  onCloneSuccess: () => void
+}) {
+  const [areas, setAreas] = useState<ScheduledAreaResponseDto[]>([])
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true)
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null)
+  const [isCloning, setIsCloning] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const toast = useToast()
+
+  useEffect(() => {
+    loadAreas()
+  }, [])
+
+  const loadAreas = async () => {
+    setIsLoadingAreas(true)
+    try {
+      // Carregar todas as áreas
+      let todasAreas: ScheduledAreaResponseDto[] = []
+      let pagina = 1
+      let temMaisPaginas = true
+      const limitePorRequisicao = 100
+
+      while (temMaisPaginas) {
+        const response = await scheduledAreaService.getAllScheduledAreas({
+          page: pagina,
+          limit: limitePorRequisicao
+        })
+        
+        todasAreas = [...todasAreas, ...response.data]
+        
+        if (response.meta && typeof response.meta.totalPages === 'number') {
+          if (pagina >= response.meta.totalPages || response.data.length === 0) {
+            temMaisPaginas = false
+          } else {
+            pagina++
+          }
+        } else {
+          if (response.data.length === 0 || response.data.length < limitePorRequisicao) {
+            temMaisPaginas = false
+          } else {
+            pagina++
+          }
+        }
+      }
+
+      // Filtrar a área atual
+      const areasFiltradas = todasAreas.filter(area => area.id !== currentAreaId)
+      setAreas(areasFiltradas)
+    } catch (error: any) {
+      console.error('Erro ao carregar áreas:', error)
+      toast.showError(error.message || 'Erro ao carregar áreas')
+    } finally {
+      setIsLoadingAreas(false)
+    }
+  }
+
+  const handleClone = async () => {
+    if (!selectedAreaId) {
+      toast.showError('Selecione uma área para clonar as funções')
+      return
+    }
+
+    setIsCloning(true)
+    try {
+      // Buscar funções da área selecionada
+      const sourceFunctions = await responsibilityService.getAllResponsibilities({
+        scheduledAreaId: selectedAreaId,
+        limit: 100
+      })
+
+      if (sourceFunctions.data.length === 0) {
+        toast.showWarning('A área selecionada não possui funções para clonar')
+        setIsCloning(false)
+        return
+      }
+
+      // Clonar cada função
+      let successCount = 0
+      let errorCount = 0
+      const errors: string[] = []
+
+      for (const funcao of sourceFunctions.data) {
+        try {
+          // Criar nova função na área atual
+          const newFuncao = await responsibilityService.createResponsibility({
+            name: funcao.name,
+            description: funcao.description || undefined,
+            scheduledAreaId: currentAreaId
+          })
+
+          // Se a função original tinha imagem, tentar fazer upload (se possível)
+          // Nota: Não podemos copiar a imagem diretamente, mas podemos tentar fazer upload se houver URL
+          // Por enquanto, vamos apenas criar a função sem imagem
+          // Se necessário, o usuário pode adicionar as imagens manualmente depois
+
+          successCount++
+        } catch (error: any) {
+          errorCount++
+          const errorMessage = error.message || 'Erro ao clonar função'
+          errors.push(`${funcao.name}: ${errorMessage}`)
+        }
+      }
+
+      if (successCount > 0) {
+        toast.showSuccess(`${successCount} função(ões) clonada(s) com sucesso!${errorCount > 0 ? ` ${errorCount} erro(s).` : ''}`)
+        if (errorCount > 0 && errors.length > 0) {
+          console.error('Erros ao clonar funções:', errors)
+        }
+        onCloneSuccess()
+      } else {
+        toast.showError(`Erro ao clonar funções: ${errors.join('; ')}`)
+      }
+    } catch (error: any) {
+      console.error('Erro ao clonar funções:', error)
+      toast.showError(error.message || 'Erro ao clonar funções')
+    } finally {
+      setIsCloning(false)
+    }
+  }
+
+  const filteredAreas = areas.filter(area =>
+    area.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  return (
+    <Modal
+      title="Clonar Funções de Outra Área"
+      onClose={onClose}
+    >
+      <div style={{ marginBottom: '20px' }}>
+        <p style={{ color: 'var(--text-color)', lineHeight: '1.6', marginBottom: '15px' }}>
+          <i className="fa-solid fa-info-circle" style={{ color: 'var(--color-purple)', marginRight: '8px' }}></i>
+          Selecione uma área para copiar todas as suas funções para esta área. 
+          As funções serão criadas com os mesmos nomes e descrições, mas sem as imagens (você pode adicioná-las depois).
+        </p>
+      </div>
+
+      <div className="form-group">
+        <label>
+          <i className="fa-solid fa-search"></i> Buscar Área
+        </label>
+        <input
+          type="text"
+          className="person-search-input"
+          placeholder="Buscar área por nome..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group" style={{ marginTop: '20px' }}>
+        <label>
+          <i className="fa-solid fa-map"></i> Selecione a Área
+        </label>
+        {isLoadingAreas ? (
+          <div className="empty-state" style={{ padding: '40px 20px' }}>
+            <i className="fa-solid fa-spinner fa-spin"></i>
+            <p>Carregando áreas...</p>
+          </div>
+        ) : filteredAreas.length === 0 ? (
+          <div className="empty-state" style={{ padding: '40px 20px' }}>
+            <i className="fa-solid fa-map"></i>
+            <p>{searchTerm ? 'Nenhuma área encontrada' : 'Nenhuma outra área disponível'}</p>
+          </div>
+        ) : (
+          <div className="person-select-list" style={{ maxHeight: '400px' }}>
+            {filteredAreas.map((area) => (
+              <div
+                key={area.id}
+                className={`person-select-item ${selectedAreaId === area.id ? 'selected' : ''}`}
+                onClick={() => setSelectedAreaId(area.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="person-select-photo">
+                  {area.imageUrl ? (
+                    <img src={addCacheBusting(area.imageUrl)} alt={area.name} />
+                  ) : (
+                    <div className="person-select-photo-placeholder">
+                      <i className="fa-solid fa-map"></i>
+                    </div>
+                  )}
+                </div>
+                <div className="person-select-info">
+                  <div className="person-select-name">{area.name}</div>
+                  <div className="person-select-email">
+                    {area.description || 'Sem descrição'}
+                  </div>
+                </div>
+                {selectedAreaId === area.id && (
+                  <i className="fa-solid fa-check person-select-check"></i>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="form-actions">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={onClose}
+          disabled={isCloning}
+        >
+          <i className="fa-solid fa-times"></i> Cancelar
+        </button>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleClone}
+          disabled={!selectedAreaId || isCloning}
+        >
+          {isCloning ? (
+            <>
+              <i className="fa-solid fa-spinner fa-spin"></i> Clonando...
+            </>
+          ) : (
+            <>
+              <i className="fa-solid fa-copy"></i> Clonar Funções
+            </>
+          )}
+        </button>
+      </div>
     </Modal>
   )
 }
