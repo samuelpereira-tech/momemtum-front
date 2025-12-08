@@ -370,7 +370,6 @@
 /* Schedule Card (Item) - Modern Design */
 .schedules-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 20px;
 }
 

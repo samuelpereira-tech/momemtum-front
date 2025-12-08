@@ -1998,70 +1998,81 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
               {schedule.groups && schedule.groups.length > 0 && (
                 <div className="schedule-content">
                   <strong>Grupos:</strong>
-                  <div className="schedule-groups-list">
-                    {schedule.groups.map(group => (
-                      <div key={group.id} className="schedule-group-card">
-                        <div className="schedule-group-header">
-                          <h6 className="schedule-group-name">
-                            <i className="fa-solid fa-users"></i> {group.name}
-                          </h6>
-                          {group.members && (
-                            <span className="schedule-group-member-count">
-                              {group.members.length} {group.members.length === 1 ? 'membro' : 'membros'}
-                            </span>
-                          )}
-                        </div>
-                        {group.members && group.members.length > 0 ? (
-                          <div className="schedule-group-members">
-                            {group.members.map((member, memberIndex) => (
-                              <div key={memberIndex} className="schedule-group-member">
-                                <div className="schedule-member-photo-container">
-                                  {member.personPhotoUrl ? (
-                                    <img
-                                      src={addCacheBusting(member.personPhotoUrl)}
-                                      alt={member.personName}
-                                      className="schedule-member-photo"
-                                      loading="lazy"
-                                      decoding="async"
-                                    />
-                                  ) : (
-                                    <div className="schedule-member-photo-placeholder">
-                                      {member.personName.charAt(0).toUpperCase()}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="schedule-member-info">
-                                  <div className="schedule-member-name">{member.personName}</div>
-                                  {member.responsibilities && member.responsibilities.length > 0 && (
-                                    <div className="schedule-member-roles">
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Grupo</th>
+                          <th>Membro</th>
+                          <th>Responsabilidades</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {schedule.groups.map(group => (
+                          group.members && group.members.length > 0 ? (
+                            group.members.map((member, memberIndex) => (
+                              <tr key={`${group.id}-${memberIndex}`}>
+                                {memberIndex === 0 && (
+                                  <td rowSpan={group.members.length} className="group-name-cell">
+                                    <i className="fa-solid fa-users"></i> {group.name}
+                                  </td>
+                                )}
+                                <td>
+                                  <div className="table-photo-name">
+                                    {member.personPhotoUrl ? (
+                                      <img
+                                        src={addCacheBusting(member.personPhotoUrl)}
+                                        alt={member.personName}
+                                        className="table-photo"
+                                        loading="lazy"
+                                        decoding="async"
+                                      />
+                                    ) : (
+                                      <div className="table-photo-placeholder">
+                                        {member.personName.charAt(0).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <span>{member.personName}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  {member.responsibilities && member.responsibilities.length > 0 ? (
+                                    <div className="responsibilities-list">
                                       {member.responsibilities.map((responsibility) => (
-                                        <span key={responsibility.id} className="schedule-member-role-badge">
+                                        <span key={responsibility.id} className="responsibility-badge">
                                           {responsibility.imageUrl ? (
                                             <img
                                               src={addCacheBusting(responsibility.imageUrl)}
                                               alt={responsibility.name}
-                                              className="schedule-member-role-image"
+                                              className="responsibility-icon"
                                               loading="lazy"
                                               decoding="async"
                                             />
                                           ) : null}
-                                          <span className="schedule-member-role-name">{responsibility.name}</span>
+                                          <span>{responsibility.name}</span>
                                         </span>
                                       ))}
                                     </div>
+                                  ) : (
+                                    <span className="text-muted">-</span>
                                   )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="schedule-group-empty">
-                            <i className="fa-solid fa-info-circle"></i>
-                            <span>Nenhum membro cadastrado neste grupo</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr key={group.id}>
+                              <td>
+                                <i className="fa-solid fa-users"></i> {group.name}
+                              </td>
+                              <td colSpan={2} className="table-empty">
+                                <i className="fa-solid fa-info-circle"></i>
+                                Nenhum membro cadastrado neste grupo
+                              </td>
+                            </tr>
+                          )
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
