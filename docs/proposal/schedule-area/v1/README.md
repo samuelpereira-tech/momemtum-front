@@ -362,3 +362,5 @@ curl -X GET "http://localhost:3000/api/scheduled-areas?favorite=true&page=1&limi
 
 
 
+
+

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './GeracaoAutomaticaTabPanel.css'
 import type { GenerationConfiguration, GenerationPreview, GenerationType, PeriodType, DistributionOrder, ParticipantSelection } from './types'
-import { generatePreview, confirmGenerationMock } from './mockServices'
+import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
 import { groupService, type GroupResponseDto } from '../../../../../services/basic/groupService'
@@ -228,96 +228,30 @@ export default function GeracaoAutomaticaTabPanel() {
   }
   
   const handleGeneratePreview = async () => {
+    if (!scheduledAreaId) return
+    
     setIsGeneratingPreview(true)
     try {
-      // Carregar membros dos grupos se necessário
-      let groupMembers: any[] = []
-      
-      // Carregar membros quando o tipo de geração é por grupo
-      const groupIdsToLoad: string[] = []
-      
-      if (config.generationType === 'group' && config.groupConfig?.groupIds) {
-        groupIdsToLoad.push(...config.groupConfig.groupIds)
-      }
-      
-      // Carregar membros quando a seleção de participantes é por grupo
-      if (config.teamConfig?.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
-        for (const groupId of config.teamConfig.selectedGroupIds) {
-          if (!groupIdsToLoad.includes(groupId)) {
-            groupIdsToLoad.push(groupId)
-          }
-        }
-      }
-      
-      // Carregar membros de todos os grupos necessários
-      for (const groupId of groupIdsToLoad) {
-        try {
-          let members: any[] = []
-          let page = 1
-          let hasMore = true
-          const limit = 100
-          
-          while (hasMore && scheduledAreaId) {
-            const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
-            members = [...members, ...response.data]
-            
-            if (page >= response.meta.totalPages || response.data.length === 0) {
-              hasMore = false
-            } else {
-              page++
-            }
-          }
-          
-          groupMembers = [...groupMembers, ...members]
-        } catch (error) {
-          console.error(`Erro ao carregar membros do grupo ${groupId}:`, error)
-        }
-      }
-      
-      const previewData = await generatePreview(config, groups, teams, persons, absences, groupMembers)
+      const previewData = await scheduleGenerationService.generatePreview(scheduledAreaId, config)
       setPreview(previewData)
       setCurrentStep(5)
     } catch (error: any) {
-      toast.showError('Erro ao gerar preview: ' + (error.message || 'Erro desconhecido'))
+      const errorMessage = error.message || 'Erro desconhecido'
+      toast.showError(`Erro ao gerar preview: ${errorMessage}`)
+      console.error('Erro ao gerar preview:', error)
     } finally {
       setIsGeneratingPreview(false)
     }
   }
   
   const handleConfirmGeneration = async () => {
+    if (!scheduledAreaId) return
+    
     setIsConfirming(true)
     setShowConfirmModal(false)
     try {
-      // Carregar membros dos grupos se necessário
-      let groupMembers: any[] = []
-      if (config.teamConfig?.participantSelection === 'by_group' && config.teamConfig.selectedGroupIds) {
-        for (const groupId of config.teamConfig.selectedGroupIds) {
-          try {
-            let members: any[] = []
-            let page = 1
-            let hasMore = true
-            const limit = 100
-            
-            while (hasMore && scheduledAreaId) {
-              const response = await groupMemberService.getMembersInGroup(scheduledAreaId, groupId, { page, limit })
-              members = [...members, ...response.data]
-              
-              if (page >= response.meta.totalPages || response.data.length === 0) {
-                hasMore = false
-              } else {
-                page++
-              }
-            }
-            
-            groupMembers = [...groupMembers, ...members]
-          } catch (error) {
-            console.error(`Erro ao carregar membros do grupo ${groupId}:`, error)
-          }
-        }
-      }
-      
-      const result = await confirmGenerationMock(config, groups, teams, persons, absences, groupMembers)
-      toast.showSuccess(`Geração concluída! ${result.schedulesCreated} escalas criadas.`)
+      const result = await scheduleGenerationService.createGeneration(scheduledAreaId, config)
+      toast.showSuccess(`Geração concluída! ${result.totalSchedulesGenerated} escalas criadas.`)
       // Resetar formulário
       setCurrentStep(1)
       setPreview(null)
@@ -351,7 +285,24 @@ export default function GeracaoAutomaticaTabPanel() {
         },
       })
     } catch (error: any) {
-      toast.showError('Erro ao confirmar geração: ' + (error.message || 'Erro desconhecido'))
+      const errorMessage = error.message || 'Erro desconhecido'
+      
+      // Mensagens mais específicas para diferentes tipos de erro
+      if (errorMessage.includes('409') || errorMessage.includes('Conflict') || errorMessage.includes('conflito')) {
+        toast.showError(
+          'Conflito detectado: ' + 
+          (errorMessage.includes('Esta operação não pode ser realizada') 
+            ? errorMessage 
+            : 'Pode haver escalas já existentes no período ou grupos/pessoas sendo usados em outras escalas. Verifique o período selecionado e tente novamente.')
+        )
+      } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+        toast.showError('Dados inválidos: ' + errorMessage)
+      } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+        toast.showError('Recurso não encontrado: Verifique se os grupos, equipes ou pessoas selecionados ainda existem.')
+      } else {
+        toast.showError('Erro ao confirmar geração: ' + errorMessage)
+      }
+      console.error('Erro ao confirmar geração:', error)
     } finally {
       setIsConfirming(false)
     }

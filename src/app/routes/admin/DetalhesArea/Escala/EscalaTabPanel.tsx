@@ -2,9 +2,57 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './EscalaTabPanel.css'
-import { getScheduleGroups, getSchedules, type ScheduleGroupDto, type ScheduleDto } from './mockServices'
+import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
+import { scheduleService, type ScheduleResponseDto } from '../../../../../services/basic/scheduleService'
 import ScheduleDetailsView from './ScheduleDetailsView'
 import ScheduleGroupDetailsView from './ScheduleGroupDetailsView'
+
+// Tipos para compatibilidade com a tela
+export interface ScheduleGroupConfiguration {
+  // Período
+  periodStartDate: string
+  periodEndDate: string
+  periodType: 'fixed' | 'daily' | 'weekly' | 'monthly'
+  
+  // Dias da semana (0-6, domingo-sábado)
+  weekdays?: number[]
+  
+  // Horários (para tipo daily)
+  startTime?: string // HH:mm
+  endTime?: string // HH:mm
+  
+  // Grupos selecionados
+  selectedGroupIds?: string[]
+  selectedGroupNames?: string[]
+  
+  // Equipe selecionada
+  selectedTeamId?: string
+  selectedTeamName?: string
+  
+  // Regras
+  considerAbsences: boolean
+  requireResponsibilities?: boolean
+  distributionOrder?: 'sequential' | 'random' | 'balanced'
+  groupsPerSchedule?: number
+  participantSelection?: 'all' | 'all_with_exclusions' | 'by_group' | 'individual'
+  
+  // Datas excluídas/incluídas
+  excludedDates?: string[]
+  includedDates?: string[]
+}
+
+export interface ScheduleGroupDto {
+  id: string
+  name: string
+  description?: string
+  scheduledAreaId: string
+  schedulesCount: number
+  configuration: ScheduleGroupConfiguration
+  createdAt: string
+  updatedAt: string
+}
+
+export type ScheduleDto = ScheduleResponseDto
 
 export default function EscalaTabPanel() {
   const { id: scheduledAreaId } = useParams<{ id: string }>()
@@ -27,14 +75,25 @@ export default function EscalaTabPanel() {
   const schedulesLimit = 10
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
 
-  // Carregar grupos
+  // Carregar grupos (gerações automáticas)
   const loadGroups = useCallback(async (page: number) => {
     if (!scheduledAreaId) return
 
     setGroupsLoading(true)
     try {
-      const response = await getScheduleGroups(scheduledAreaId, { page, limit: groupsLimit })
-      setGroups(response.data)
+      const response = await scheduleGenerationService.getGenerations(scheduledAreaId, { page, limit: groupsLimit })
+      // Converter ScheduleGenerationResponseDto para ScheduleGroupDto para compatibilidade
+      const convertedGroups: ScheduleGroupDto[] = response.data.map(gen => ({
+        id: gen.id,
+        name: `Geração ${gen.generationType} - ${gen.periodType}`,
+        description: `Período: ${gen.periodStartDate} a ${gen.periodEndDate}`,
+        scheduledAreaId: gen.scheduledAreaId,
+        schedulesCount: gen.totalSchedulesGenerated,
+        configuration: gen.configuration,
+        createdAt: gen.createdAt,
+        updatedAt: gen.createdAt,
+      }))
+      setGroups(convertedGroups)
       setGroupsTotalPages(response.meta.totalPages)
     } catch (error) {
       console.error('Erro ao carregar grupos de escalas:', error)
@@ -49,10 +108,10 @@ export default function EscalaTabPanel() {
 
     setSchedulesLoading(true)
     try {
-      const response = await getSchedules(scheduledAreaId, {
+      const response = await scheduleService.getSchedules(scheduledAreaId, {
         page,
         limit: schedulesLimit,
-        scheduleGroupId: groupId,
+        scheduleGenerationId: groupId,
       })
       setSchedules(response.data)
       setSchedulesTotalPages(response.meta.totalPages)
@@ -475,7 +534,7 @@ export default function EscalaTabPanel() {
               <>
                 <div className="schedules-list">
                   {schedules.map((schedule) => {
-                    const scheduleDate = schedule.date ? new Date(schedule.date) : new Date(schedule.startDatetime)
+                    const scheduleDate = new Date(schedule.startDatetime)
                     return (
                       <div
                         key={schedule.id}
@@ -500,12 +559,6 @@ export default function EscalaTabPanel() {
                               <div className="schedule-weekday">
                                 {scheduleDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
                               </div>
-                              {schedule.dayIndex && (
-                                <div className="schedule-day-index">
-                                  <i className="fa-solid fa-calendar-day"></i>
-                                  Dia {schedule.dayIndex} do período
-                                </div>
-                              )}
                             </div>
                           </div>
                           <span className={getStatusBadgeClass(schedule.status)}>

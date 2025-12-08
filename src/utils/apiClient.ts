@@ -27,6 +27,29 @@ export async function apiClient<T>(
   })
 
   if (!response.ok) {
+    // Tentar extrair mensagem de erro do response
+    let errorMessage = `Erro HTTP ${response.status}`
+    try {
+      const errorData = await response.clone().json()
+      if (errorData.message) {
+        errorMessage = errorData.message
+      } else if (errorData.error) {
+        errorMessage = errorData.error
+      }
+    } catch {
+      // Se não conseguir parsear JSON, usar mensagem padrão baseada no status
+      const statusMessages: Record<number, string> = {
+        400: 'Dados inválidos fornecidos',
+        401: 'Não autorizado. Por favor, faça login novamente.',
+        403: 'Acesso negado',
+        404: 'Recurso não encontrado',
+        409: 'Conflito: Esta operação não pode ser realizada porque o registro está sendo usado em outras partes do sistema.',
+        422: 'Dados de validação inválidos',
+        500: 'Erro interno do servidor',
+      }
+      errorMessage = statusMessages[response.status] || `Erro HTTP ${response.status}`
+    }
+
     if (response.status === 401) {
       // Token expirado, tentar renovar
       const refreshTokenValue = localStorage.getItem('refreshToken')
@@ -47,7 +70,20 @@ export async function apiClient<T>(
               headers,
             })
             if (!retryResponse.ok) {
+              // Tentar extrair mensagem de erro do retry
+              try {
+                const retryErrorData = await retryResponse.clone().json()
+                if (retryErrorData.message) {
+                  throw new Error(retryErrorData.message)
+                }
+              } catch {
+                // Ignorar erro de parsing
+              }
               throw new Error(`HTTP error! status: ${retryResponse.status}`)
+            }
+            // Se for 204 No Content, retornar void
+            if (retryResponse.status === 204) {
+              return undefined as any
             }
             return retryResponse.json()
           }
@@ -61,7 +97,13 @@ export async function apiClient<T>(
         }
       }
     }
-    throw new Error(`HTTP error! status: ${response.status}`)
+    
+    throw new Error(errorMessage)
+  }
+
+  // Se for 204 No Content, retornar void
+  if (response.status === 204) {
+    return undefined as any
   }
 
   return response.json()

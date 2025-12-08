@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
-import { getScheduleGroupDetails, type ScheduleGroupDto, type ScheduleGroupConfiguration } from './mockServices'
+import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
+import type { ScheduleGroupDto, ScheduleGroupConfiguration } from './EscalaTabPanel'
 import './ScheduleGroupDetailsView.css'
 
 interface ScheduleGroupDetailsViewProps {
@@ -10,19 +12,35 @@ interface ScheduleGroupDetailsViewProps {
 }
 
 export default function ScheduleGroupDetailsView({ groupId, onBack, onViewSchedules }: ScheduleGroupDetailsViewProps) {
+  const { id: scheduledAreaId } = useParams<{ id: string }>()
   const toast = useToast()
   const [group, setGroup] = useState<ScheduleGroupDto | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadGroupDetails()
-  }, [groupId])
+    if (scheduledAreaId) {
+      loadGroupDetails()
+    }
+  }, [groupId, scheduledAreaId])
 
   const loadGroupDetails = async () => {
+    if (!scheduledAreaId) return
+    
     setLoading(true)
     try {
-      const details = await getScheduleGroupDetails(groupId)
-      setGroup(details)
+      const generation = await scheduleGenerationService.getGenerationById(scheduledAreaId, groupId)
+      // Converter ScheduleGenerationResponseDto para ScheduleGroupDto para compatibilidade
+      const convertedGroup: ScheduleGroupDto = {
+        id: generation.id,
+        name: `Geração ${generation.generationType} - ${generation.periodType}`,
+        description: `Período: ${generation.periodStartDate} a ${generation.periodEndDate}`,
+        scheduledAreaId: generation.scheduledAreaId,
+        schedulesCount: generation.totalSchedulesGenerated,
+        configuration: generation.configuration as ScheduleGroupConfiguration,
+        createdAt: generation.createdAt,
+        updatedAt: generation.createdAt,
+      }
+      setGroup(convertedGroup)
     } catch (error: any) {
       toast.showError('Erro ao carregar detalhes do grupo: ' + (error.message || 'Erro desconhecido'))
     } finally {

@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
-import {
-  getScheduleDetails,
-  addScheduleComment,
-  updateScheduleComment,
-  deleteScheduleComment,
-  removeScheduleMember,
-  updateScheduleMember,
-  updateScheduleMemberStatus,
-  mockResponsibilities,
-  type ScheduleDetailsDto,
-} from './mockServices'
+import { scheduleService, type ScheduleDetailsResponseDto } from '../../../../../services/basic/scheduleService'
+import { scheduleCommentService } from '../../../../../services/basic/scheduleCommentService'
+import { scheduleMemberService } from '../../../../../services/basic/scheduleMemberService'
+import { responsibilityService } from '../../../../../services/basic/responsibilityService'
 import './ScheduleDetailsView.css'
 
 interface ScheduleDetailsViewProps {
@@ -21,10 +15,15 @@ interface ScheduleDetailsViewProps {
   onUpdate?: () => void
 }
 
+// Tipo para compatibilidade
+type ScheduleDetailsDto = ScheduleDetailsResponseDto
+
 export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: ScheduleDetailsViewProps) {
+  const { id: scheduledAreaId } = useParams<{ id: string }>()
   const toast = useToast()
   const [schedule, setSchedule] = useState<ScheduleDetailsDto | null>(null)
   const [loading, setLoading] = useState(true)
+  const [responsibilities, setResponsibilities] = useState<Array<{ id: string; name: string }>>([])
   const [newComment, setNewComment] = useState('')
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingCommentContent, setEditingCommentContent] = useState('')
@@ -33,13 +32,48 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   const [showDeleteMemberModal, setShowDeleteMemberModal] = useState<string | null>(null)
 
   useEffect(() => {
-    loadScheduleDetails()
-  }, [scheduleId])
+    if (scheduledAreaId) {
+      loadScheduleDetails()
+      loadResponsibilities()
+    }
+  }, [scheduleId, scheduledAreaId])
+
+  const loadResponsibilities = async () => {
+    if (!scheduledAreaId) return
+    
+    try {
+      let allResponsibilities: Array<{ id: string; name: string }> = []
+      let page = 1
+      let hasMore = true
+      const limit = 100
+      
+      while (hasMore) {
+        const response = await responsibilityService.getAllResponsibilities({
+          scheduledAreaId,
+          page,
+          limit,
+        })
+        allResponsibilities = [...allResponsibilities, ...response.data.map(r => ({ id: r.id, name: r.name }))]
+        
+        if (page >= response.meta.totalPages || response.data.length === 0) {
+          hasMore = false
+        } else {
+          page++
+        }
+      }
+      
+      setResponsibilities(allResponsibilities)
+    } catch (error) {
+      console.error('Erro ao carregar responsabilidades:', error)
+    }
+  }
 
   const loadScheduleDetails = async () => {
+    if (!scheduledAreaId) return
+    
     setLoading(true)
     try {
-      const details = await getScheduleDetails(scheduleId)
+      const details = await scheduleService.getScheduleById(scheduledAreaId, scheduleId)
       setSchedule(details)
     } catch (error: any) {
       toast.showError('Erro ao carregar detalhes da escala: ' + (error.message || 'Erro desconhecido'))
@@ -49,10 +83,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !schedule) return
+    if (!newComment.trim() || !schedule || !scheduledAreaId) return
 
     try {
-      await addScheduleComment(scheduleId, newComment.trim())
+      await scheduleCommentService.addComment(scheduledAreaId, scheduleId, { content: newComment.trim() })
       setNewComment('')
       await loadScheduleDetails()
       onUpdate?.()
@@ -68,10 +102,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleSaveComment = async () => {
-    if (!editingCommentId || !editingCommentContent.trim() || !schedule) return
+    if (!editingCommentId || !editingCommentContent.trim() || !schedule || !scheduledAreaId) return
 
     try {
-      await updateScheduleComment(scheduleId, editingCommentId, editingCommentContent.trim())
+      await scheduleCommentService.updateComment(scheduledAreaId, scheduleId, editingCommentId, { content: editingCommentContent.trim() })
       setEditingCommentId(null)
       setEditingCommentContent('')
       await loadScheduleDetails()
@@ -83,10 +117,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleDeleteComment = async () => {
-    if (!showDeleteCommentModal || !schedule) return
+    if (!showDeleteCommentModal || !schedule || !scheduledAreaId) return
 
     try {
-      await deleteScheduleComment(scheduleId, showDeleteCommentModal)
+      await scheduleCommentService.deleteComment(scheduledAreaId, scheduleId, showDeleteCommentModal)
       setShowDeleteCommentModal(null)
       await loadScheduleDetails()
       onUpdate?.()
@@ -97,10 +131,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleRemoveMember = async () => {
-    if (!showDeleteMemberModal || !schedule) return
+    if (!showDeleteMemberModal || !schedule || !scheduledAreaId) return
 
     try {
-      await removeScheduleMember(scheduleId, showDeleteMemberModal)
+      await scheduleMemberService.removeMember(scheduledAreaId, scheduleId, showDeleteMemberModal)
       setShowDeleteMemberModal(null)
       await loadScheduleDetails()
       onUpdate?.()
@@ -111,8 +145,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleUpdateMemberResponsibility = async (memberId: string, responsibilityId: string, responsibilityName: string) => {
+    if (!scheduledAreaId) return
+    
     try {
-      await updateScheduleMember(scheduleId, memberId, responsibilityId, responsibilityName)
+      await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { responsibilityId })
       await loadScheduleDetails()
       onUpdate?.()
       toast.showSuccess('Função do membro atualizada com sucesso')
@@ -122,8 +158,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleUpdateMemberStatus = async (memberId: string, status: 'pending' | 'accepted' | 'rejected') => {
+    if (!scheduledAreaId) return
+    
     try {
-      await updateScheduleMemberStatus(scheduleId, memberId, status)
+      await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { status })
       await loadScheduleDetails()
       onUpdate?.()
       toast.showSuccess('Status do membro atualizado com sucesso')
@@ -264,20 +302,20 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                   {schedule.members.map((member) => (
                     <div key={member.id} className="member-card">
                       <div className="member-photo-wrapper">
-                        {member.personPhotoUrl ? (
+                        {member.person?.photoUrl ? (
                           <img
-                            src={addCacheBusting(member.personPhotoUrl)}
-                            alt={member.personName}
+                            src={addCacheBusting(member.person.photoUrl)}
+                            alt={member.person.fullName}
                             className="member-card-photo"
                           />
                         ) : (
                           <div className="member-card-placeholder">
-                            {member.personName.charAt(0).toUpperCase()}
+                            {member.person?.fullName?.charAt(0).toUpperCase() || member.personId.charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
 
-                      <div className="member-card-name">{member.personName}</div>
+                      <div className="member-card-name">{member.person?.fullName || member.personId}</div>
 
                       {editingMemberId === member.id ? (
                         <div className="member-edit-mode">
@@ -285,14 +323,14 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                           <select
                             value={member.responsibilityId}
                             onChange={(e) => {
-                              const selected = mockResponsibilities.find(r => r.id === e.target.value)
+                              const selected = responsibilities.find(r => r.id === e.target.value)
                               if (selected) {
                                 handleUpdateMemberResponsibility(member.id, selected.id, selected.name)
                               }
                             }}
                             className="member-edit-select"
                           >
-                            {mockResponsibilities.map((resp) => (
+                            {responsibilities.map((resp) => (
                               <option key={resp.id} value={resp.id}>
                                 {resp.name}
                               </option>
@@ -321,14 +359,14 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                       ) : (
                         <>
                           <div className="member-card-role">
-                            {member.responsibilityImageUrl && (
+                            {member.responsibility?.imageUrl && (
                               <img
-                                src={addCacheBusting(member.responsibilityImageUrl)}
-                                alt={member.responsibilityName}
+                                src={addCacheBusting(member.responsibility.imageUrl)}
+                                alt={member.responsibility.name}
                                 style={{ width: '16px', height: '16px', borderRadius: '4px' }}
                               />
                             )}
-                            <span>{member.responsibilityName}</span>
+                            <span>{member.responsibility?.name || 'Sem função'}</span>
                           </div>
 
                           <div className={`member-status-badge status-${member.status}`}>

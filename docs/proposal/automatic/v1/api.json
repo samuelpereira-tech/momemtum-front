@@ -162,6 +162,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflict - Cannot create generation due to conflicts (e.g., existing schedules in the period, groups/persons being used in other schedules)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },

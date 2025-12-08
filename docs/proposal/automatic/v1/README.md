@@ -166,6 +166,10 @@ Confirms the generation configuration and creates all schedules. This endpoint c
 - `400 Bad Request`: Invalid configuration or validation errors
 - `401 Unauthorized`: Missing or invalid authentication token
 - `404 Not Found`: Scheduled area, groups, teams, or persons not found
+- `409 Conflict`: Cannot create generation due to conflicts. Common causes:
+  - Existing schedules in the selected period that would conflict
+  - Groups or persons being used in other active schedules
+  - Database constraints preventing the operation
 
 ---
 
