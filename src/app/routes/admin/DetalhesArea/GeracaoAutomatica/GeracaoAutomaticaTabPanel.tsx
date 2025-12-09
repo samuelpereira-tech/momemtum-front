@@ -1998,46 +1998,36 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
               {schedule.groups && schedule.groups.length > 0 && (
                 <div className="schedule-content">
                   <strong>Grupos:</strong>
-                  <div className="table-wrapper">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>Grupo</th>
-                          <th>Membro</th>
-                          <th>Responsabilidades</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {schedule.groups.map(group => (
-                          group.members && group.members.length > 0 ? (
-                            group.members.map((member, memberIndex) => (
-                              <tr key={`${group.id}-${memberIndex}`}>
-                                {memberIndex === 0 && (
-                                  <td rowSpan={group.members.length} className="group-name-cell">
-                                    <i className="fa-solid fa-users"></i> {group.name}
-                                  </td>
-                                )}
-                                <td>
-                                  <div className="table-photo-name">
-                                    {member.personPhotoUrl ? (
-                                      <img
-                                        src={addCacheBusting(member.personPhotoUrl)}
-                                        alt={member.personName}
-                                        className="table-photo"
-                                        loading="lazy"
-                                        decoding="async"
-                                      />
-                                    ) : (
-                                      <div className="table-photo-placeholder">
-                                        {member.personName.charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                    <span>{member.personName}</span>
-                                  </div>
-                                </td>
-                                <td>
+                  <div className="groups-grid">
+                    {schedule.groups.map(group => (
+                      <div key={group.id} className="group-card">
+                        <div className="group-card-header">
+                          <i className="fa-solid fa-users"></i>
+                          <h6 className="group-card-title">{group.name}</h6>
+                        </div>
+                        {group.members && group.members.length > 0 ? (
+                          <div className="group-members-list">
+                            {group.members.map((member, memberIndex) => (
+                              <div key={`${group.id}-${memberIndex}`} className="group-member-item">
+                                <div className="group-member-photo">
+                                  {member.personPhotoUrl ? (
+                                    <img
+                                      src={addCacheBusting(member.personPhotoUrl)}
+                                      alt={member.personName}
+                                      className="group-member-image"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                  ) : (
+                                    <div className="group-member-placeholder">
+                                      {member.personName.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="group-member-info">
+                                  <div className="group-member-name">{member.personName}</div>
                                   {member.responsibilities && member.responsibilities.length > 0 ? (
-                                    <div className="responsibilities-list">
+                                    <div className="group-member-responsibilities">
                                       {member.responsibilities.map((responsibility) => (
                                         <span key={responsibility.id} className="responsibility-badge">
                                           {responsibility.imageUrl ? (
@@ -2054,25 +2044,20 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
                                       ))}
                                     </div>
                                   ) : (
-                                    <span className="text-muted">-</span>
+                                    <span className="text-muted">Sem responsabilidades</span>
                                   )}
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr key={group.id}>
-                              <td>
-                                <i className="fa-solid fa-users"></i> {group.name}
-                              </td>
-                              <td colSpan={2} className="table-empty">
-                                <i className="fa-solid fa-info-circle"></i>
-                                Nenhum membro cadastrado neste grupo
-                              </td>
-                            </tr>
-                          )
-                        ))}
-                      </tbody>
-                    </table>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="group-empty">
+                            <i className="fa-solid fa-info-circle"></i>
+                            <span>Nenhum membro cadastrado neste grupo</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
