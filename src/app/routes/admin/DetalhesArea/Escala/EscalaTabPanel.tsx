@@ -4,6 +4,7 @@ import '../shared/TabPanel.css'
 import './EscalaTabPanel.css'
 import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
 import { scheduleService, type ScheduleResponseDto } from '../../../../../services/basic/scheduleService'
+import { addCacheBusting } from '../../../../../utils/fileUtils'
 import ScheduleDetailsView from './ScheduleDetailsView'
 import ScheduleGroupDetailsView from './ScheduleGroupDetailsView'
 
@@ -24,6 +25,11 @@ export interface ScheduleGroupConfiguration {
   // Grupos selecionados
   selectedGroupIds?: string[]
   selectedGroupNames?: string[]
+  selectedGroups?: Array<{
+    id: string
+    name: string
+    imageUrl?: string | null
+  }>
   
   // Equipe selecionada
   selectedTeamId?: string
@@ -75,6 +81,77 @@ export default function EscalaTabPanel() {
   const schedulesLimit = 10
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
 
+  // Função para mapear a configuração aninhada da API para a estrutura plana esperada
+  const mapConfiguration = (config: any, generationType: string, periodType: string, periodStartDate: string, periodEndDate: string): ScheduleGroupConfiguration => {
+    const mapped: ScheduleGroupConfiguration = {
+      periodStartDate: periodStartDate || '',
+      periodEndDate: periodEndDate || '',
+      periodType: periodType as 'fixed' | 'daily' | 'weekly' | 'monthly',
+      considerAbsences: false,
+    }
+
+    // Mapear configurações do período
+    if (config.periodConfig) {
+      mapped.weekdays = config.periodConfig.weekdays
+      mapped.startTime = config.periodConfig.startTime
+      mapped.endTime = config.periodConfig.endTime
+      mapped.excludedDates = config.periodConfig.excludedDates
+      mapped.includedDates = config.periodConfig.includedDates
+    }
+
+    // Mapear configurações baseadas no tipo de geração
+    if (generationType === 'group' && config.groupConfig) {
+      mapped.considerAbsences = config.groupConfig.considerAbsences || false
+      mapped.distributionOrder = config.groupConfig.distributionOrder
+      mapped.groupsPerSchedule = config.groupConfig.groupsPerSchedule
+      
+      // Verificar se groupIds é um array de objetos (com id, name, imageUrl) ou apenas strings
+      if (config.groupConfig.groupIds && Array.isArray(config.groupConfig.groupIds)) {
+        const firstItem = config.groupConfig.groupIds[0]
+        if (firstItem && typeof firstItem === 'object' && firstItem.id) {
+          // É um array de objetos com id, name, imageUrl
+          mapped.selectedGroups = config.groupConfig.groupIds.map((g: any) => ({
+            id: g.id,
+            name: g.name || g.id,
+            imageUrl: g.imageUrl || null,
+          }))
+          mapped.selectedGroupIds = mapped.selectedGroups?.map(g => g.id) || []
+          mapped.selectedGroupNames = mapped.selectedGroups?.map(g => g.name) || []
+        } else {
+          // É um array de strings (IDs)
+          mapped.selectedGroupIds = config.groupConfig.groupIds
+        }
+      }
+    } else if (generationType === 'people' && config.peopleConfig) {
+      mapped.considerAbsences = config.peopleConfig.considerAbsences || false
+    } else if ((generationType === 'team_without_restriction' || generationType === 'team_with_restriction') && config.teamConfig) {
+      mapped.considerAbsences = config.teamConfig.considerAbsences || false
+      mapped.requireResponsibilities = config.teamConfig.requireResponsibilities
+      mapped.participantSelection = config.teamConfig.participantSelection
+      mapped.selectedTeamId = config.teamConfig.teamId
+      
+      // Verificar se selectedGroupIds é um array de objetos ou apenas strings
+      if (config.teamConfig.selectedGroupIds && Array.isArray(config.teamConfig.selectedGroupIds)) {
+        const firstItem = config.teamConfig.selectedGroupIds[0]
+        if (firstItem && typeof firstItem === 'object' && firstItem.id) {
+          // É um array de objetos com id, name, imageUrl
+          mapped.selectedGroups = config.teamConfig.selectedGroupIds.map((g: any) => ({
+            id: g.id,
+            name: g.name || g.id,
+            imageUrl: g.imageUrl || null,
+          }))
+          mapped.selectedGroupIds = mapped.selectedGroups?.map(g => g.id) || []
+          mapped.selectedGroupNames = mapped.selectedGroups?.map(g => g.name) || []
+        } else {
+          // É um array de strings (IDs)
+          mapped.selectedGroupIds = config.teamConfig.selectedGroupIds
+        }
+      }
+    }
+
+    return mapped
+  }
+
   // Carregar grupos (gerações automáticas)
   const loadGroups = useCallback(async (page: number) => {
     if (!scheduledAreaId) return
@@ -83,16 +160,26 @@ export default function EscalaTabPanel() {
     try {
       const response = await scheduleGenerationService.getGenerations(scheduledAreaId, { page, limit: groupsLimit })
       // Converter ScheduleGenerationResponseDto para ScheduleGroupDto para compatibilidade
-      const convertedGroups: ScheduleGroupDto[] = response.data.map(gen => ({
-        id: gen.id,
-        name: `Geração ${gen.generationType} - ${gen.periodType}`,
-        description: `Período: ${gen.periodStartDate} a ${gen.periodEndDate}`,
-        scheduledAreaId: gen.scheduledAreaId,
-        schedulesCount: gen.totalSchedulesGenerated,
-        configuration: gen.configuration,
-        createdAt: gen.createdAt,
-        updatedAt: gen.createdAt,
-      }))
+      const convertedGroups: ScheduleGroupDto[] = response.data.map(gen => {
+        const mappedConfiguration = mapConfiguration(
+          gen.configuration,
+          gen.generationType,
+          gen.periodType,
+          gen.periodStartDate,
+          gen.periodEndDate
+        )
+        
+        return {
+          id: gen.id,
+          name: `Geração ${gen.generationType} - ${gen.periodType}`,
+          description: `Período: ${gen.periodStartDate} a ${gen.periodEndDate}`,
+          scheduledAreaId: gen.scheduledAreaId,
+          schedulesCount: gen.totalSchedulesGenerated,
+          configuration: mappedConfiguration,
+          createdAt: gen.createdAt,
+          updatedAt: gen.createdAt,
+        }
+      })
       setGroups(convertedGroups)
       setGroupsTotalPages(response.meta.totalPages)
     } catch (error) {
@@ -592,8 +679,67 @@ export default function EscalaTabPanel() {
                         {/* Footer com Meta Informações */}
                         <div className="schedule-card-footer">
                           <div className="schedule-participants-info">
-                            <i className="fa-solid fa-users"></i>
-                            <span>{schedule.participantsCount} {schedule.participantsCount === 1 ? 'participante' : 'participantes'}</span>
+                            {schedule.participants && schedule.participants.length > 0 ? (
+                              <>
+                                <div className="schedule-participants-avatars">
+                                  {schedule.participants.map((participant, index) => {
+                                    // Verificar se participant é um objeto (com id, name, imageUrl) ou string (ID)
+                                    const participantData: { id: string; name: string; imageUrl: string | null } = 
+                                      typeof participant === 'object' && participant !== null && 'id' in participant
+                                        ? participant as { id: string; name: string; imageUrl: string | null }
+                                        : { 
+                                            id: typeof participant === 'string' ? participant : String(index), 
+                                            name: typeof participant === 'object' && participant !== null && 'name' in participant 
+                                              ? (participant as any).name 
+                                              : 'Participante', 
+                                            imageUrl: typeof participant === 'object' && participant !== null && 'imageUrl' in participant
+                                              ? (participant as any).imageUrl
+                                              : null
+                                          }
+                                    
+                                    return (
+                                      <div
+                                        key={participantData.id || index}
+                                        className="participant-avatar"
+                                        style={{ zIndex: schedule.participants!.length - index }}
+                                      >
+                                        <div className="participant-avatar-content">
+                                          {participantData.imageUrl ? (
+                                            <img
+                                              src={addCacheBusting(participantData.imageUrl)}
+                                              alt={participantData.name}
+                                              className="participant-avatar-image"
+                                              loading="lazy"
+                                              decoding="async"
+                                            />
+                                          ) : (
+                                            <div className="participant-avatar-placeholder">
+                                              {participantData.name && participantData.name.length > 0 
+                                                ? participantData.name.charAt(0).toUpperCase() 
+                                                : '?'}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <span className="participant-avatar-name">{participantData.name}</span>
+                                      </div>
+                                    )
+                                  })}
+                                  {schedule.participantsCount > schedule.participants.length && (
+                                    <div className="participant-avatar-more" title={`+${schedule.participantsCount - schedule.participants.length} mais`}>
+                                      +{schedule.participantsCount - schedule.participants.length}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="participants-count">
+                                  {schedule.participantsCount} {schedule.participantsCount === 1 ? 'participante' : 'participantes'}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <i className="fa-solid fa-users"></i>
+                                <span>{schedule.participantsCount} {schedule.participantsCount === 1 ? 'participante' : 'participantes'}</span>
+                              </>
+                            )}
                           </div>
                           <i className="fa-solid fa-chevron-right schedule-action-arrow"></i>
                         </div>

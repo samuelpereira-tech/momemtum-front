@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '../../../../components/ui/Toast/ToastProvider'
+import { signUp } from '../../../../services/authService'
 import './Register.css'
 
 export default function Register() {
   const toast = useToast()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -12,7 +14,7 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (password !== confirmPassword) {
@@ -20,14 +22,43 @@ export default function Register() {
       return
     }
     
+    if (password.length < 6) {
+      toast.showError('A senha deve ter pelo menos 6 caracteres!')
+      return
+    }
+    
     setIsLoading(true)
     
-    // Simular chamada de API
-    setTimeout(() => {
+    try {
+      const result = await signUp(email, password)
+      
+      // Salvar tokens se houver sessão
+      if (result.accessToken) {
+        localStorage.setItem('accessToken', result.accessToken)
+        if (result.refreshToken) {
+          localStorage.setItem('refreshToken', result.refreshToken)
+        }
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user))
+        }
+      }
+      
+      toast.showSuccess('Conta criada com sucesso!')
+      
+      // Se houver sessão (email confirmado), redirecionar para dashboard
+      // Caso contrário, mostrar mensagem de confirmação de email
+      if (result.session) {
+        navigate('/admin')
+      } else {
+        toast.showSuccess('Verifique seu email para confirmar a conta!')
+        navigate('/')
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Erro ao criar conta'
+      toast.showError(errorMessage)
+    } finally {
       setIsLoading(false)
-      // Aqui você pode redirecionar ou fazer a lógica de cadastro
-      console.log('Cadastro:', { email, password })
-    }, 1500)
+    }
   }
 
   return (

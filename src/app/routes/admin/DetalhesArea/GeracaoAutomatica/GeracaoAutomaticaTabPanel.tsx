@@ -1997,7 +1997,6 @@ function Step5Preview({ preview, persons, teams, responsibilities, getResponsibi
               
               {schedule.groups && schedule.groups.length > 0 && (
                 <div className="schedule-content">
-                  <strong>Grupos:</strong>
                   <div className="groups-grid">
                     {schedule.groups.map(group => (
                       <div key={group.id} className="group-card">

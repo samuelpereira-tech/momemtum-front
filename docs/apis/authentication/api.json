@@ -7537,6 +7537,13 @@
             "description": "Number of participants in the schedule",
             "example": 5
           },
+          "participants": {
+            "description": "List of participants with id, name and imageUrl",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "createdAt": {
             "type": "string",
             "description": "Creation timestamp",
@@ -7708,6 +7715,13 @@
             "type": "number",
             "description": "Number of participants in the schedule",
             "example": 5
+          },
+          "participants": {
+            "description": "List of participants with id, name and imageUrl",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "createdAt": {
             "type": "string",

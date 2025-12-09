@@ -6,6 +6,11 @@ export interface SignInRequest {
   password: string
 }
 
+export interface SignUpRequest {
+  email: string
+  password: string
+}
+
 export interface User {
   id: string
   email: string
@@ -48,6 +53,7 @@ export type AuthProviderType = 'localhost' | 'supabase'
 export interface IAuthServiceConfig {
   baseUrl: string
   endpoints: {
+    signup: string
     signInEmailPassword: string
     refreshToken: string
     me: string
@@ -67,6 +73,7 @@ export interface ISupabaseAuthServiceConfig {
  * Interface que define os métodos do serviço de autenticação
  */
 export interface IAuthService {
+  signUp(email: string, password: string): Promise<AuthResult>
   signInWithEmailPassword(email: string, password: string): Promise<AuthResult>
   refreshToken(refreshToken: string): Promise<AuthResult>
   getCurrentUser(accessToken: string): Promise<User>
@@ -81,6 +88,34 @@ export class AuthService implements IAuthService {
 
   constructor(config: IAuthServiceConfig) {
     this.config = config
+  }
+
+  /**
+   * Registra um novo usuário com email e senha
+   */
+  async signUp(email: string, password: string): Promise<AuthResult> {
+    const response = await fetch(`${this.config.baseUrl}${this.config.endpoints.signup}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password } as SignUpRequest),
+    })
+
+    if (!response.ok) {
+      if (response.status === 400) {
+        throw new Error('Dados inválidos')
+      }
+      if (response.status === 403) {
+        throw new Error('Rate limit excedido. Aguarde antes de tentar novamente')
+      }
+      if (response.status === 409) {
+        throw new Error('Email já cadastrado')
+      }
+      throw new Error('Erro ao criar conta')
+    }
+
+    return response.json()
   }
 
   /**
@@ -181,6 +216,69 @@ export class SupabaseAuthService implements IAuthService {
 
   constructor(config: ISupabaseAuthServiceConfig) {
     this.supabase = createClient(config.supabaseUrl, config.supabaseAnonKey)
+  }
+
+  /**
+   * Registra um novo usuário com email e senha via Supabase
+   */
+  async signUp(email: string, password: string): Promise<AuthResult> {
+    const { data, error } = await this.supabase.auth.signUp({
+      email,
+      password,
+    })
+
+    if (error) {
+      if (error.message.includes('User already registered') || error.message.includes('already exists')) {
+        throw new Error('Email já cadastrado')
+      }
+      if (error.message.includes('Invalid email') || error.message.includes('Password')) {
+        throw new Error('Dados inválidos')
+      }
+      if (error.message.includes('rate limit')) {
+        throw new Error('Rate limit excedido. Aguarde antes de tentar novamente')
+      }
+      throw new Error(error.message || 'Erro ao criar conta')
+    }
+
+    if (!data.user) {
+      throw new Error('Erro ao criar conta')
+    }
+
+    // Converter o usuário do Supabase para o formato esperado
+    const user: User = {
+      id: data.user.id,
+      email: data.user.email || '',
+      emailVerified: data.user.email_confirmed_at !== null,
+      phone: data.user.phone || undefined,
+      phoneVerified: data.user.phone_confirmed_at !== null,
+      metadata: data.user.user_metadata || {},
+      createdAt: data.user.created_at,
+      updatedAt: data.user.updated_at || data.user.created_at,
+    }
+
+    // Se houver sessão (email confirmado automaticamente), retornar com sessão
+    if (data.session) {
+      const session: Session = {
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+        expiresIn: data.session.expires_in || 3600,
+        expiresAt: data.session.expires_at || Math.floor(Date.now() / 1000) + 3600,
+        tokenType: data.session.token_type || 'bearer',
+        user,
+      }
+
+      return {
+        user,
+        session,
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+      }
+    }
+
+    // Se não houver sessão (precisa confirmar email), retornar apenas o usuário
+    return {
+      user,
+    }
   }
 
   /**
@@ -358,6 +456,7 @@ export class AuthServiceFactory {
         return new AuthService({
           baseUrl: API_BASE_URL,
           endpoints: {
+            signup: API_ENDPOINTS.AUTH.SIGNUP,
             signInEmailPassword: API_ENDPOINTS.AUTH.SIGNIN_EMAIL_PASSWORD,
             refreshToken: API_ENDPOINTS.AUTH.REFRESH_TOKEN,
             me: API_ENDPOINTS.AUTH.ME,
@@ -370,6 +469,17 @@ export class AuthServiceFactory {
 
 // Instância padrão do AuthService baseada na variável de ambiente AUTH_SERVICE_PROVIDER
 const defaultAuthService = AuthServiceFactory.create(AUTH_SERVICE_PROVIDER)
+
+/**
+ * Funções de compatibilidade - mantidas para não quebrar código existente
+ * @deprecated Use AuthService diretamente ou injete uma instância
+ */
+export async function signUp(
+  email: string,
+  password: string
+): Promise<AuthResult> {
+  return defaultAuthService.signUp(email, password)
+}
 
 /**
  * Funções de compatibilidade - mantidas para não quebrar código existente

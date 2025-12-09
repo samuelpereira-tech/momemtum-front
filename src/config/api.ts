@@ -10,6 +10,7 @@ export const AUTH_SERVICE_PROVIDER = (import.meta.env.VITE_AUTH_SERVICE_PROVIDER
 
 export const API_ENDPOINTS = {
   AUTH: {
+    SIGNUP: '/auth/signup',
     SIGNIN_EMAIL_PASSWORD: '/auth/signin/email-password',
     REFRESH_TOKEN: '/auth/refresh',
     ME: '/auth/me',

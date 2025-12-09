@@ -82,6 +82,12 @@ export interface ScheduleCommentResponseDto {
   updatedAt: string
 }
 
+export interface ParticipantInfoDto {
+  id: string
+  name: string
+  imageUrl: string | null
+}
+
 export interface ScheduleResponseDto {
   id: string
   scheduleGenerationId: string | null
@@ -91,6 +97,8 @@ export interface ScheduleResponseDto {
   scheduleType: 'group' | 'team' | 'individual'
   status: 'pending' | 'confirmed' | 'cancelled'
   participantsCount: number
+  // A API pode retornar participantes como array de objetos (com id, name, imageUrl) ou array de strings (IDs)
+  participants?: (ParticipantInfoDto | string)[]
   createdAt: string
   updatedAt: string
 }
