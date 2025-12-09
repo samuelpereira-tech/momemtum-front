@@ -281,6 +281,21 @@ Retrieves a paginated list of schedules for a scheduled area. Supports filtering
       "scheduleType": "group",
       "status": "pending",
       "participantsCount": 5,
+      "logs": [
+        {
+          "id": "log-123e4567-e89b-12d3-a456-426614174000",
+          "scheduleId": "schedule-123e4567-e89b-12d3-a456-426614174000",
+          "scheduleMemberId": null,
+          "action": "schedule_created",
+          "field": null,
+          "oldValue": null,
+          "newValue": null,
+          "description": "Escala criada automaticamente",
+          "userId": "user-123e4567-e89b-12d3-a456-426614174000",
+          "userName": "Sistema",
+          "createdAt": "2025-01-15T10:30:00.000Z"
+        }
+      ],
       "createdAt": "2025-01-15T10:30:00.000Z",
       "updatedAt": "2025-01-15T10:30:00.000Z"
     }
@@ -402,6 +417,7 @@ Retrieves a specific schedule with all its details including members, assignment
         "imageUrl": null
       },
       "status": "pending",
+      "present": null,
       "createdAt": "2025-01-15T10:30:00.000Z"
     }
   ],
@@ -413,6 +429,34 @@ Retrieves a specific schedule with all its details including members, assignment
       "authorName": "João Silva",
       "createdAt": "2025-01-15T11:00:00.000Z",
       "updatedAt": "2025-01-15T11:00:00.000Z"
+    }
+  ],
+  "logs": [
+    {
+      "id": "log-123e4567-e89b-12d3-a456-426614174000",
+      "scheduleId": "schedule-123e4567-e89b-12d3-a456-426614174000",
+      "scheduleMemberId": null,
+      "action": "schedule_created",
+      "field": null,
+      "oldValue": null,
+      "newValue": null,
+      "description": "Escala criada automaticamente",
+      "userId": "user-123e4567-e89b-12d3-a456-426614174000",
+      "userName": "Sistema",
+      "createdAt": "2025-01-15T10:30:00.000Z"
+    },
+    {
+      "id": "log-223e4567-e89b-12d3-a456-426614174001",
+      "scheduleId": "schedule-123e4567-e89b-12d3-a456-426614174000",
+      "scheduleMemberId": "member-123e4567-e89b-12d3-a456-426614174000",
+      "action": "member_added",
+      "field": null,
+      "oldValue": null,
+      "newValue": null,
+      "description": "João Silva adicionado à escala como Operador",
+      "userId": "user-123e4567-e89b-12d3-a456-426614174000",
+      "userName": "Sistema",
+      "createdAt": "2025-01-15T10:31:00.000Z"
     }
   ],
   "createdAt": "2025-01-15T10:30:00.000Z",
@@ -512,6 +556,7 @@ Adds a person to a schedule with a specific responsibility.
     "imageUrl": null
   },
   "status": "pending",
+  "present": null,
   "createdAt": "2025-01-15T10:30:00.000Z"
 }
 ```
@@ -527,7 +572,7 @@ Adds a person to a schedule with a specific responsibility.
 
 **PATCH** `/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/members/{memberId}`
 
-Updates a schedule member's responsibility or status.
+Updates a schedule member's responsibility, status, or presence.
 
 **Path Parameters:**
 - `scheduledAreaId` (required): Scheduled area unique identifier (UUID)
@@ -538,11 +583,19 @@ Updates a schedule member's responsibility or status.
 ```json
 {
   "responsibilityId": "resp-2",
-  "status": "accepted"
+  "status": "accepted",
+  "present": true
 }
 ```
 
-**Response (200 OK):** Same structure as create response
+**Request Body Fields:**
+- `responsibilityId` (optional): New responsibility ID for the member
+- `status` (optional): Member status (`pending`, `accepted`, `rejected`)
+- `present` (optional): Whether the person was present (`true`, `false`, or `null` to unset)
+
+**Response (200 OK):** Same structure as create response, including the updated `present` field
+
+**Note:** All changes to schedule members (status, responsibility, presence) are automatically logged in `schedule_members_logs`.
 
 ---
 
@@ -558,6 +611,56 @@ Removes a person from a schedule.
 - `memberId` (required): Schedule member unique identifier (UUID)
 
 **Response (204 No Content):** Success, no response body
+
+**Note:** Removing a member automatically creates a log entry in `schedule_members_logs`.
+
+---
+
+## Schedule Logs
+
+All changes to schedules and their members are automatically logged in `schedule_members_logs`. The logs are returned in the schedule details and list endpoints.
+
+### Log Actions
+
+The following actions are automatically logged:
+
+- **Schedule Changes:**
+  - `schedule_created`: When a schedule is created
+  - `schedule_updated`: When a schedule is updated
+  - `schedule_status_changed`: When the schedule status changes
+  - `schedule_datetime_changed`: When start or end datetime changes
+
+- **Member Changes:**
+  - `member_added`: When a member is added to a schedule
+  - `member_removed`: When a member is removed from a schedule
+  - `member_status_changed`: When a member's status changes (pending/accepted/rejected)
+  - `member_present_changed`: When a member's presence is marked or changed
+  - `member_responsibility_changed`: When a member's responsibility changes
+
+- **Team Changes:**
+  - `team_changed`: When the team assigned to a schedule changes
+  - `team_member_status_changed`: When a team member's status changes
+
+### Log Structure
+
+Each log entry contains:
+- `id`: Unique log identifier
+- `scheduleId`: ID of the schedule
+- `scheduleMemberId`: ID of the member (if applicable, null for schedule-level changes)
+- `action`: Type of action performed
+- `field`: Field that was changed (optional)
+- `oldValue`: Previous value (optional)
+- `newValue`: New value (optional)
+- `description`: Human-readable description of the change
+- `userId`: ID of the user who made the change
+- `userName`: Name of the user who made the change
+- `createdAt`: Timestamp of when the change occurred
+
+### Accessing Logs
+
+Logs are included in:
+- **GET** `/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}` - Returns logs in the schedule details
+- **GET** `/api/scheduled-areas/{scheduledAreaId}/schedules` - Returns logs for each schedule in the list
 
 ---
 

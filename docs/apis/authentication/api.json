@@ -7555,6 +7555,13 @@
             "description": "Last update timestamp",
             "example": "2025-01-15T10:30:00.000Z",
             "format": "date-time"
+          },
+          "logs": {
+            "description": "Logs of changes to schedule and members",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -7735,6 +7742,13 @@
             "example": "2025-01-15T10:30:00.000Z",
             "format": "date-time"
           },
+          "logs": {
+            "description": "Logs of changes to schedule and members",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleMemberLogDto"
+            }
+          },
           "groups": {
             "description": "Groups assigned to this schedule",
             "type": "array",
@@ -7869,6 +7883,12 @@
               "rejected"
             ]
           },
+          "present": {
+            "type": "boolean",
+            "description": "Whether the person was present",
+            "example": true,
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "description": "Creation timestamp",
@@ -7883,6 +7903,7 @@
           "responsibilityId",
           "responsibility",
           "status",
+          "present",
           "createdAt"
         ]
       },
@@ -7903,8 +7924,103 @@
               "accepted",
               "rejected"
             ]
+          },
+          "present": {
+            "type": "boolean",
+            "description": "Whether the person was present",
+            "example": true,
+            "nullable": true
           }
         }
+      },
+      "ScheduleMemberLogDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Log unique identifier",
+            "example": "log-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "scheduleId": {
+            "type": "string",
+            "description": "Schedule ID",
+            "example": "schedule-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "scheduleMemberId": {
+            "type": "string",
+            "description": "Schedule member ID (if log is related to a member)",
+            "example": "member-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid",
+            "nullable": true
+          },
+          "action": {
+            "type": "string",
+            "description": "Action type",
+            "enum": [
+              "schedule_created",
+              "schedule_updated",
+              "schedule_status_changed",
+              "schedule_datetime_changed",
+              "member_added",
+              "member_removed",
+              "member_status_changed",
+              "member_present_changed",
+              "member_responsibility_changed",
+              "team_changed",
+              "team_member_status_changed"
+            ]
+          },
+          "field": {
+            "type": "string",
+            "description": "Field that was changed",
+            "example": "status"
+          },
+          "oldValue": {
+            "type": "string",
+            "description": "Previous value",
+            "example": "pending",
+            "nullable": true
+          },
+          "newValue": {
+            "type": "string",
+            "description": "New value",
+            "example": "confirmed",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the change",
+            "example": "Status da escala alterado de 'Pendente' para 'Confirmado'"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID who made the change",
+            "example": "user-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string",
+            "description": "User name who made the change",
+            "example": "João Silva"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Creation timestamp",
+            "example": "2025-01-15T10:30:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "scheduleId",
+          "action",
+          "description",
+          "userId",
+          "userName",
+          "createdAt"
+        ]
       },
       "CreateScheduleCommentDto": {
         "type": "object",

@@ -30,6 +30,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null)
   const [showDeleteCommentModal, setShowDeleteCommentModal] = useState<string | null>(null)
   const [showDeleteMemberModal, setShowDeleteMemberModal] = useState<string | null>(null)
+  const [editingSchedule, setEditingSchedule] = useState(false)
+  const [editStartDatetime, setEditStartDatetime] = useState('')
+  const [editEndDatetime, setEditEndDatetime] = useState('')
+  const [editStatus, setEditStatus] = useState<'pending' | 'confirmed' | 'cancelled'>('pending')
 
   useEffect(() => {
     if (scheduledAreaId) {
@@ -170,6 +174,81 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     }
   }
 
+  const handleUpdateMemberPresence = async (memberId: string, present: boolean | null) => {
+    if (!scheduledAreaId) return
+    
+    try {
+      await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { present })
+      await loadScheduleDetails()
+      onUpdate?.()
+      const message = present === true ? 'Presença marcada' : present === false ? 'Ausência marcada' : 'Presença removida'
+      toast.showSuccess(message + ' com sucesso')
+    } catch (error: any) {
+      toast.showError('Erro ao atualizar presença: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  const handleStartEditDatetime = () => {
+    if (!schedule) return
+    setEditStartDatetime(new Date(schedule.startDatetime).toISOString().slice(0, 16))
+    setEditEndDatetime(new Date(schedule.endDatetime).toISOString().slice(0, 16))
+    setEditStatus(schedule.status)
+    setEditingSchedule(true)
+  }
+
+  const handleCancelEditSchedule = () => {
+    setEditingSchedule(false)
+  }
+
+  const handleSaveSchedule = async () => {
+    if (!schedule || !scheduledAreaId) return
+
+    try {
+      const updateData: {
+        startDatetime?: string
+        endDatetime?: string
+        status?: 'pending' | 'confirmed' | 'cancelled'
+      } = {}
+
+      // Verificar se as datas foram alteradas
+      const startDate = new Date(editStartDatetime)
+      const endDate = new Date(editEndDatetime)
+      
+      if (startDate.toISOString() !== new Date(schedule.startDatetime).toISOString()) {
+        updateData.startDatetime = startDate.toISOString()
+      }
+      
+      if (endDate.toISOString() !== new Date(schedule.endDatetime).toISOString()) {
+        updateData.endDatetime = endDate.toISOString()
+      }
+      
+      // Validar que a data fim é depois da data início
+      if (endDate <= startDate) {
+        toast.showError('A data de fim deve ser posterior à data de início')
+        return
+      }
+      
+      if (editStatus !== schedule.status) {
+        updateData.status = editStatus
+      }
+
+      // Só atualizar se houver mudanças
+      if (Object.keys(updateData).length > 0) {
+        await scheduleService.updateSchedule(scheduledAreaId, scheduleId, updateData)
+        await loadScheduleDetails()
+        onUpdate?.()
+        setEditingSchedule(false)
+        toast.showSuccess('Escala atualizada com sucesso')
+      } else {
+        setEditingSchedule(false)
+      }
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Erro desconhecido'
+      console.error('Erro ao atualizar escala:', error)
+      toast.showError(errorMessage)
+    }
+  }
+
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleString('pt-BR', {
@@ -237,7 +316,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     <>
       <div className="schedule-details-container">
         {/* Header Principal */}
-        <div className="schedule-details-header">
+        <div className="schedule-details-header" style={{display: 'none'}}>
           <h3 className="schedule-details-title">Detalhes da Escala</h3>
         </div>
 
@@ -258,7 +337,22 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                   </div>
                   <div className="date-time-content">
                     <span className="date-time-label">Início</span>
-                    <span className="date-time-value">{formatDateTime(schedule.startDatetime)}</span>
+                    {editingSchedule ? (
+                      <input
+                        type="datetime-local"
+                        value={editStartDatetime}
+                        onChange={(e) => setEditStartDatetime(e.target.value)}
+                        className="date-time-input"
+                      />
+                    ) : (
+                      <span 
+                        className="date-time-value date-time-editable" 
+                        onClick={handleStartEditDatetime}
+                        title="Clique para editar"
+                      >
+                        {formatDateTime(schedule.startDatetime)}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -268,16 +362,66 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                   </div>
                   <div className="date-time-content">
                     <span className="date-time-label">Fim</span>
-                    <span className="date-time-value">{formatDateTime(schedule.endDatetime)}</span>
+                    {editingSchedule ? (
+                      <input
+                        type="datetime-local"
+                        value={editEndDatetime}
+                        onChange={(e) => setEditEndDatetime(e.target.value)}
+                        className="date-time-input"
+                      />
+                    ) : (
+                      <span 
+                        className="date-time-value date-time-editable" 
+                        onClick={handleStartEditDatetime}
+                        title="Clique para editar"
+                      >
+                        {formatDateTime(schedule.endDatetime)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="status-section">
-                <span className={`status-label-large status-${schedule.status === 'confirmed' ? 'confirmed' : schedule.status === 'cancelled' ? 'cancelled' : 'pending'}-large`}>
-                  {getStatusLabel(schedule.status)}
-                </span>
+                {editingSchedule ? (
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as 'pending' | 'confirmed' | 'cancelled')}
+                    className="status-select"
+                  >
+                    <option value="pending">Pendente</option>
+                    <option value="confirmed">Confirmado</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                ) : (
+                  <span 
+                    className={`status-label-large status-${schedule.status === 'confirmed' ? 'confirmed' : schedule.status === 'cancelled' ? 'cancelled' : 'pending'}-large status-editable`}
+                    onClick={handleStartEditDatetime}
+                    title="Clique para editar"
+                  >
+                    {getStatusLabel(schedule.status)}
+                  </span>
+                )}
               </div>
+
+              {editingSchedule && (
+                <div className="schedule-edit-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={handleCancelEditSchedule}
+                  >
+                    <i className="fa-solid fa-xmark"></i> Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary btn-sm"
+                    onClick={handleSaveSchedule}
+                  >
+                    <i className="fa-solid fa-check"></i> Salvar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -375,6 +519,28 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                             {member.status === 'pending' && <i className="fa-solid fa-clock"></i>}
                             {getStatusLabel(member.status)}
                           </div>
+
+                          <div className="member-presence-section">
+                            <label className="presence-label">
+                              <input
+                                type="checkbox"
+                                checked={member.present === true}
+                                onChange={(e) => handleUpdateMemberPresence(member.id, e.target.checked ? true : null)}
+                                className="presence-checkbox"
+                              />
+                              <span className="presence-text">
+                                {member.present === true ? (
+                                  <>
+                                    <i className="fa-solid fa-check-circle" style={{ color: '#5abcb0' }}></i> Presente
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fa-regular fa-circle"></i> Marcar presença
+                                  </>
+                                )}
+                              </span>
+                            </label>
+                          </div>
                         </>
                       )}
 
@@ -405,6 +571,46 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                 </div>
               )}
             </div>
+
+            {/* Seção de Logs */}
+            {schedule.logs && schedule.logs.length > 0 && (
+              <div className="detail-card">
+                <div className="info-card-header">
+                  <h4 className="info-card-title">
+                    <i className="fa-solid fa-history"></i> Histórico de Alterações ({schedule.logs.length})
+                  </h4>
+                </div>
+
+                <div className="logs-container">
+                  {schedule.logs.map((log) => (
+                    <div key={log.id} className="log-item">
+                      <div className="log-icon">
+                        {log.action === 'schedule_created' && <i className="fa-solid fa-plus-circle"></i>}
+                        {log.action === 'schedule_updated' && <i className="fa-solid fa-edit"></i>}
+                        {log.action === 'schedule_status_changed' && <i className="fa-solid fa-toggle-on"></i>}
+                        {log.action === 'schedule_datetime_changed' && <i className="fa-solid fa-calendar-alt"></i>}
+                        {log.action === 'member_added' && <i className="fa-solid fa-user-plus"></i>}
+                        {log.action === 'member_removed' && <i className="fa-solid fa-user-minus"></i>}
+                        {log.action === 'member_status_changed' && <i className="fa-solid fa-user-check"></i>}
+                        {log.action === 'member_present_changed' && <i className="fa-solid fa-clipboard-check"></i>}
+                        {log.action === 'member_responsibility_changed' && <i className="fa-solid fa-briefcase"></i>}
+                        {log.action === 'team_changed' && <i className="fa-solid fa-users"></i>}
+                        {log.action === 'team_member_status_changed' && <i className="fa-solid fa-user-gear"></i>}
+                        {!log.action && <i className="fa-solid fa-info-circle"></i>}
+                      </div>
+                      <div className="log-content">
+                        <div className="log-description">{log.description}</div>
+                        <div className="log-meta">
+                          <span className="log-user">{log.userName}</span>
+                          <span className="log-separator">•</span>
+                          <span className="log-time">{formatDateTime(log.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Seção de Comentários */}
             <div className="detail-card">

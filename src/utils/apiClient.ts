@@ -32,9 +32,17 @@ export async function apiClient<T>(
     try {
       const errorData = await response.clone().json()
       if (errorData.message) {
-        errorMessage = errorData.message
+        // Se message for um array (validação do class-validator), juntar as mensagens
+        if (Array.isArray(errorData.message)) {
+          errorMessage = errorData.message.join(', ')
+        } else {
+          errorMessage = errorData.message
+        }
       } else if (errorData.error) {
         errorMessage = errorData.error
+      } else if (Array.isArray(errorData)) {
+        // Se o erro for um array direto
+        errorMessage = errorData.join(', ')
       }
     } catch {
       // Se não conseguir parsear JSON, usar mensagem padrão baseada no status

@@ -153,6 +153,20 @@
   color: var(--text-color);
 }
 
+.date-time-editable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.date-time-editable:hover {
+  background: rgba(173, 130, 217, 0.1);
+  color: var(--color-purple);
+  transform: translateX(2px);
+}
+
 /* --- Status Badge (Grande) --- */
 .status-section {
   display: flex;
@@ -189,6 +203,104 @@
   background: rgba(242, 179, 61, 0.15);
   color: #dda54a;
   border: 1px solid rgba(242, 179, 61, 0.3);
+}
+
+.status-editable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-editable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Edição de Escala --- */
+.schedule-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  justify-content: flex-end;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: var(--color-purple);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background: #966ec0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(173, 130, 217, 0.3);
+}
+
+.btn-secondary {
+  background: var(--white);
+  color: var(--text-color);
+  border: 1px solid #e0e0e0;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+  background: rgba(173, 130, 217, 0.05);
+}
+
+.date-time-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color);
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.date-time-input:focus {
+  outline: none;
+  border-color: var(--color-purple);
+  box-shadow: 0 0 0 3px rgba(173, 130, 217, 0.1);
+}
+
+.status-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: var(--white);
+  color: var(--text-color);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-select:focus {
+  outline: none;
+  border-color: var(--color-purple);
+  box-shadow: 0 0 0 3px rgba(173, 130, 217, 0.1);
+}
+
+.status-select option {
+  padding: 10px;
 }
 
 /* --- Coluna Principal (Conteúdo) --- */
@@ -545,6 +657,115 @@
   font-size: 2.5rem;
   margin-bottom: 15px;
   color: #ddd;
+}
+
+/* --- Presença --- */
+.member-presence-section {
+  width: 100%;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  z-index: 1;
+}
+
+.presence-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.presence-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-purple);
+}
+
+.presence-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.presence-text i {
+  font-size: 1rem;
+}
+
+/* --- Logs --- */
+.logs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.log-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid var(--color-purple);
+  transition: all 0.2s ease;
+}
+
+.log-item:hover {
+  background: #f0f0f0;
+  transform: translateX(2px);
+}
+
+.log-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(173, 130, 217, 0.1);
+  color: var(--color-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.log-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-description {
+  font-size: 0.9rem;
+  color: var(--text-color);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.log-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-light);
+}
+
+.log-user {
+  font-weight: 600;
+  color: var(--color-purple);
+}
+
+.log-separator {
+  color: #ddd;
+}
+
+.log-time {
+  color: var(--text-light);
 }
 
 /* Responsividade */

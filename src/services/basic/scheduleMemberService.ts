@@ -9,6 +9,7 @@ export interface CreateScheduleMemberDto {
 export interface UpdateScheduleMemberDto {
   responsibilityId?: string
   status?: 'pending' | 'accepted' | 'rejected'
+  present?: boolean | null
 }
 
 /**

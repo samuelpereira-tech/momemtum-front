@@ -70,6 +70,21 @@ export interface ScheduleMemberResponseDto {
   responsibilityId: string
   responsibility: ResponsibilityInfoDto | null
   status: 'pending' | 'accepted' | 'rejected'
+  present: boolean | null
+  createdAt: string
+}
+
+export interface ScheduleMemberLogDto {
+  id: string
+  scheduleId: string
+  scheduleMemberId: string | null
+  action: 'schedule_created' | 'schedule_updated' | 'schedule_status_changed' | 'schedule_datetime_changed' | 'member_added' | 'member_removed' | 'member_status_changed' | 'member_present_changed' | 'member_responsibility_changed' | 'team_changed' | 'team_member_status_changed'
+  field?: string
+  oldValue?: string | null
+  newValue?: string | null
+  description: string
+  userId: string
+  userName: string
   createdAt: string
 }
 
@@ -99,6 +114,7 @@ export interface ScheduleResponseDto {
   participantsCount: number
   // A API pode retornar participantes como array de objetos (com id, name, imageUrl) ou array de strings (IDs)
   participants?: (ParticipantInfoDto | string)[]
+  logs?: ScheduleMemberLogDto[]
   createdAt: string
   updatedAt: string
 }
@@ -109,6 +125,7 @@ export interface ScheduleDetailsResponseDto extends ScheduleResponseDto {
   assignments: ScheduleAssignmentResponseDto[]
   members: ScheduleMemberResponseDto[]
   comments: ScheduleCommentResponseDto[]
+  logs?: ScheduleMemberLogDto[]
 }
 
 export interface PaginatedScheduleResponseDto {
