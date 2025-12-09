@@ -658,9 +658,46 @@ Each log entry contains:
 
 ### Accessing Logs
 
-Logs are included in:
-- **GET** `/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}` - Returns logs in the schedule details
-- **GET** `/api/scheduled-areas/{scheduledAreaId}/schedules` - Returns logs for each schedule in the list
+Logs can be accessed through a dedicated endpoint:
+- **GET** `/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/logs` - Returns all logs for a specific schedule
+
+**Path Parameters:**
+- `scheduledAreaId` (required): Scheduled area unique identifier (UUID)
+- `scheduleId` (required): Schedule unique identifier (UUID)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "log-123e4567-e89b-12d3-a456-426614174000",
+    "scheduleId": "schedule-123e4567-e89b-12d3-a456-426614174000",
+    "scheduleMemberId": null,
+    "action": "schedule_created",
+    "field": null,
+    "oldValue": null,
+    "newValue": null,
+    "description": "Escala criada automaticamente",
+    "userId": "user-123e4567-e89b-12d3-a456-426614174000",
+    "userName": "Sistema",
+    "createdAt": "2025-01-15T10:30:00.000Z"
+  },
+  {
+    "id": "log-223e4567-e89b-12d3-a456-426614174001",
+    "scheduleId": "schedule-123e4567-e89b-12d3-a456-426614174000",
+    "scheduleMemberId": "member-123e4567-e89b-12d3-a456-426614174000",
+    "action": "member_added",
+    "field": null,
+    "oldValue": null,
+    "newValue": null,
+    "description": "João Silva adicionado à escala como Operador",
+    "userId": "user-123e4567-e89b-12d3-a456-426614174000",
+    "userName": "Sistema",
+    "createdAt": "2025-01-15T10:31:00.000Z"
+  }
+]
+```
+
+**Note:** Logs are returned in chronological order (oldest first).
 
 ---
 

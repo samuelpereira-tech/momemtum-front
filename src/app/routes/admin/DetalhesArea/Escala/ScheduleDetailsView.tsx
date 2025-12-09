@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
-import { scheduleService, type ScheduleDetailsResponseDto } from '../../../../../services/basic/scheduleService'
+import { scheduleService, type ScheduleDetailsResponseDto, type ScheduleMemberLogDto } from '../../../../../services/basic/scheduleService'
 import { scheduleCommentService } from '../../../../../services/basic/scheduleCommentService'
 import { scheduleMemberService } from '../../../../../services/basic/scheduleMemberService'
 import { responsibilityService } from '../../../../../services/basic/responsibilityService'
@@ -34,11 +34,14 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   const [editStartDatetime, setEditStartDatetime] = useState('')
   const [editEndDatetime, setEditEndDatetime] = useState('')
   const [editStatus, setEditStatus] = useState<'pending' | 'confirmed' | 'cancelled'>('pending')
+  const [logs, setLogs] = useState<ScheduleMemberLogDto[]>([])
+  const [loadingLogs, setLoadingLogs] = useState(false)
 
   useEffect(() => {
     if (scheduledAreaId) {
       loadScheduleDetails()
       loadResponsibilities()
+      loadScheduleLogs()
     }
   }, [scheduleId, scheduledAreaId])
 
@@ -86,6 +89,21 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     }
   }
 
+  const loadScheduleLogs = async () => {
+    if (!scheduledAreaId) return
+    
+    setLoadingLogs(true)
+    try {
+      const scheduleLogs = await scheduleService.getScheduleLogs(scheduledAreaId, scheduleId)
+      setLogs(scheduleLogs)
+    } catch (error: any) {
+      console.error('Erro ao carregar logs da escala:', error)
+      // Não mostrar erro para o usuário, apenas logar no console
+    } finally {
+      setLoadingLogs(false)
+    }
+  }
+
   const handleAddComment = async () => {
     if (!newComment.trim() || !schedule || !scheduledAreaId) return
 
@@ -93,6 +111,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       await scheduleCommentService.addComment(scheduledAreaId, scheduleId, { content: newComment.trim() })
       setNewComment('')
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       toast.showSuccess('Comentário adicionado com sucesso')
     } catch (error: any) {
@@ -113,6 +132,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       setEditingCommentId(null)
       setEditingCommentContent('')
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       toast.showSuccess('Comentário atualizado com sucesso')
     } catch (error: any) {
@@ -127,6 +147,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       await scheduleCommentService.deleteComment(scheduledAreaId, scheduleId, showDeleteCommentModal)
       setShowDeleteCommentModal(null)
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       toast.showSuccess('Comentário removido com sucesso')
     } catch (error: any) {
@@ -141,6 +162,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       await scheduleMemberService.removeMember(scheduledAreaId, scheduleId, showDeleteMemberModal)
       setShowDeleteMemberModal(null)
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       toast.showSuccess('Membro removido com sucesso')
     } catch (error: any) {
@@ -154,6 +176,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { responsibilityId })
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       toast.showSuccess('Função do membro atualizada com sucesso')
     } catch (error: any) {
@@ -167,6 +190,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { status })
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       toast.showSuccess('Status do membro atualizado com sucesso')
     } catch (error: any) {
@@ -180,6 +204,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { present })
       await loadScheduleDetails()
+      await loadScheduleLogs()
       onUpdate?.()
       const message = present === true ? 'Presença marcada' : present === false ? 'Ausência marcada' : 'Presença removida'
       toast.showSuccess(message + ' com sucesso')
@@ -236,6 +261,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       if (Object.keys(updateData).length > 0) {
         await scheduleService.updateSchedule(scheduledAreaId, scheduleId, updateData)
         await loadScheduleDetails()
+        await loadScheduleLogs()
         onUpdate?.()
         setEditingSchedule(false)
         toast.showSuccess('Escala atualizada com sucesso')
@@ -573,16 +599,22 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
             </div>
 
             {/* Seção de Logs */}
-            {schedule.logs && schedule.logs.length > 0 && (
+            {logs && logs.length > 0 && (
               <div className="detail-card">
                 <div className="info-card-header">
                   <h4 className="info-card-title">
-                    <i className="fa-solid fa-history"></i> Histórico de Alterações ({schedule.logs.length})
+                    <i className="fa-solid fa-history"></i> Histórico de Alterações ({logs.length})
                   </h4>
                 </div>
 
-                <div className="logs-container">
-                  {schedule.logs.map((log) => (
+                {loadingLogs ? (
+                  <div className="loading-container" style={{ padding: '20px', textAlign: 'center' }}>
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                    <span style={{ marginLeft: '10px' }}>Carregando logs...</span>
+                  </div>
+                ) : (
+                  <div className="logs-container">
+                    {logs.map((log) => (
                     <div key={log.id} className="log-item">
                       <div className="log-icon">
                         {log.action === 'schedule_created' && <i className="fa-solid fa-plus-circle"></i>}
@@ -607,8 +639,9 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

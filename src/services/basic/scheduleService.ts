@@ -244,6 +244,21 @@ export class ScheduleService {
       }
     )
   }
+
+  /**
+   * Busca os logs de uma escala
+   */
+  async getScheduleLogs(
+    scheduledAreaId: string,
+    scheduleId: string
+  ): Promise<ScheduleMemberLogDto[]> {
+    return apiClient<ScheduleMemberLogDto[]>(
+      `${this.baseEndpoint}/${scheduledAreaId}/schedules/${scheduleId}/logs`,
+      {
+        method: 'GET',
+      }
+    )
+  }
 }
 
 export const scheduleService = new ScheduleService()
