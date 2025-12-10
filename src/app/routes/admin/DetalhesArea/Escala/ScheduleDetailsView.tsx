@@ -547,7 +547,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                           </div>
 
                           <div className="member-presence-section">
-                            <label className="presence-label">
+                            <label className={`presence-label ${member.present === true ? 'presence-checked' : ''}`}>
                               <input
                                 type="checkbox"
                                 checked={member.present === true}
@@ -557,7 +557,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                               <span className="presence-text">
                                 {member.present === true ? (
                                   <>
-                                    <i className="fa-solid fa-check-circle" style={{ color: '#5abcb0' }}></i> Presente
+                                    <i className="fa-solid fa-check-circle"></i> Presente
                                   </>
                                 ) : (
                                   <>
@@ -599,28 +599,32 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
             </div>
 
             {/* Seção de Logs */}
-            {logs && logs.length > 0 && (
-              <div className="detail-card">
-                <div className="info-card-header">
-                  <h4 className="info-card-title">
-                    <i className="fa-solid fa-history"></i> Histórico de Alterações ({logs.length})
-                  </h4>
-                </div>
+            <div className="detail-card">
+              <div className="info-card-header">
+                <h4 className="info-card-title">
+                  <i className="fa-solid fa-history"></i> Histórico de Alterações {logs.length > 0 && `(${logs.length})`}
+                </h4>
+              </div>
 
-                {loadingLogs ? (
-                  <div className="loading-container" style={{ padding: '20px', textAlign: 'center' }}>
-                    <i className="fa-solid fa-spinner fa-spin"></i>
-                    <span style={{ marginLeft: '10px' }}>Carregando logs...</span>
-                  </div>
-                ) : (
-                  <div className="logs-container">
-                    {logs.map((log) => (
+              {loadingLogs ? (
+                <div className="loading-container" style={{ padding: '20px', textAlign: 'center' }}>
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  <span style={{ marginLeft: '10px' }}>Carregando logs...</span>
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="empty-logs" style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                  <i className="fa-solid fa-history" style={{ fontSize: '2rem', marginBottom: '10px', opacity: 0.5 }}></i>
+                  <p>Nenhuma alteração registrada ainda</p>
+                </div>
+              ) : (
+                <div className="logs-container">
+                  {logs.map((log) => (
                     <div key={log.id} className="log-item">
                       <div className="log-icon">
                         {log.action === 'schedule_created' && <i className="fa-solid fa-plus-circle"></i>}
                         {log.action === 'schedule_updated' && <i className="fa-solid fa-edit"></i>}
-                        {log.action === 'schedule_status_changed' && <i className="fa-solid fa-toggle-on"></i>}
-                        {log.action === 'schedule_datetime_changed' && <i className="fa-solid fa-calendar-alt"></i>}
+                        {(log.action === 'schedule_status_changed') && <i className="fa-solid fa-toggle-on"></i>}
+                        {(log.action === 'schedule_datetime_changed' || log.action === 'schedule_start_date_changed' || log.action === 'schedule_end_date_changed') && <i className="fa-solid fa-calendar-alt"></i>}
                         {log.action === 'member_added' && <i className="fa-solid fa-user-plus"></i>}
                         {log.action === 'member_removed' && <i className="fa-solid fa-user-minus"></i>}
                         {log.action === 'member_status_changed' && <i className="fa-solid fa-user-check"></i>}
@@ -633,17 +637,16 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                       <div className="log-content">
                         <div className="log-description">{log.description}</div>
                         <div className="log-meta">
-                          <span className="log-user">{log.userName}</span>
+                          <span className="log-user">{log.userName || 'Sistema'}</span>
                           <span className="log-separator">•</span>
                           <span className="log-time">{formatDateTime(log.createdAt)}</span>
                         </div>
                       </div>
                     </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Seção de Comentários */}
             <div className="detail-card">

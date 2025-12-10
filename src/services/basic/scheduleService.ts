@@ -74,11 +74,36 @@ export interface ScheduleMemberResponseDto {
   createdAt: string
 }
 
+// Tipo para a resposta da API de logs
+export interface ScheduleLogApiResponse {
+  id: string
+  scheduleId: string
+  scheduleMemberId: string | null
+  personId: string | null
+  changeType: string
+  oldValue: Record<string, any> | null
+  newValue: Record<string, any> | null
+  changedBy: string | null
+  changedByPerson: string | null
+  message?: string | null
+  createdAt: string
+}
+
+export interface PaginatedScheduleLogResponse {
+  data: ScheduleLogApiResponse[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
 export interface ScheduleMemberLogDto {
   id: string
   scheduleId: string
   scheduleMemberId: string | null
-  action: 'schedule_created' | 'schedule_updated' | 'schedule_status_changed' | 'schedule_datetime_changed' | 'member_added' | 'member_removed' | 'member_status_changed' | 'member_present_changed' | 'member_responsibility_changed' | 'team_changed' | 'team_member_status_changed'
+  action: 'schedule_created' | 'schedule_updated' | 'schedule_status_changed' | 'schedule_datetime_changed' | 'schedule_start_date_changed' | 'schedule_end_date_changed' | 'member_added' | 'member_removed' | 'member_status_changed' | 'member_present_changed' | 'member_responsibility_changed' | 'team_changed' | 'team_member_status_changed'
   field?: string
   oldValue?: string | null
   newValue?: string | null
@@ -252,12 +277,135 @@ export class ScheduleService {
     scheduledAreaId: string,
     scheduleId: string
   ): Promise<ScheduleMemberLogDto[]> {
-    return apiClient<ScheduleMemberLogDto[]>(
+    const response = await apiClient<PaginatedScheduleLogResponse>(
       `${this.baseEndpoint}/${scheduledAreaId}/schedules/${scheduleId}/logs`,
       {
         method: 'GET',
       }
     )
+
+    // Função auxiliar para formatar datas
+    const formatDateTime = (dateStr: string) => {
+      const date = new Date(dateStr)
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    }
+
+    // Mapear os logs da API para o formato esperado pela UI
+    return response.data.map((log) => {
+      // Mapear changeType para action
+      let action: ScheduleMemberLogDto['action'] = 'schedule_updated'
+      if (log.changeType === 'schedule_status_changed') {
+        action = 'schedule_status_changed'
+      } else if (log.changeType === 'schedule_start_date_changed') {
+        action = 'schedule_start_date_changed'
+      } else if (log.changeType === 'schedule_end_date_changed') {
+        action = 'schedule_end_date_changed'
+      } else if (log.changeType === 'schedule_datetime_changed') {
+        action = 'schedule_datetime_changed'
+      } else if (log.changeType === 'member_added') {
+        action = 'member_added'
+      } else if (log.changeType === 'member_removed') {
+        action = 'member_removed'
+      } else if (log.changeType === 'member_status_changed') {
+        action = 'member_status_changed'
+      } else if (log.changeType === 'member_present_changed') {
+        action = 'member_present_changed'
+      } else if (log.changeType === 'member_responsibility_changed') {
+        action = 'member_responsibility_changed'
+      } else if (log.changeType === 'team_changed') {
+        action = 'team_changed'
+      } else if (log.changeType === 'team_member_status_changed') {
+        action = 'team_member_status_changed'
+      }
+
+      // Usar message da API se disponível, caso contrário gerar descrição baseada no tipo de mudança
+      const userName = log.changedByPerson || 'Sistema'
+      let description = log.message || ''
+      
+      // Se não houver message da API, gerar descrição baseada no tipo de mudança (fallback)
+      if (!description) {
+        if (log.changeType === 'schedule_status_changed') {
+          const oldStatus = log.oldValue?.status || 'desconhecido'
+          const newStatus = log.newValue?.status || 'desconhecido'
+          description = `Status da escala alterado de "${this.getStatusLabel(oldStatus)}" para "${this.getStatusLabel(newStatus)}"`
+        } else if (log.changeType === 'schedule_start_date_changed') {
+          const oldDate = log.oldValue?.startDatetime ? formatDateTime(log.oldValue.startDatetime) : 'desconhecido'
+          const newDate = log.newValue?.startDatetime ? formatDateTime(log.newValue.startDatetime) : 'desconhecido'
+          description = `Data de início alterada de "${oldDate}" para "${newDate}"`
+        } else if (log.changeType === 'schedule_end_date_changed') {
+          const oldDate = log.oldValue?.endDatetime ? formatDateTime(log.oldValue.endDatetime) : 'desconhecido'
+          const newDate = log.newValue?.endDatetime ? formatDateTime(log.newValue.endDatetime) : 'desconhecido'
+          description = `Data de fim alterada de "${oldDate}" para "${newDate}"`
+        } else if (log.changeType === 'schedule_datetime_changed') {
+          description = 'Data e hora da escala foram alteradas'
+        } else if (log.changeType === 'member_added') {
+          description = 'Membro adicionado à escala'
+        } else if (log.changeType === 'member_removed') {
+          description = 'Membro removido da escala'
+        } else if (log.changeType === 'member_status_changed') {
+          const oldStatus = log.oldValue?.status || 'desconhecido'
+          const newStatus = log.newValue?.status || 'desconhecido'
+          description = `Status do membro alterado de "${this.getMemberStatusLabel(oldStatus)}" para "${this.getMemberStatusLabel(newStatus)}"`
+        } else if (log.changeType === 'member_present_changed') {
+          const oldPresent = log.oldValue?.present !== undefined ? (log.oldValue.present ? 'Presente' : 'Ausente') : 'Não definido'
+          const newPresent = log.newValue?.present !== undefined ? (log.newValue.present ? 'Presente' : 'Ausente') : 'Não definido'
+          description = `Presença do membro alterada de "${oldPresent}" para "${newPresent}"`
+        } else if (log.changeType === 'member_responsibility_changed') {
+          description = 'Função do membro foi alterada'
+        } else if (log.changeType === 'team_changed') {
+          description = 'Equipe da escala foi alterada'
+        } else if (log.changeType === 'team_member_status_changed') {
+          description = 'Status de membro da equipe foi alterado'
+        } else {
+          description = `Alteração: ${log.changeType}`
+        }
+      }
+
+      return {
+        id: log.id,
+        scheduleId: log.scheduleId,
+        scheduleMemberId: log.scheduleMemberId,
+        action,
+        oldValue: log.oldValue ? JSON.stringify(log.oldValue) : null,
+        newValue: log.newValue ? JSON.stringify(log.newValue) : null,
+        description,
+        userId: log.changedBy || log.personId || '',
+        userName,
+        createdAt: log.createdAt,
+      }
+    })
+  }
+
+  private getStatusLabel(status: string): string {
+    switch (status) {
+      case 'confirmed':
+        return 'Confirmado'
+      case 'cancelled':
+        return 'Cancelado'
+      case 'pending':
+        return 'Pendente'
+      default:
+        return status
+    }
+  }
+
+  private getMemberStatusLabel(status: string): string {
+    switch (status) {
+      case 'accepted':
+        return 'Aceito'
+      case 'rejected':
+        return 'Rejeitado'
+      case 'pending':
+        return 'Pendente'
+      default:
+        return status
+    }
   }
 }
 

@@ -4414,64 +4414,6 @@
         ]
       }
     },
-    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/logs": {
-      "get": {
-        "description": "Retrieves all logs for a specific schedule.",
-        "operationId": "ScheduleController_getLogs",
-        "parameters": [
-          {
-            "name": "scheduledAreaId",
-            "required": true,
-            "in": "path",
-            "description": "Scheduled area unique identifier",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          },
-          {
-            "name": "scheduleId",
-            "required": true,
-            "in": "path",
-            "description": "Schedule unique identifier",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Logs retrieved successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ScheduleMemberLogDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized - Authentication required"
-          },
-          "404": {
-            "description": "Schedule or scheduled area not found"
-          }
-        },
-        "security": [
-          {
-            "JWT-auth": []
-          }
-        ],
-        "summary": "Get schedule logs",
-        "tags": [
-          "schedules"
-        ]
-      }
-    },
     "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/members/{memberId}": {
       "patch": {
         "description": "Updates a schedule member's responsibility or status.",
@@ -4808,6 +4750,123 @@
         "summary": "Delete schedule comment",
         "tags": [
           "schedule-comments"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/logs": {
+      "get": {
+        "description": "Retrieves a paginated list of logs for a schedule. Supports filtering by change type, person, and who made the change.",
+        "operationId": "ScheduleLogController_findAll",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "required": true,
+            "in": "path",
+            "description": "Schedule unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "changeType",
+            "required": false,
+            "in": "query",
+            "description": "Filter by change type",
+            "schema": {
+              "enum": [
+                "member_added",
+                "member_removed",
+                "member_status_changed",
+                "member_present_changed",
+                "member_responsibility_changed",
+                "schedule_start_date_changed",
+                "schedule_end_date_changed",
+                "schedule_status_changed",
+                "team_changed",
+                "team_member_added",
+                "team_member_removed"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "personId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person ID (logs related to this person)",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "changedBy",
+            "required": false,
+            "in": "query",
+            "description": "Filter by who made the change",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedule logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScheduleLogResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Schedule not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List schedule logs",
+        "tags": [
+          "schedule-logs"
         ]
       }
     }
@@ -8066,6 +8125,121 @@
         },
         "required": [
           "content"
+        ]
+      },
+      "ScheduleLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Log unique identifier",
+            "example": "log-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "scheduleId": {
+            "type": "string",
+            "description": "Schedule ID",
+            "example": "schedule-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "scheduleMemberId": {
+            "type": "object",
+            "description": "Schedule member ID (if applicable)",
+            "example": "member-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid",
+            "nullable": true
+          },
+          "personId": {
+            "type": "object",
+            "description": "Person ID (if applicable)",
+            "example": "person-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid",
+            "nullable": true
+          },
+          "changeType": {
+            "type": "string",
+            "description": "Type of change",
+            "enum": [
+              "member_added",
+              "member_removed",
+              "member_status_changed",
+              "member_present_changed",
+              "member_responsibility_changed",
+              "schedule_start_date_changed",
+              "schedule_end_date_changed",
+              "schedule_status_changed",
+              "team_changed",
+              "team_member_added",
+              "team_member_removed"
+            ]
+          },
+          "oldValue": {
+            "type": "object",
+            "description": "Old value before the change",
+            "nullable": true
+          },
+          "newValue": {
+            "type": "object",
+            "description": "New value after the change",
+            "nullable": true
+          },
+          "changedBy": {
+            "type": "object",
+            "description": "ID of the person who made the change",
+            "example": "user-123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid",
+            "nullable": true
+          },
+          "changedByPerson": {
+            "type": "object",
+            "description": "Person who made the change (if available)",
+            "nullable": true
+          },
+          "message": {
+            "type": "object",
+            "description": "Human-readable message in Portuguese describing the change",
+            "example": "Função do membro foi alterada de Professora para Auxiliar",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Creation timestamp",
+            "example": "2025-01-15T10:30:00.000Z",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "scheduleId",
+          "scheduleMemberId",
+          "personId",
+          "changeType",
+          "oldValue",
+          "newValue",
+          "changedBy",
+          "changedByPerson",
+          "message",
+          "createdAt"
+        ]
+      },
+      "PaginatedScheduleLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Array of schedule logs",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleLogResponseDto"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       }
     }
