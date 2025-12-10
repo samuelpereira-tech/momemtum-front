@@ -47,13 +47,13 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
 
   const loadResponsibilities = async () => {
     if (!scheduledAreaId) return
-    
+
     try {
       let allResponsibilities: Array<{ id: string; name: string }> = []
       let page = 1
       let hasMore = true
       const limit = 100
-      
+
       while (hasMore) {
         const response = await responsibilityService.getAllResponsibilities({
           scheduledAreaId,
@@ -61,37 +61,37 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
           limit,
         })
         allResponsibilities = [...allResponsibilities, ...response.data.map(r => ({ id: r.id, name: r.name }))]
-        
+
         if (page >= response.meta.totalPages || response.data.length === 0) {
           hasMore = false
         } else {
           page++
         }
       }
-      
+
       setResponsibilities(allResponsibilities)
     } catch (error) {
       console.error('Erro ao carregar responsabilidades:', error)
     }
   }
 
-  const loadScheduleDetails = async () => {
+  const loadScheduleDetails = async (showLoading = true) => {
     if (!scheduledAreaId) return
-    
-    setLoading(true)
+
+    if (showLoading) setLoading(true)
     try {
       const details = await scheduleService.getScheduleById(scheduledAreaId, scheduleId)
       setSchedule(details)
     } catch (error: any) {
       toast.showError('Erro ao carregar detalhes da escala: ' + (error.message || 'Erro desconhecido'))
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }
 
   const loadScheduleLogs = async () => {
     if (!scheduledAreaId) return
-    
+
     setLoadingLogs(true)
     try {
       const scheduleLogs = await scheduleService.getScheduleLogs(scheduledAreaId, scheduleId)
@@ -172,7 +172,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
 
   const handleUpdateMemberResponsibility = async (memberId: string, responsibilityId: string, responsibilityName: string) => {
     if (!scheduledAreaId) return
-    
+
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { responsibilityId })
       await loadScheduleDetails()
@@ -186,7 +186,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
 
   const handleUpdateMemberStatus = async (memberId: string, status: 'pending' | 'accepted' | 'rejected') => {
     if (!scheduledAreaId) return
-    
+
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { status })
       await loadScheduleDetails()
@@ -199,16 +199,26 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   }
 
   const handleUpdateMemberPresence = async (memberId: string, present: boolean | null) => {
-    if (!scheduledAreaId) return
-    
+    if (!scheduledAreaId || !schedule) return
+
+    // Optimistic Update
+    const originalSchedule = { ...schedule }
+    const updatedMembers = schedule.members.map(m =>
+      m.id === memberId ? { ...m, present: present === true } : m
+    )
+    setSchedule({ ...schedule, members: updatedMembers })
+
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { present })
-      await loadScheduleDetails()
+      // Reload silently to ensure data consistency
+      await loadScheduleDetails(false)
       await loadScheduleLogs()
       onUpdate?.()
-      const message = present === true ? 'Presença marcada' : present === false ? 'Ausência marcada' : 'Presença removida'
-      toast.showSuccess(message + ' com sucesso')
+      const message = present === true ? 'Presença marcada' : 'Presença removida'
+      toast.showSuccess(message)
     } catch (error: any) {
+      // Rollback on error
+      setSchedule(originalSchedule)
       toast.showError('Erro ao atualizar presença: ' + (error.message || 'Erro desconhecido'))
     }
   }
@@ -238,21 +248,21 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       // Verificar se as datas foram alteradas
       const startDate = new Date(editStartDatetime)
       const endDate = new Date(editEndDatetime)
-      
+
       if (startDate.toISOString() !== new Date(schedule.startDatetime).toISOString()) {
         updateData.startDatetime = startDate.toISOString()
       }
-      
+
       if (endDate.toISOString() !== new Date(schedule.endDatetime).toISOString()) {
         updateData.endDatetime = endDate.toISOString()
       }
-      
+
       // Validar que a data fim é depois da data início
       if (endDate <= startDate) {
         toast.showError('A data de fim deve ser posterior à data de início')
         return
       }
-      
+
       if (editStatus !== schedule.status) {
         updateData.status = editStatus
       }
@@ -338,11 +348,13 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     return null
   }
 
+  console.log(schedule.members)
+
   return (
     <>
       <div className="schedule-details-container">
         {/* Header Principal */}
-        <div className="schedule-details-header" style={{display: 'none'}}>
+        <div className="schedule-details-header" style={{ display: 'none' }}>
           <h3 className="schedule-details-title">Detalhes da Escala</h3>
         </div>
 
@@ -371,8 +383,8 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                         className="date-time-input"
                       />
                     ) : (
-                      <span 
-                        className="date-time-value date-time-editable" 
+                      <span
+                        className="date-time-value date-time-editable"
                         onClick={handleStartEditDatetime}
                         title="Clique para editar"
                       >
@@ -396,8 +408,8 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                         className="date-time-input"
                       />
                     ) : (
-                      <span 
-                        className="date-time-value date-time-editable" 
+                      <span
+                        className="date-time-value date-time-editable"
                         onClick={handleStartEditDatetime}
                         title="Clique para editar"
                       >
@@ -420,7 +432,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                     <option value="cancelled">Cancelado</option>
                   </select>
                 ) : (
-                  <span 
+                  <span
                     className={`status-label-large status-${schedule.status === 'confirmed' ? 'confirmed' : schedule.status === 'cancelled' ? 'cancelled' : 'pending'}-large status-editable`}
                     onClick={handleStartEditDatetime}
                     title="Clique para editar"
