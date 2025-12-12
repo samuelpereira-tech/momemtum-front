@@ -7,7 +7,29 @@
 
 .schedule-groups-header,
 .schedules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
+  gap: 16px;
+}
+
+.schedules-header .header-left,
+.schedules-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedules-header .header-left {
+  flex: 1;
+}
+
+.schedules-header .header-left h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-color);
 }
 
 .section-title {

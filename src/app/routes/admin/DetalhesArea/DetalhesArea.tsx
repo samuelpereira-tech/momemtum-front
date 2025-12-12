@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, Link, useLocation, useMatch } from 'react-router-dom'
 import TopNavbar from '../../../../components/admin/TopNavbar/TopNavbar'
 import Sidebar from '../../../../components/admin/Sidebar/Sidebar'
 import PageHeader from '../../../../components/admin/PageHeader/PageHeader'
@@ -12,6 +12,11 @@ import GruposTabPanel from './Grupos/GruposTabPanel'
 import EquipesTabPanel from './Equipes/EquipesTabPanel'
 import GeracaoAutomaticaTabPanel from './GeracaoAutomatica/GeracaoAutomaticaTabPanel'
 import EscalaTabPanel from './Escala/EscalaTabPanel'
+import EscalaGrupos from './Escala/EscalaGrupos'
+import EscalaCards from './Escala/EscalaCards'
+import EscalaTabela from './Escala/EscalaTabela'
+import EscalaScheduleDetails from './Escala/EscalaScheduleDetails'
+import EscalaGrupoDetails from './Escala/EscalaGrupoDetails'
 import type { TabType } from './shared/types'
 import '../../../../components/admin/admin.css'
 import '../ListarAreas/ListarAreas.css'
@@ -27,12 +32,46 @@ export default function DetalhesArea() {
   const getActiveTabFromPath = (): TabType => {
     const path = location.pathname
     if (path.includes('/pessoas')) return 'pessoas'
-    if (path.includes('/grupos')) return 'grupos'
+    if (path.includes('/grupos') && !path.includes('/escala/grupo')) return 'grupos'
     if (path.includes('/funcoes')) return 'funcoes'
     if (path.includes('/equipes')) return 'equipes'
     if (path.includes('/geracao-automatica')) return 'geracao-automatica'
     if (path.includes('/escala')) return 'escala'
     return 'pessoas' // padrão
+  }
+
+  // Determinar qual componente de escala renderizar baseado na rota
+  const getEscalaComponent = () => {
+    const path = location.pathname
+    
+    // Rotas de detalhes
+    if (path.includes('/escala/schedule/')) {
+      return <EscalaScheduleDetails />
+    }
+    if (path.includes('/escala/grupo/')) {
+      return <EscalaGrupoDetails />
+    }
+    
+    // Rotas principais
+    if (path.includes('/escala/grupos')) {
+      return <EscalaGrupos />
+    }
+    if (path.includes('/escala/cards')) {
+      return <EscalaCards />
+    }
+    if (path.includes('/escala/tabela')) {
+      return <EscalaTabela />
+    }
+    
+    // Rota padrão /escala - redirecionar para tabela
+    if (path.endsWith('/escala')) {
+      // Redirecionar para tabela
+      navigate(`/Dashboard/escala/areas/${id}/escala/tabela`, { replace: true })
+      return null
+    }
+    
+    // Fallback para compatibilidade
+    return <EscalaTabPanel />
   }
   
   const [activeTab, setActiveTab] = useState<TabType>(getActiveTabFromPath())
@@ -305,7 +344,7 @@ export default function DetalhesArea() {
               {activeTab === 'funcoes' && <FuncoesTabPanel key="funcoes" />}
               {activeTab === 'equipes' && <EquipesTabPanel key="equipes" />}
               {activeTab === 'geracao-automatica' && <GeracaoAutomaticaTabPanel key="geracao-automatica" />}
-              {activeTab === 'escala' && <EscalaTabPanel key="escala" />}
+              {activeTab === 'escala' && getEscalaComponent()}
             </div>
           </div>
         </main>

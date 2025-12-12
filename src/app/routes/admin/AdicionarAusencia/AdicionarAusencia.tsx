@@ -9,6 +9,7 @@ import { personService } from '../../../../services/basic/personService'
 import type { PersonResponseDto } from '../../../../services/basic/personService'
 import type { AbsenceTypeResponseDto } from '../../../../services/basic/absenceTypeService'
 import { useToast } from '../../../../components/ui/Toast/ToastProvider'
+import { formatDateForAPI } from '../../../../utils/dateUtils'
 import '../../../../components/admin/admin.css'
 import './AdicionarAusencia.css'
 
@@ -86,8 +87,8 @@ export default function AdicionarAusencia() {
         await scheduledAbsenceService.updateScheduledAbsence(id, {
           personId: formData.personId,
           absenceTypeId: formData.absenceTypeId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
+          startDate: formatDateForAPI(formData.startDate, false),
+          endDate: formatDateForAPI(formData.endDate, true),
           description: formData.description || undefined
         })
         toast.showSuccess('Ausência programada atualizada com sucesso!')
@@ -95,8 +96,8 @@ export default function AdicionarAusencia() {
         await scheduledAbsenceService.createScheduledAbsence({
           personId: formData.personId,
           absenceTypeId: formData.absenceTypeId,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
+          startDate: formatDateForAPI(formData.startDate, false),
+          endDate: formatDateForAPI(formData.endDate, true),
           description: formData.description || undefined
         })
         toast.showSuccess('Ausência programada criada com sucesso!')

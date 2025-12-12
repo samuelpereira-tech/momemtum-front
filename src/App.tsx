@@ -153,6 +153,46 @@ function App() {
             } 
           />
           <Route 
+            path="/Dashboard/escala/areas/:id/escala/grupos" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/escala/cards" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/escala/tabela" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/escala/schedule/:scheduleId" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/Dashboard/escala/areas/:id/escala/grupo/:groupId" 
+            element={
+              <ProtectedRoute>
+                <DetalhesArea />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/Dashboard/escala/areas/editar/:id" 
             element={
               <ProtectedRoute>

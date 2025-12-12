@@ -10,6 +10,7 @@ import type { ScheduledAbsenceResponseDto } from '../../../../services/basic/sch
 import type { AbsenceTypeResponseDto } from '../../../../services/basic/absenceTypeService'
 import { useToast } from '../../../../components/ui/Toast/ToastProvider'
 import { formatarData } from '../../../../utils/formatters'
+import { formatDateForAPI } from '../../../../utils/dateUtils'
 import ConfirmModal from '../../../../components/ui/ConfirmModal/ConfirmModal'
 import '../../../../components/admin/admin.css'
 import './ListarAusencias.css'
@@ -69,7 +70,7 @@ export default function ListarAusencias() {
       }
 
       if (filtroDataInicio) {
-        filters.startDate = filtroDataInicio
+        filters.startDate = formatDateForAPI(filtroDataInicio)
       }
 
       const response = await scheduledAbsenceService.getAllScheduledAbsences(filters)

@@ -3,62 +3,15 @@ import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './EscalaTabPanel.css'
 import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
-import { scheduleService, type ScheduleResponseDto, type ScheduleOptimizedResponseDto } from '../../../../../services/basic/scheduleService'
+import { scheduleService, type ScheduleOptimizedResponseDto } from '../../../../../services/basic/scheduleService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
 import ScheduleDetailsView from './ScheduleDetailsView'
 import ScheduleGroupDetailsView from './ScheduleGroupDetailsView'
+import type { ScheduleGroupDto, ScheduleDto } from './types'
+import { mapConfiguration } from './utils'
 
-// Tipos para compatibilidade com a tela
-export interface ScheduleGroupConfiguration {
-  // Período
-  periodStartDate: string
-  periodEndDate: string
-  periodType: 'fixed' | 'daily' | 'weekly' | 'monthly'
-  
-  // Dias da semana (0-6, domingo-sábado)
-  weekdays?: number[]
-  
-  // Horários (para tipo daily)
-  startTime?: string // HH:mm
-  endTime?: string // HH:mm
-  
-  // Grupos selecionados
-  selectedGroupIds?: string[]
-  selectedGroupNames?: string[]
-  selectedGroups?: Array<{
-    id: string
-    name: string
-    imageUrl?: string | null
-  }>
-  
-  // Equipe selecionada
-  selectedTeamId?: string
-  selectedTeamName?: string
-  
-  // Regras
-  considerAbsences: boolean
-  requireResponsibilities?: boolean
-  distributionOrder?: 'sequential' | 'random' | 'balanced'
-  groupsPerSchedule?: number
-  participantSelection?: 'all' | 'all_with_exclusions' | 'by_group' | 'individual'
-  
-  // Datas excluídas/incluídas
-  excludedDates?: string[]
-  includedDates?: string[]
-}
-
-export interface ScheduleGroupDto {
-  id: string
-  name: string
-  description?: string
-  scheduledAreaId: string
-  schedulesCount: number
-  configuration: ScheduleGroupConfiguration
-  createdAt: string
-  updatedAt: string
-}
-
-export type ScheduleDto = ScheduleResponseDto
+// Re-exportar tipos do arquivo types.ts para compatibilidade
+export type { ScheduleGroupConfiguration, ScheduleGroupDto, ScheduleDto } from './types'
 
 export default function EscalaTabPanel() {
   const { id: scheduledAreaId } = useParams<{ id: string }>()
@@ -94,76 +47,6 @@ export default function EscalaTabPanel() {
   const [filterStartDate, setFilterStartDate] = useState<string>('')
   const [filterEndDate, setFilterEndDate] = useState<string>('')
 
-  // Função para mapear a configuração aninhada da API para a estrutura plana esperada
-  const mapConfiguration = (config: any, generationType: string, periodType: string, periodStartDate: string, periodEndDate: string): ScheduleGroupConfiguration => {
-    const mapped: ScheduleGroupConfiguration = {
-      periodStartDate: periodStartDate || '',
-      periodEndDate: periodEndDate || '',
-      periodType: periodType as 'fixed' | 'daily' | 'weekly' | 'monthly',
-      considerAbsences: false,
-    }
-
-    // Mapear configurações do período
-    if (config.periodConfig) {
-      mapped.weekdays = config.periodConfig.weekdays
-      mapped.startTime = config.periodConfig.startTime
-      mapped.endTime = config.periodConfig.endTime
-      mapped.excludedDates = config.periodConfig.excludedDates
-      mapped.includedDates = config.periodConfig.includedDates
-    }
-
-    // Mapear configurações baseadas no tipo de geração
-    if (generationType === 'group' && config.groupConfig) {
-      mapped.considerAbsences = config.groupConfig.considerAbsences || false
-      mapped.distributionOrder = config.groupConfig.distributionOrder
-      mapped.groupsPerSchedule = config.groupConfig.groupsPerSchedule
-      
-      // Verificar se groupIds é um array de objetos (com id, name, imageUrl) ou apenas strings
-      if (config.groupConfig.groupIds && Array.isArray(config.groupConfig.groupIds)) {
-        const firstItem = config.groupConfig.groupIds[0]
-        if (firstItem && typeof firstItem === 'object' && firstItem.id) {
-          // É um array de objetos com id, name, imageUrl
-          mapped.selectedGroups = config.groupConfig.groupIds.map((g: any) => ({
-            id: g.id,
-            name: g.name || g.id,
-            imageUrl: g.imageUrl || null,
-          }))
-          mapped.selectedGroupIds = mapped.selectedGroups?.map(g => g.id) || []
-          mapped.selectedGroupNames = mapped.selectedGroups?.map(g => g.name) || []
-        } else {
-          // É um array de strings (IDs)
-          mapped.selectedGroupIds = config.groupConfig.groupIds
-        }
-      }
-    } else if (generationType === 'people' && config.peopleConfig) {
-      mapped.considerAbsences = config.peopleConfig.considerAbsences || false
-    } else if ((generationType === 'team_without_restriction' || generationType === 'team_with_restriction') && config.teamConfig) {
-      mapped.considerAbsences = config.teamConfig.considerAbsences || false
-      mapped.requireResponsibilities = config.teamConfig.requireResponsibilities
-      mapped.participantSelection = config.teamConfig.participantSelection
-      mapped.selectedTeamId = config.teamConfig.teamId
-      
-      // Verificar se selectedGroupIds é um array de objetos ou apenas strings
-      if (config.teamConfig.selectedGroupIds && Array.isArray(config.teamConfig.selectedGroupIds)) {
-        const firstItem = config.teamConfig.selectedGroupIds[0]
-        if (firstItem && typeof firstItem === 'object' && firstItem.id) {
-          // É um array de objetos com id, name, imageUrl
-          mapped.selectedGroups = config.teamConfig.selectedGroupIds.map((g: any) => ({
-            id: g.id,
-            name: g.name || g.id,
-            imageUrl: g.imageUrl || null,
-          }))
-          mapped.selectedGroupIds = mapped.selectedGroups?.map(g => g.id) || []
-          mapped.selectedGroupNames = mapped.selectedGroups?.map(g => g.name) || []
-        } else {
-          // É um array de strings (IDs)
-          mapped.selectedGroupIds = config.teamConfig.selectedGroupIds
-        }
-      }
-    }
-
-    return mapped
-  }
 
   // Carregar grupos (gerações automáticas)
   const loadGroups = useCallback(async (page: number) => {
@@ -277,10 +160,12 @@ export default function EscalaTabPanel() {
       }
       
       if (filterStartDate) {
+        // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
         filters.startDate = filterStartDate
       }
       
       if (filterEndDate) {
+        // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
         filters.endDate = filterEndDate
       }
       
@@ -327,10 +212,12 @@ export default function EscalaTabPanel() {
           }
           
           if (filterStartDate) {
+            // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
             filters.startDate = filterStartDate
           }
           
           if (filterEndDate) {
+            // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
             filters.endDate = filterEndDate
           }
           
@@ -1048,7 +935,7 @@ export default function EscalaTabPanel() {
                             {schedule.participants && schedule.participants.length > 0 ? (
                               <>
                                 <div className="schedule-participants-avatars">
-                                  {schedule.participants.map((participant, index) => {
+                                  {schedule.participants.map((participant: any, index: number) => {
                                     // Verificar se participant é um objeto (com id, name, imageUrl) ou string (ID)
                                     const participantData: { id: string; name: string; imageUrl: string | null } = 
                                       typeof participant === 'object' && participant !== null && 'id' in participant
