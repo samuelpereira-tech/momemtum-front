@@ -900,6 +900,76 @@
         ]
       }
     },
+    "/persons/{id}/availability": {
+      "get": {
+        "description": "Retrieves dates within a period where the person is scheduled or absent",
+        "operationId": "PersonController_getAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Person unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": true,
+            "in": "query",
+            "description": "Start date of the period (format: YYYY-MM-DD)",
+            "schema": {
+              "format": "date",
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": true,
+            "in": "query",
+            "description": "End date of the period (format: YYYY-MM-DD)",
+            "schema": {
+              "format": "date",
+              "example": "2024-01-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Person availability retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonAvailabilityResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or date range"
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Person not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get person availability",
+        "tags": [
+          "persons"
+        ]
+      }
+    },
     "/api/scheduled-absences": {
       "post": {
         "description": "Creates a new scheduled absence for a person",
@@ -4549,6 +4619,62 @@
       }
     },
     "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}/comments": {
+      "get": {
+        "description": "Retrieves all comments for a schedule.",
+        "operationId": "ScheduleCommentController_findAll",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "scheduleId",
+            "required": true,
+            "in": "path",
+            "description": "Schedule unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comments retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleCommentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Schedule or scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List schedule comments",
+        "tags": [
+          "schedule-comments"
+        ]
+      },
       "post": {
         "description": "Adds a comment to a schedule.",
         "operationId": "ScheduleCommentController_create",
@@ -5447,6 +5573,79 @@
           "message",
           "photoUrl",
           "personId"
+        ]
+      },
+      "PersonAvailabilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "ID da pessoa",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "personName": {
+            "type": "string",
+            "description": "Nome completo da pessoa",
+            "example": "João Silva"
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Data de início do período consultado",
+            "example": "2024-01-01",
+            "format": "date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Data de fim do período consultado",
+            "example": "2024-01-31",
+            "format": "date"
+          },
+          "scheduledDates": {
+            "description": "Lista de datas onde a pessoa está escalada (formato: YYYY-MM-DD)",
+            "example": [
+              "2024-01-05",
+              "2024-01-10",
+              "2024-01-15"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "absentDates": {
+            "description": "Lista de datas onde a pessoa está ausente (formato: YYYY-MM-DD)",
+            "example": [
+              "2024-01-08",
+              "2024-01-12"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allOccupiedDates": {
+            "description": "Lista de todas as datas do período onde a pessoa está escalada ou ausente (formato: YYYY-MM-DD)",
+            "example": [
+              "2024-01-05",
+              "2024-01-08",
+              "2024-01-10",
+              "2024-01-12",
+              "2024-01-15"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "personId",
+          "personName",
+          "startDate",
+          "endDate",
+          "scheduledDates",
+          "absentDates",
+          "allOccupiedDates"
         ]
       },
       "CreateScheduledAbsenceDto": {
@@ -8050,21 +8249,6 @@
           }
         }
       },
-      "CreateScheduleCommentDto": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "type": "string",
-            "description": "Comment content",
-            "example": "Observação importante sobre esta escala",
-            "minLength": 1,
-            "maxLength": 5000
-          }
-        },
-        "required": [
-          "content"
-        ]
-      },
       "ScheduleCommentResponseDto": {
         "type": "object",
         "properties": {
@@ -8110,6 +8294,21 @@
           "authorName",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "CreateScheduleCommentDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Comment content",
+            "example": "Observação importante sobre esta escala",
+            "minLength": 1,
+            "maxLength": 5000
+          }
+        },
+        "required": [
+          "content"
         ]
       },
       "UpdateScheduleCommentDto": {

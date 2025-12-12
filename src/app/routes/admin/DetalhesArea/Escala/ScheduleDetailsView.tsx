@@ -7,6 +7,9 @@ import { scheduleService, type ScheduleDetailsResponseDto, type ScheduleMemberLo
 import { scheduleCommentService } from '../../../../../services/basic/scheduleCommentService'
 import { scheduleMemberService } from '../../../../../services/basic/scheduleMemberService'
 import { responsibilityService } from '../../../../../services/basic/responsibilityService'
+import { personAreaService, type PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
+import { scheduledAbsenceService, type ScheduledAbsenceResponseDto } from '../../../../../services/basic/scheduledAbsenceService'
+import Modal from '../shared/Modal'
 import './ScheduleDetailsView.css'
 
 interface ScheduleDetailsViewProps {
@@ -36,6 +39,19 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
   const [editStatus, setEditStatus] = useState<'pending' | 'confirmed' | 'cancelled'>('pending')
   const [logs, setLogs] = useState<ScheduleMemberLogDto[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [sendingComment, setSendingComment] = useState(false)
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false)
+  const [availablePersons, setAvailablePersons] = useState<PersonAreaResponseDto[]>([])
+  const [loadingPersons, setLoadingPersons] = useState(false)
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('')
+  const [selectedResponsibilityId, setSelectedResponsibilityId] = useState<string>('')
+  const [addingMember, setAddingMember] = useState(false)
+  const [personValidation, setPersonValidation] = useState<{
+    isAlreadyScheduled: boolean
+    isAbsent: boolean
+    absenceInfo: ScheduledAbsenceResponseDto | null
+  } | null>(null)
+  const [checkingPerson, setCheckingPerson] = useState(false)
 
   useEffect(() => {
     if (scheduledAreaId) {
@@ -44,6 +60,12 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       loadScheduleLogs()
     }
   }, [scheduleId, scheduledAreaId])
+
+  useEffect(() => {
+    if (showAddMemberModal && scheduledAreaId && schedule) {
+      loadAvailablePersons()
+    }
+  }, [showAddMemberModal, scheduledAreaId, schedule])
 
   const loadResponsibilities = async () => {
     if (!scheduledAreaId) return
@@ -75,6 +97,52 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     }
   }
 
+  const loadAvailablePersons = async () => {
+    if (!scheduledAreaId) return
+
+    setLoadingPersons(true)
+    try {
+      let allPersons: PersonAreaResponseDto[] = []
+      let page = 1
+      let hasMore = true
+      const limit = 100
+
+      while (hasMore) {
+        const response = await personAreaService.getPersonsInArea(scheduledAreaId, {
+          page,
+          limit,
+        })
+        allPersons = [...allPersons, ...response.data]
+
+        if (page >= response.meta.totalPages || response.data.length === 0) {
+          hasMore = false
+        } else {
+          page++
+        }
+      }
+
+      // Filtrar pessoas que já estão na escala
+      if (schedule) {
+        const memberPersonIds = new Set(schedule.members.map(m => m.personId))
+        allPersons = allPersons.filter(p => !memberPersonIds.has(p.personId))
+      }
+
+      // Ordenar pessoas por nome
+      allPersons.sort((a, b) => {
+        const nameA = a.person?.fullName || a.personId || ''
+        const nameB = b.person?.fullName || b.personId || ''
+        return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' })
+      })
+
+      setAvailablePersons(allPersons)
+    } catch (error) {
+      console.error('Erro ao carregar pessoas disponíveis:', error)
+      toast.showError('Erro ao carregar pessoas disponíveis')
+    } finally {
+      setLoadingPersons(false)
+    }
+  }
+
   const loadScheduleDetails = async (showLoading = true) => {
     if (!scheduledAreaId) return
 
@@ -89,10 +157,10 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     }
   }
 
-  const loadScheduleLogs = async () => {
+  const loadScheduleLogs = async (showLoading = true) => {
     if (!scheduledAreaId) return
 
-    setLoadingLogs(true)
+    if (showLoading) setLoadingLogs(true)
     try {
       const scheduleLogs = await scheduleService.getScheduleLogs(scheduledAreaId, scheduleId)
       setLogs(scheduleLogs)
@@ -100,22 +168,25 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       console.error('Erro ao carregar logs da escala:', error)
       // Não mostrar erro para o usuário, apenas logar no console
     } finally {
-      setLoadingLogs(false)
+      if (showLoading) setLoadingLogs(false)
     }
   }
 
   const handleAddComment = async () => {
     if (!newComment.trim() || !schedule || !scheduledAreaId) return
 
+    setSendingComment(true)
     try {
       await scheduleCommentService.addComment(scheduledAreaId, scheduleId, { content: newComment.trim() })
       setNewComment('')
-      await loadScheduleDetails()
-      await loadScheduleLogs()
+      await loadScheduleDetails(false)
+      await loadScheduleLogs(false)
       onUpdate?.()
       toast.showSuccess('Comentário adicionado com sucesso')
     } catch (error: any) {
       toast.showError('Erro ao adicionar comentário: ' + (error.message || 'Erro desconhecido'))
+    } finally {
+      setSendingComment(false)
     }
   }
 
@@ -131,8 +202,8 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       await scheduleCommentService.updateComment(scheduledAreaId, scheduleId, editingCommentId, { content: editingCommentContent.trim() })
       setEditingCommentId(null)
       setEditingCommentContent('')
-      await loadScheduleDetails()
-      await loadScheduleLogs()
+      await loadScheduleDetails(false)
+      await loadScheduleLogs(false)
       onUpdate?.()
       toast.showSuccess('Comentário atualizado com sucesso')
     } catch (error: any) {
@@ -146,8 +217,8 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     try {
       await scheduleCommentService.deleteComment(scheduledAreaId, scheduleId, showDeleteCommentModal)
       setShowDeleteCommentModal(null)
-      await loadScheduleDetails()
-      await loadScheduleLogs()
+      await loadScheduleDetails(false)
+      await loadScheduleLogs(false)
       onUpdate?.()
       toast.showSuccess('Comentário removido com sucesso')
     } catch (error: any) {
@@ -162,7 +233,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       await scheduleMemberService.removeMember(scheduledAreaId, scheduleId, showDeleteMemberModal)
       setShowDeleteMemberModal(null)
       await loadScheduleDetails()
-      await loadScheduleLogs()
+      await loadScheduleLogs(false)
       onUpdate?.()
       toast.showSuccess('Membro removido com sucesso')
     } catch (error: any) {
@@ -170,30 +241,153 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     }
   }
 
+  const handleAddMember = async () => {
+    if (!selectedPersonId || !selectedResponsibilityId || !scheduledAreaId || !schedule) return
+
+    setAddingMember(true)
+    try {
+      await scheduleMemberService.addMember(scheduledAreaId, scheduleId, {
+        personId: selectedPersonId,
+        responsibilityId: selectedResponsibilityId,
+      })
+      setShowAddMemberModal(false)
+      setSelectedPersonId('')
+      setSelectedResponsibilityId('')
+      await loadScheduleDetails()
+      await loadScheduleLogs(false)
+      onUpdate?.()
+      toast.showSuccess('Participante adicionado com sucesso')
+    } catch (error: any) {
+      toast.showError('Erro ao adicionar participante: ' + (error.message || 'Erro desconhecido'))
+    } finally {
+      setAddingMember(false)
+    }
+  }
+
+  const handleOpenAddMemberModal = () => {
+    setShowAddMemberModal(true)
+    setSelectedPersonId('')
+    setSelectedResponsibilityId('')
+    setPersonValidation(null)
+  }
+
+  const checkPersonAvailability = async (personId: string) => {
+    if (!personId || !schedule || !scheduledAreaId) {
+      setPersonValidation(null)
+      return
+    }
+
+    setCheckingPerson(true)
+    try {
+      // Verificar se a pessoa já está escalada
+      const isAlreadyScheduled = schedule.members.some(m => m.personId === personId)
+
+      // Verificar se a pessoa está ausente no período da escala
+      let isAbsent = false
+      let absenceInfo: ScheduledAbsenceResponseDto | null = null
+
+      if (!isAlreadyScheduled) {
+        // Normalizar datas para comparação (apenas data, sem hora)
+        const normalizeDate = (dateString: string) => {
+          const date = new Date(dateString)
+          date.setHours(0, 0, 0, 0)
+          return date
+        }
+
+        const scheduleStart = normalizeDate(schedule.startDatetime)
+        const scheduleEnd = normalizeDate(schedule.endDatetime)
+
+        // Buscar ausências da pessoa
+        let allAbsences: ScheduledAbsenceResponseDto[] = []
+        let page = 1
+        let hasMore = true
+        const limit = 100
+
+        while (hasMore) {
+          const response = await scheduledAbsenceService.getAllScheduledAbsences({
+            personId,
+            page,
+            limit,
+          })
+          allAbsences = [...allAbsences, ...response.data]
+
+          if (page >= response.totalPages || response.data.length === 0) {
+            hasMore = false
+          } else {
+            page++
+          }
+        }
+
+        // Verificar se há ausência que sobrepõe o período da escala
+        for (const absence of allAbsences) {
+          const absenceStart = normalizeDate(absence.startDate)
+          const absenceEnd = normalizeDate(absence.endDate)
+
+          // Verificar sobreposição: ausência começa antes ou no fim da escala E termina depois ou no início da escala
+          if (absenceStart.getTime() <= scheduleEnd.getTime() && absenceEnd.getTime() >= scheduleStart.getTime()) {
+            isAbsent = true
+            absenceInfo = absence
+            break
+          }
+        }
+      }
+
+      setPersonValidation({
+        isAlreadyScheduled,
+        isAbsent,
+        absenceInfo,
+      })
+    } catch (error) {
+      console.error('Erro ao verificar disponibilidade da pessoa:', error)
+      // Em caso de erro, não bloquear, apenas não mostrar validação
+      setPersonValidation(null)
+    } finally {
+      setCheckingPerson(false)
+    }
+  }
+
   const handleUpdateMemberResponsibility = async (memberId: string, responsibilityId: string, responsibilityName: string) => {
-    if (!scheduledAreaId) return
+    if (!scheduledAreaId || !schedule) return
+
+    // Optimistic Update
+    const originalSchedule = { ...schedule }
+    const updatedMembers = schedule.members.map(m =>
+      m.id === memberId
+        ? { ...m, responsibilityId, responsibility: { id: responsibilityId, name: responsibilityName, active: true, description: '', imageUrl: null } } // Mocking responsibility object
+        : m
+    )
+    setSchedule({ ...schedule, members: updatedMembers })
 
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { responsibilityId })
-      await loadScheduleDetails()
-      await loadScheduleLogs()
+      await loadScheduleDetails(false)
+      await loadScheduleLogs(false)
       onUpdate?.()
       toast.showSuccess('Função do membro atualizada com sucesso')
     } catch (error: any) {
+      setSchedule(originalSchedule)
       toast.showError('Erro ao atualizar membro: ' + (error.message || 'Erro desconhecido'))
     }
   }
 
   const handleUpdateMemberStatus = async (memberId: string, status: 'pending' | 'accepted' | 'rejected') => {
-    if (!scheduledAreaId) return
+    if (!scheduledAreaId || !schedule) return
+
+    // Optimistic Update
+    const originalSchedule = { ...schedule }
+    const updatedMembers = schedule.members.map(m =>
+      m.id === memberId ? { ...m, status } : m
+    )
+    setSchedule({ ...schedule, members: updatedMembers })
 
     try {
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { status })
-      await loadScheduleDetails()
-      await loadScheduleLogs()
+      await loadScheduleDetails(false)
+      await loadScheduleLogs(false)
       onUpdate?.()
       toast.showSuccess('Status do membro atualizado com sucesso')
     } catch (error: any) {
+      setSchedule(originalSchedule)
       toast.showError('Erro ao atualizar status do membro: ' + (error.message || 'Erro desconhecido'))
     }
   }
@@ -212,7 +406,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
       await scheduleMemberService.updateMember(scheduledAreaId, scheduleId, memberId, { present })
       // Reload silently to ensure data consistency
       await loadScheduleDetails(false)
-      await loadScheduleLogs()
+      await loadScheduleLogs(false)
       onUpdate?.()
       const message = present === true ? 'Presença marcada' : 'Presença removida'
       toast.showSuccess(message)
@@ -472,6 +666,14 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                 <h4 className="info-card-title">
                   <i className="fa-solid fa-users"></i> Equipe Escalada ({schedule.members.length})
                 </h4>
+                <button
+                  type="button"
+                  className="btn-add-member"
+                  onClick={handleOpenAddMemberModal}
+                  title="Adicionar participante"
+                >
+                  <i className="fa-solid fa-plus"></i> Adicionar Participante
+                </button>
               </div>
 
               {schedule.members.length === 0 ? (
@@ -481,131 +683,137 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                 </div>
               ) : (
                 <div className="members-grid">
-                  {schedule.members.map((member) => (
-                    <div key={member.id} className="member-card">
-                      <div className="member-photo-wrapper">
-                        {member.person?.photoUrl ? (
-                          <img
-                            src={addCacheBusting(member.person.photoUrl)}
-                            alt={member.person.fullName}
-                            className="member-card-photo"
-                          />
-                        ) : (
-                          <div className="member-card-placeholder">
-                            {member.person?.fullName?.charAt(0).toUpperCase() || member.personId.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="member-card-name">{member.person?.fullName || member.personId}</div>
-
-                      {editingMemberId === member.id ? (
-                        <div className="member-edit-mode">
-                          <label className="edit-label">Função:</label>
-                          <select
-                            value={member.responsibilityId}
-                            onChange={(e) => {
-                              const selected = responsibilities.find(r => r.id === e.target.value)
-                              if (selected) {
-                                handleUpdateMemberResponsibility(member.id, selected.id, selected.name)
-                              }
-                            }}
-                            className="member-edit-select"
-                          >
-                            {responsibilities.map((resp) => (
-                              <option key={resp.id} value={resp.id}>
-                                {resp.name}
-                              </option>
-                            ))}
-                          </select>
-
-                          <label className="edit-label">Status:</label>
-                          <select
-                            value={member.status}
-                            onChange={(e) => handleUpdateMemberStatus(member.id, e.target.value as any)}
-                            className="member-edit-select"
-                          >
-                            <option value="pending">Pendente</option>
-                            <option value="accepted">Confirmado</option>
-                            <option value="rejected">Rejeitado</option>
-                          </select>
-
-                          <button
-                            className="btn-secondary btn-sm"
-                            style={{ marginTop: '5px', width: '100%' }}
-                            onClick={() => setEditingMemberId(null)}
-                          >
-                            Concluir
-                          </button>
+                  {[...schedule.members]
+                    .sort((a, b) => (a.person?.fullName || "").localeCompare(b.person?.fullName || ""))
+                    .map((member) => (
+                      <div key={member.id} className="member-card">
+                        <div className="member-photo-wrapper">
+                          {member.person?.photoUrl ? (
+                            <img
+                              src={addCacheBusting(member.person.photoUrl)}
+                              alt={member.person.fullName}
+                              className="member-card-photo"
+                            />
+                          ) : (
+                            <div className="member-card-placeholder">
+                              {member.person?.fullName?.charAt(0).toUpperCase() || member.personId.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <>
-                          <div className="member-card-role">
-                            {member.responsibility?.imageUrl && (
-                              <img
-                                src={addCacheBusting(member.responsibility.imageUrl)}
-                                alt={member.responsibility.name}
-                                style={{ width: '16px', height: '16px', borderRadius: '4px' }}
-                              />
-                            )}
-                            <span>{member.responsibility?.name || 'Sem função'}</span>
-                          </div>
 
-                          <div className={`member-status-badge status-${member.status}`}>
-                            {member.status === 'accepted' && <i className="fa-solid fa-check"></i>}
-                            {member.status === 'rejected' && <i className="fa-solid fa-xmark"></i>}
-                            {member.status === 'pending' && <i className="fa-solid fa-clock"></i>}
-                            {getStatusLabel(member.status)}
-                          </div>
+                        <div className="member-card-name">{member.person?.fullName || member.personId}</div>
 
-                          <div className="member-presence-section">
-                            <label className={`presence-label ${member.present === true ? 'presence-checked' : ''}`}>
-                              <input
-                                type="checkbox"
-                                checked={member.present === true}
-                                onChange={(e) => handleUpdateMemberPresence(member.id, e.target.checked ? true : null)}
-                                className="presence-checkbox"
-                              />
-                              <span className="presence-text">
-                                {member.present === true ? (
-                                  <>
-                                    <i className="fa-solid fa-check-circle"></i> Presente
-                                  </>
-                                ) : (
-                                  <>
-                                    <i className="fa-regular fa-circle"></i> Marcar presença
-                                  </>
-                                )}
-                              </span>
-                            </label>
-                          </div>
-                        </>
-                      )}
+                        {editingMemberId === member.id ? (
+                          <div className="member-edit-mode">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <label className="edit-label">Editar Membro</label>
+                              <button
+                                className="btn-card-action"
+                                style={{ width: '24px', height: '24px', fontSize: '0.8rem' }}
+                                onClick={() => setEditingMemberId(null)}
+                                title="Fechar edição"
+                              >
+                                <i className="fa-solid fa-xmark"></i>
+                              </button>
+                            </div>
 
-                      <div className="member-card-actions">
-                        {editingMemberId !== member.id && (
+                            <label className="edit-label">Função:</label>
+                            <select
+                              value={member.responsibilityId}
+                              onChange={(e) => {
+                                const selected = responsibilities.find(r => r.id === e.target.value)
+                                if (selected) {
+                                  handleUpdateMemberResponsibility(member.id, selected.id, selected.name)
+                                }
+                              }}
+                              className="member-edit-select"
+                            >
+                              {responsibilities.map((resp) => (
+                                <option key={resp.id} value={resp.id}>
+                                  {resp.name}
+                                </option>
+                              ))}
+                            </select>
+
+                            <label className="edit-label" style={{ marginTop: '6px' }}>Status:</label>
+                            <select
+                              value={member.status}
+                              onChange={(e) => handleUpdateMemberStatus(member.id, e.target.value as any)}
+                              className="member-edit-select"
+                            >
+                              <option value="pending">Pendente</option>
+                              <option value="accepted">Confirmado</option>
+                              <option value="rejected">Rejeitado</option>
+                            </select>
+                          </div>
+                        ) : (
                           <>
-                            <button
-                              type="button"
-                              className="btn-card-action"
-                              onClick={() => setEditingMemberId(member.id)}
-                              title="Editar função"
-                            >
-                              <i className="fa-solid fa-pen"></i>
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-card-action danger"
-                              onClick={() => setShowDeleteMemberModal(member.id)}
-                              title="Remover membro"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
+                            <div className="member-card-role">
+                              {member.responsibility?.imageUrl && (
+                                <img
+                                  src={addCacheBusting(member.responsibility.imageUrl)}
+                                  alt={member.responsibility.name}
+                                  style={{ width: '16px', height: '16px', borderRadius: '4px' }}
+                                />
+                              )}
+                              <span>{member.responsibility?.name || 'Sem função'}</span>
+                            </div>
+
+                            <div className={`member-status-badge status-${member.status}`}>
+                              {member.status === 'accepted' && <i className="fa-solid fa-check"></i>}
+                              {member.status === 'rejected' && <i className="fa-solid fa-xmark"></i>}
+                              {member.status === 'pending' && <i className="fa-solid fa-clock"></i>}
+                              {getStatusLabel(member.status)}
+                            </div>
+
+                            <div className="member-presence-section">
+                              <label className={`presence-label ${member.present === true ? 'presence-checked' : ''}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={member.present === true}
+                                  onChange={(e) => handleUpdateMemberPresence(member.id, e.target.checked ? true : null)}
+                                  className="presence-checkbox"
+                                />
+                                <span className="presence-text">
+                                  {member.present === true ? (
+                                    <>
+                                      <i className="fa-solid fa-check-circle"></i> Presente
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="fa-regular fa-circle"></i> Marcar presença
+                                    </>
+                                  )}
+                                </span>
+                              </label>
+                            </div>
                           </>
                         )}
+
+                        <div className="member-card-actions">
+                          {editingMemberId !== member.id && (
+                            <>
+                              <button
+                                type="button"
+                                className="btn-card-action"
+                                onClick={() => setEditingMemberId(member.id)}
+                                title="Editar função"
+                              >
+                                <i className="fa-solid fa-pen"></i>
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-card-action danger"
+                                onClick={() => setShowDeleteMemberModal(member.id)}
+                                title="Remover membro"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>
@@ -684,7 +892,6 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
 
                     <div className="comment-body">
                       <div className="comment-header">
-                        <span className="comment-author-name">{comment.authorName}</span>
                         <span className="comment-timestamp">{formatDateTime(comment.createdAt)}</span>
                       </div>
 
@@ -726,9 +933,15 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                   type="button"
                   className="comment-submit-btn"
                   onClick={handleAddComment}
-                  disabled={!newComment.trim()}
+                  disabled={!newComment.trim() || sendingComment}
                 >
-                  Enviar Comentário
+                  {sendingComment ? (
+                    <>
+                      <i className="fa-solid fa-circle-notch fa-spin"></i> Enviando...
+                    </>
+                  ) : (
+                    'Enviar Comentário'
+                  )}
                 </button>
                 <div style={{ clear: 'both' }}></div>
               </div>
@@ -759,6 +972,150 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
         onConfirm={handleRemoveMember}
         onCancel={() => setShowDeleteMemberModal(null)}
       />
+
+      {showAddMemberModal && (
+        <Modal title="Adicionar Participante" onClose={() => setShowAddMemberModal(false)}>
+          <div className="add-member-modal-content">
+            {loadingPersons ? (
+              <div className="loading-container" style={{ padding: '20px', textAlign: 'center' }}>
+                <i className="fa-solid fa-spinner fa-spin"></i>
+                <span style={{ marginLeft: '10px' }}>Carregando pessoas disponíveis...</span>
+              </div>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Pessoa:</label>
+                  {availablePersons.length === 0 ? (
+                    <div className="empty-state-message">
+                      <i className="fa-solid fa-info-circle"></i>
+                      <p>Não há pessoas disponíveis para adicionar. Todas as pessoas da área já estão na escala.</p>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedPersonId}
+                      onChange={(e) => {
+                        const newPersonId = e.target.value
+                        setSelectedPersonId(newPersonId)
+                        setPersonValidation(null)
+                        
+                        // Selecionar automaticamente a primeira responsabilidade da pessoa, se houver
+                        if (newPersonId) {
+                          const selectedPerson = availablePersons.find(p => p.personId === newPersonId)
+                          if (selectedPerson && selectedPerson.responsibilities.length > 0) {
+                            setSelectedResponsibilityId(selectedPerson.responsibilities[0].id)
+                          } else if (responsibilities.length > 0) {
+                            setSelectedResponsibilityId(responsibilities[0].id)
+                          }
+                          
+                          // Verificar disponibilidade da pessoa
+                          checkPersonAvailability(newPersonId)
+                        } else {
+                          setSelectedResponsibilityId('')
+                        }
+                      }}
+                      className="form-select"
+                      disabled={checkingPerson}
+                    >
+                      <option value="">Selecione uma pessoa</option>
+                      {availablePersons.map((person) => (
+                        <option key={person.personId} value={person.personId}>
+                          {person.person?.fullName || person.personId}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  
+                  {checkingPerson && (
+                    <div className="validation-loading">
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      <span>Verificando disponibilidade...</span>
+                    </div>
+                  )}
+                  
+                  {personValidation && !checkingPerson && (personValidation.isAlreadyScheduled || personValidation.isAbsent) && (
+                    <div className="validation-message validation-error">
+                      {personValidation.isAlreadyScheduled ? (
+                        <>
+                          <i className="fa-solid fa-exclamation-triangle"></i>
+                          <span>Esta pessoa já está escalada nesta escala.</span>
+                        </>
+                      ) : personValidation.isAbsent && personValidation.absenceInfo ? (
+                        <>
+                          <i className="fa-solid fa-calendar-xmark"></i>
+                          <span>
+                            Esta pessoa está ausente no período da escala ({new Date(personValidation.absenceInfo.startDate).toLocaleDateString('pt-BR')} até {new Date(personValidation.absenceInfo.endDate).toLocaleDateString('pt-BR')}).
+                            {personValidation.absenceInfo.absenceType && ` Tipo: ${personValidation.absenceInfo.absenceType.name}`}
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+
+                {selectedPersonId && (
+                  <div className="form-group">
+                    <label className="form-label">Função:</label>
+                    <select
+                      value={selectedResponsibilityId}
+                      onChange={(e) => setSelectedResponsibilityId(e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="">Selecione uma função</option>
+                      {(() => {
+                        const selectedPerson = availablePersons.find(p => p.personId === selectedPersonId)
+                        const availableResponsibilities = selectedPerson?.responsibilities || []
+                        
+                        // Se a pessoa tem responsabilidades específicas, mostrar apenas essas
+                        if (availableResponsibilities.length > 0) {
+                          return availableResponsibilities.map((resp) => (
+                            <option key={resp.id} value={resp.id}>
+                              {resp.name}
+                            </option>
+                          ))
+                        }
+                        
+                        // Caso contrário, mostrar todas as responsabilidades disponíveis
+                        return responsibilities.map((resp) => (
+                          <option key={resp.id} value={resp.id}>
+                            {resp.name}
+                          </option>
+                        ))
+                      })()}
+                    </select>
+                  </div>
+                )}
+
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowAddMemberModal(false)}
+                    disabled={addingMember}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={handleAddMember}
+                    disabled={!selectedPersonId || !selectedResponsibilityId || addingMember || checkingPerson || (personValidation && (personValidation.isAlreadyScheduled || personValidation.isAbsent))}
+                  >
+                    {addingMember ? (
+                      <>
+                        <i className="fa-solid fa-circle-notch fa-spin"></i> Adicionando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-check"></i> Adicionar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
     </>
   )
 }
