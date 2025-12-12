@@ -8001,31 +8001,31 @@
       "PersonInScheduleDto": {
         "type": "object",
         "properties": {
-          "nome": {
+          "name": {
             "type": "string",
-            "description": "Nome completo da pessoa",
+            "description": "Full name of the person",
             "example": "João Silva"
           },
           "url": {
             "type": "object",
-            "description": "URL da foto da pessoa",
+            "description": "URL of the person photo",
             "example": "https://example.com/photos/person-123.jpg",
             "nullable": true
           },
-          "função": {
+          "role": {
             "type": "string",
-            "description": "Nome da função/responsabilidade da pessoa",
+            "description": "Name of the role/responsibility of the person",
             "example": "Médico"
           },
           "present": {
             "type": "object",
-            "description": "Indica se a pessoa esteve presente",
+            "description": "Indicates if the person was present",
             "example": true,
             "nullable": true
           },
           "status": {
             "type": "string",
-            "description": "Status do membro na escala",
+            "description": "Status of the member in the schedule",
             "enum": [
               "pending",
               "accepted",
@@ -8035,9 +8035,9 @@
           }
         },
         "required": [
-          "nome",
+          "name",
           "url",
-          "função",
+          "role",
           "present",
           "status"
         ]
@@ -8063,11 +8063,24 @@
             "example": "2024-01-01T17:00:00.000Z",
             "format": "date-time"
           },
-          "pessoas": {
-            "description": "Lista de pessoas na escala",
+          "people": {
+            "description": "List of people in the schedule",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/PersonInScheduleDto"
+            }
+          },
+          "groups": {
+            "description": "List of groups associated with the schedule",
+            "example": [
+              {
+                "id": "uuid",
+                "name": "Grupo A"
+              }
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           }
         },
@@ -8075,7 +8088,8 @@
           "id",
           "startDatetime",
           "endDatetime",
-          "pessoas"
+          "people",
+          "groups"
         ]
       },
       "PaginatedScheduleOptimizedResponseDto": {

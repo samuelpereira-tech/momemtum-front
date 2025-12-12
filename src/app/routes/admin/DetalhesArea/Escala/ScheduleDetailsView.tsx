@@ -542,8 +542,6 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     return null
   }
 
-  console.log(schedule.members)
-
   return (
     <>
       <div className="schedule-details-container">

@@ -47,6 +47,10 @@ export default function EscalaTabPanel() {
   const [filterStartDate, setFilterStartDate] = useState<string>('')
   const [filterEndDate, setFilterEndDate] = useState<string>('')
 
+  // Estados para agrupamento por data
+  const [groupByDate, setGroupByDate] = useState(false)
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+
 
   // Carregar grupos (gerações automáticas)
   const loadGroups = useCallback(async (page: number) => {
@@ -296,6 +300,44 @@ export default function EscalaTabPanel() {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+    })
+  }
+
+  // Função para obter apenas a data (sem hora) de uma string de data
+  const getDateOnly = (dateString: string): string => {
+    const date = new Date(dateString)
+    return date.toISOString().split('T')[0]
+  }
+
+  // Função para agrupar escalas por data
+  const groupSchedulesByDate = (schedules: ScheduleOptimizedResponseDto[]) => {
+    const grouped = new Map<string, ScheduleOptimizedResponseDto[]>()
+    
+    schedules.forEach(schedule => {
+      const dateKey = getDateOnly(schedule.startDatetime)
+      if (!grouped.has(dateKey)) {
+        grouped.set(dateKey, [])
+      }
+      grouped.get(dateKey)!.push(schedule)
+    })
+    
+    return Array.from(grouped.entries()).map(([date, schedules]) => ({
+      date,
+      schedules,
+      dateFormatted: formatDate(schedules[0].startDatetime)
+    }))
+  }
+
+  // Toggle para expandir/colapsar grupo de data
+  const toggleDateGroup = (dateKey: string) => {
+    setExpandedDates(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(dateKey)) {
+        newSet.delete(dateKey)
+      } else {
+        newSet.add(dateKey)
+      }
+      return newSet
     })
   }
 
@@ -719,6 +761,31 @@ export default function EscalaTabPanel() {
                   )}
                 </div>
 
+                {/* Botão de Agrupamento */}
+                {!optimizedSchedulesLoading && optimizedSchedules.length > 0 && (
+                  <div className="table-group-controls">
+                    <button
+                      type="button"
+                      className={`btn-secondary btn-sm ${groupByDate ? 'active' : ''}`}
+                      onClick={() => {
+                        setGroupByDate(!groupByDate)
+                        if (!groupByDate) {
+                          // Ao ativar agrupamento, expandir todos os grupos
+                          const grouped = groupSchedulesByDate(optimizedSchedules)
+                          setExpandedDates(new Set(grouped.map(g => g.date)))
+                        } else {
+                          // Ao desativar, limpar estados expandidos
+                          setExpandedDates(new Set())
+                        }
+                      }}
+                      title={groupByDate ? 'Desagrupar por data' : 'Agrupar por data'}
+                    >
+                      <i className={`fa-solid ${groupByDate ? 'fa-ungroup' : 'fa-layer-group'}`}></i>
+                      {groupByDate ? 'Desagrupar por Data' : 'Agrupar por Data'}
+                    </button>
+                  </div>
+                )}
+
                 {optimizedSchedulesLoading ? (
                   <div className="loading-container">
                     <i className="fa-solid fa-spinner fa-spin"></i>
@@ -731,94 +798,247 @@ export default function EscalaTabPanel() {
                   </div>
                 ) : (
                   <>
-                    <div className="schedules-table-container">
-                    <table className="schedules-table">
-                      <thead>
-                        <tr>
-                          <th>Data Início</th>
-                          <th>Data Fim</th>
-                          <th>Participantes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {optimizedSchedules.map((schedule) => (
-                          <tr
-                            key={schedule.id}
-                            className="schedule-table-row"
-                            onClick={(e) => handleTableRowClick(schedule, e)}
-                          >
-                            <td 
-                              className="schedule-table-date"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleTableRowClick(schedule, e)
-                              }}
-                            >
-                              {formatDateTime(schedule.startDatetime)}
-                            </td>
-                            <td 
-                              className="schedule-table-date"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleTableRowClick(schedule, e)
-                              }}
-                            >
-                              {formatDateTime(schedule.endDatetime)}
-                            </td>
-                            <td className="schedule-table-participants">
-                              <div className="table-participants-avatars">
-                                {schedule.pessoas.map((pessoa, index) => {
-                                  const isRejected = pessoa.status === 'rejected'
-                                  
-                                  return (
-                                    <div
-                                      key={index}
-                                      className="table-participant-avatar-wrapper"
-                                      style={{ zIndex: schedule.pessoas.length - index }}
-                                    >
-                                      <div
-                                        className="table-participant-avatar"
-                                        title={`${pessoa.nome}${pessoa.função ? ` - ${pessoa.função}` : ''}`}
-                                      >
-                                        <div className="table-participant-avatar-content">
-                                          {pessoa.url ? (
-                                            <img
-                                              src={addCacheBusting(pessoa.url)}
-                                              alt={pessoa.nome}
-                                              className="table-participant-avatar-image"
-                                              loading="lazy"
-                                              decoding="async"
-                                            />
-                                          ) : (
-                                            <div className="table-participant-avatar-placeholder">
-                                              {pessoa.nome && pessoa.nome.length > 0
-                                                ? pessoa.nome.charAt(0).toUpperCase()
-                                                : '?'}
-                                            </div>
-                                          )}
-                                        </div>
-                                        {isRejected && (
-                                          <div className="table-participant-alert" title="Participante rejeitado">
-                                            <i className="fa-solid fa-exclamation-triangle"></i>
-                                          </div>
-                                        )}
-                                        <div className="table-participant-tooltip">
-                                          <div className="tooltip-name">{pessoa.nome}</div>
-                                          {pessoa.função && (
-                                            <div className="tooltip-role">{pessoa.função}</div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
+                    {groupByDate ? (
+                      // Visualização agrupada por data
+                      <div className="schedules-table-container">
+                        {groupSchedulesByDate(optimizedSchedules).map((dateGroup) => {
+                          const isExpanded = expandedDates.has(dateGroup.date)
+                          const schedulesCount = dateGroup.schedules.length
+                          
+                          return (
+                            <div key={dateGroup.date} className="date-group-container">
+                              <div 
+                                className="date-group-header"
+                                onClick={() => toggleDateGroup(dateGroup.date)}
+                              >
+                                <div className="date-group-title">
+                                  <i className={`fa-solid fa-chevron-${isExpanded ? 'down' : 'right'}`}></i>
+                                  <span className="date-group-date">{dateGroup.dateFormatted}</span>
+                                  <span className="date-group-count">
+                                    {schedulesCount} {schedulesCount === 1 ? 'escala' : 'escalas'}
+                                  </span>
+                                </div>
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                              {isExpanded && (
+                                <table className="schedules-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Horário</th>
+                                      <th>Grupos</th>
+                                      <th>Participantes</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {dateGroup.schedules.map((schedule) => {
+                                      const startTime = new Date(schedule.startDatetime).toLocaleTimeString('pt-BR', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })
+                                      const endTime = new Date(schedule.endDatetime).toLocaleTimeString('pt-BR', {
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })
+                                      
+                                      return (
+                                        <tr
+                                          key={schedule.id}
+                                          className="schedule-table-row"
+                                          onClick={(e) => handleTableRowClick(schedule, e)}
+                                        >
+                                          <td 
+                                            className="schedule-table-date"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleTableRowClick(schedule, e)
+                                            }}
+                                          >
+                                            {startTime} - {endTime}
+                                          </td>
+                                          <td className="schedule-table-groups">
+                                            {schedule.groups && schedule.groups.length > 0 ? (
+                                              <div className="table-groups-list">
+                                                {schedule.groups.map((group, index) => {
+                                                  const groupName = typeof group === 'string' ? group : group.name
+                                                  const groupId = typeof group === 'string' ? index.toString() : group.id
+                                                  return (
+                                                    <span key={groupId} className="table-group-badge">
+                                                      {groupName}
+                                                    </span>
+                                                  )
+                                                })}
+                                              </div>
+                                            ) : (
+                                              <span className="table-group-empty">-</span>
+                                            )}
+                                          </td>
+                                          <td className="schedule-table-participants">
+                                            <div className="table-participants-avatars">
+                                              {schedule.people.map((person, index) => {
+                                                const isRejected = person.status === 'rejected'
+                                                
+                                                return (
+                                                  <div
+                                                    key={index}
+                                                    className="table-participant-avatar-wrapper"
+                                                    style={{ zIndex: schedule.people.length - index }}
+                                                  >
+                                                    <div
+                                                      className="table-participant-avatar"
+                                                      title={`${person.name}${person.role ? ` - ${person.role}` : ''}`}
+                                                    >
+                                                      <div className="table-participant-avatar-content">
+                                                        {person.url ? (
+                                                          <img
+                                                            src={addCacheBusting(person.url)}
+                                                            alt={person.name}
+                                                            className="table-participant-avatar-image"
+                                                            loading="lazy"
+                                                            decoding="async"
+                                                          />
+                                                        ) : (
+                                                          <div className="table-participant-avatar-placeholder">
+                                                            {person.name && person.name.length > 0
+                                                              ? person.name.charAt(0).toUpperCase()
+                                                              : '?'}
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                      {isRejected && (
+                                                        <div className="table-participant-alert" title="Participante rejeitado">
+                                                          <i className="fa-solid fa-exclamation-triangle"></i>
+                                                        </div>
+                                                      )}
+                                                      <div className="table-participant-tooltip">
+                                                        <div className="tooltip-name">{person.name}</div>
+                                                        {person.role && (
+                                                          <div className="tooltip-role">{person.role}</div>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                )
+                                              })}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      // Visualização normal (não agrupada)
+                      <div className="schedules-table-container">
+                        <table className="schedules-table">
+                          <thead>
+                            <tr>
+                              <th>Data Início</th>
+                              <th>Data Fim</th>
+                              <th>Grupos</th>
+                              <th>Participantes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {optimizedSchedules.map((schedule) => (
+                              <tr
+                                key={schedule.id}
+                                className="schedule-table-row"
+                                onClick={(e) => handleTableRowClick(schedule, e)}
+                              >
+                                <td 
+                                  className="schedule-table-date"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleTableRowClick(schedule, e)
+                                  }}
+                                >
+                                  {formatDateTime(schedule.startDatetime)}
+                                </td>
+                                <td 
+                                  className="schedule-table-date"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleTableRowClick(schedule, e)
+                                  }}
+                                >
+                                  {formatDateTime(schedule.endDatetime)}
+                                </td>
+                                <td className="schedule-table-groups">
+                                  {schedule.groups && schedule.groups.length > 0 ? (
+                                    <div className="table-groups-list">
+                                      {schedule.groups.map((group, index) => {
+                                        const groupName = typeof group === 'string' ? group : group.name
+                                        const groupId = typeof group === 'string' ? index.toString() : group.id
+                                        return (
+                                          <span key={groupId} className="table-group-badge">
+                                            {groupName}
+                                          </span>
+                                        )
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <span className="table-group-empty">-</span>
+                                  )}
+                                </td>
+                                <td className="schedule-table-participants">
+                                  <div className="table-participants-avatars">
+                                    {schedule.people.map((person, index) => {
+                                      const isRejected = person.status === 'rejected'
+                                      
+                                      return (
+                                        <div
+                                          key={index}
+                                          className="table-participant-avatar-wrapper"
+                                          style={{ zIndex: schedule.people.length - index }}
+                                        >
+                                          <div
+                                            className="table-participant-avatar"
+                                            title={`${person.name}${person.role ? ` - ${person.role}` : ''}`}
+                                          >
+                                            <div className="table-participant-avatar-content">
+                                              {person.url ? (
+                                                <img
+                                                  src={addCacheBusting(person.url)}
+                                                  alt={person.name}
+                                                  className="table-participant-avatar-image"
+                                                  loading="lazy"
+                                                  decoding="async"
+                                                />
+                                              ) : (
+                                                <div className="table-participant-avatar-placeholder">
+                                                  {person.name && person.name.length > 0
+                                                    ? person.name.charAt(0).toUpperCase()
+                                                    : '?'}
+                                                </div>
+                                              )}
+                                            </div>
+                                            {isRejected && (
+                                              <div className="table-participant-alert" title="Participante rejeitado">
+                                                <i className="fa-solid fa-exclamation-triangle"></i>
+                                              </div>
+                                            )}
+                                            <div className="table-participant-tooltip">
+                                              <div className="tooltip-name">{person.name}</div>
+                                              {person.role && (
+                                                <div className="tooltip-role">{person.role}</div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
 
                   {optimizedSchedulesTotalPages > 1 && (
                     <div className="pagination">

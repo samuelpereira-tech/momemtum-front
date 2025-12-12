@@ -873,12 +873,19 @@
   display: flex;
   align-items: flex-end;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   padding: 20px;
   background: var(--white);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   flex-wrap: wrap;
+}
+
+.table-group-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+  padding: 0 4px;
 }
 
 .filter-group {
@@ -992,6 +999,105 @@
 .schedule-table-date:hover {
   color: var(--color-purple);
   background: rgba(173, 130, 217, 0.05);
+}
+
+.schedule-table-groups {
+  padding: 12px 20px;
+}
+
+.table-groups-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.table-group-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(121, 217, 199, 0.1);
+  border: 1px solid rgba(121, 217, 199, 0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #5abcb0;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.table-group-badge:hover {
+  background: rgba(121, 217, 199, 0.15);
+  border-color: rgba(121, 217, 199, 0.3);
+  transform: translateY(-1px);
+}
+
+.table-group-empty {
+  color: var(--text-light);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Date Group Styles */
+.date-group-container {
+  margin-bottom: 24px;
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.date-group-header {
+  background: linear-gradient(135deg, rgba(173, 130, 217, 0.1), rgba(121, 217, 199, 0.1));
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid rgba(173, 130, 217, 0.2);
+}
+
+.date-group-header:hover {
+  background: linear-gradient(135deg, rgba(173, 130, 217, 0.15), rgba(121, 217, 199, 0.15));
+}
+
+.date-group-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.date-group-title i {
+  color: var(--color-purple);
+  font-size: 0.9rem;
+  transition: transform 0.2s ease;
+}
+
+.date-group-date {
+  font-size: 1.1rem;
+  color: var(--text-color);
+  font-weight: 700;
+}
+
+.date-group-count {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  background: rgba(173, 130, 217, 0.15);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.date-group-container table {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.date-group-container table thead {
+  background: #f8f9fa;
 }
 
 .schedule-table-participants {

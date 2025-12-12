@@ -63,13 +63,6 @@ export default function DetalhesArea() {
       return <EscalaTabela />
     }
     
-    // Rota padrão /escala - redirecionar para tabela
-    if (path.endsWith('/escala')) {
-      // Redirecionar para tabela
-      navigate(`/Dashboard/escala/areas/${id}/escala/tabela`, { replace: true })
-      return null
-    }
-    
     // Fallback para compatibilidade
     return <EscalaTabPanel />
   }
@@ -170,6 +163,10 @@ export default function DetalhesArea() {
     // Redirecionar para a rota correta se acessar a rota base sem especificar a aba
     if (id && location.pathname === `/Dashboard/escala/areas/${id}`) {
       navigate(`/Dashboard/escala/areas/${id}/pessoas`, { replace: true })
+    }
+    // Redirecionar /escala para /escala/tabela
+    if (id && location.pathname === `/Dashboard/escala/areas/${id}/escala`) {
+      navigate(`/Dashboard/escala/areas/${id}/escala/tabela`, { replace: true })
     }
   }, [location.pathname, id, navigate])
 

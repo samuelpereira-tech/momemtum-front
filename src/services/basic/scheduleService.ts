@@ -165,11 +165,17 @@ export interface PaginatedScheduleResponseDto {
 
 // Interface para pessoa na escala otimizada (estrutura da API)
 export interface PersonInScheduleDto {
-  nome: string
+  name: string
   url: string | null
-  função: string
+  role: string
   present: boolean | null
   status: 'pending' | 'accepted' | 'rejected'
+}
+
+// Interface para grupo na escala otimizada
+export interface GroupInScheduleDto {
+  id: string
+  name: string
 }
 
 // Interface para escala otimizada
@@ -177,7 +183,8 @@ export interface ScheduleOptimizedResponseDto {
   id: string
   startDatetime: string
   endDatetime: string
-  pessoas: PersonInScheduleDto[]
+  people: PersonInScheduleDto[]
+  groups: GroupInScheduleDto[] | string[]
 }
 
 // Interface para resposta paginada de escalas otimizadas
