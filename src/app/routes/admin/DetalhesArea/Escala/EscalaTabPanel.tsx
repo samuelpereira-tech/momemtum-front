@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './EscalaTabPanel.css'
@@ -222,38 +222,6 @@ export default function EscalaTabPanel() {
     }
   }, [scheduledAreaId, schedulesLimit])
 
-  // Carregar escalas otimizadas (para modo tabela)
-  const loadOptimizedSchedules = useCallback(async (page: number, groupId?: string) => {
-    if (!scheduledAreaId) return
-
-    setOptimizedSchedulesLoading(true)
-    try {
-      const filters: any = {
-        page,
-        limit: schedulesLimit,
-      }
-      
-      if (groupId) {
-        filters.scheduleGenerationId = groupId
-      }
-      
-      if (filterStartDate) {
-        filters.startDate = filterStartDate
-      }
-      
-      if (filterEndDate) {
-        filters.endDate = filterEndDate
-      }
-      
-      const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
-      setOptimizedSchedules(response.data)
-      setOptimizedSchedulesTotalPages(response.meta.totalPages)
-    } catch (error) {
-      console.error('Erro ao carregar escalas otimizadas:', error)
-    } finally {
-      setOptimizedSchedulesLoading(false)
-    }
-  }, [scheduledAreaId, schedulesLimit, filterStartDate, filterEndDate])
   
   // Handlers
   const handleScheduleClick = (scheduleId: string) => {
@@ -289,26 +257,102 @@ export default function EscalaTabPanel() {
     }
   }, [scheduledAreaId, viewMode, loadGroups])
 
-  // Carregar escalas quando mudar modo ou grupo
-  useEffect(() => {
-    if (scheduledAreaId && (viewMode === 'all-schedules' || viewMode === 'group-schedules')) {
-      if (displayMode === 'table') {
-        loadOptimizedSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
-        setOptimizedSchedulesPage(1)
-      } else {
-        loadSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
-        setSchedulesPage(1)
+  // Ref para evitar execuções duplicadas do useEffect
+  const isLoadingRef = useRef(false)
+  const lastLoadParamsRef = useRef<string>('')
+
+  // Função auxiliar para carregar escalas otimizadas (usada no useEffect e na paginação)
+  const loadOptimizedSchedulesData = useCallback(async (page: number, groupId?: string) => {
+    if (!scheduledAreaId) return
+
+    setOptimizedSchedulesLoading(true)
+    try {
+      const filters: any = {
+        page,
+        limit: schedulesLimit,
       }
+      
+      if (groupId) {
+        filters.scheduleGenerationId = groupId
+      }
+      
+      if (filterStartDate) {
+        filters.startDate = filterStartDate
+      }
+      
+      if (filterEndDate) {
+        filters.endDate = filterEndDate
+      }
+      
+      const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
+      setOptimizedSchedules(response.data)
+      setOptimizedSchedulesTotalPages(response.meta.totalPages)
+    } catch (error) {
+      console.error('Erro ao carregar escalas otimizadas:', error)
+    } finally {
+      setOptimizedSchedulesLoading(false)
     }
-  }, [scheduledAreaId, viewMode, selectedGroupId, displayMode, loadSchedules, loadOptimizedSchedules])
-  
-  // Recarregar quando filtros de data mudarem
+  }, [scheduledAreaId, schedulesLimit, filterStartDate, filterEndDate])
+
+  // Carregar escalas quando mudar modo, grupo, displayMode ou filtros (consolidado em um único useEffect)
   useEffect(() => {
-    if (scheduledAreaId && displayMode === 'table' && (viewMode === 'all-schedules' || viewMode === 'group-schedules')) {
-      loadOptimizedSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
-      setOptimizedSchedulesPage(1)
+    if (!scheduledAreaId || (viewMode !== 'all-schedules' && viewMode !== 'group-schedules')) {
+      return
     }
-  }, [filterStartDate, filterEndDate, scheduledAreaId, displayMode, viewMode, selectedGroupId, loadOptimizedSchedules])
+
+    // Criar uma chave única para os parâmetros de carregamento
+    const loadKey = `${scheduledAreaId}-${viewMode}-${selectedGroupId}-${displayMode}-${filterStartDate}-${filterEndDate}-${schedulesLimit}`
+
+    // Evitar execuções duplicadas
+    if (isLoadingRef.current || lastLoadParamsRef.current === loadKey) {
+      return
+    }
+
+    isLoadingRef.current = true
+    lastLoadParamsRef.current = loadKey
+
+    if (displayMode === 'table') {
+      // Carregar escalas otimizadas diretamente no useEffect para evitar dependências circulares
+      const loadData = async () => {
+        setOptimizedSchedulesLoading(true)
+        try {
+          const filters: any = {
+            page: 1,
+            limit: schedulesLimit,
+          }
+          
+          const groupId = viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined
+          if (groupId) {
+            filters.scheduleGenerationId = groupId
+          }
+          
+          if (filterStartDate) {
+            filters.startDate = filterStartDate
+          }
+          
+          if (filterEndDate) {
+            filters.endDate = filterEndDate
+          }
+          
+          const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
+          setOptimizedSchedules(response.data)
+          setOptimizedSchedulesTotalPages(response.meta.totalPages)
+          setOptimizedSchedulesPage(1)
+        } catch (error) {
+          console.error('Erro ao carregar escalas otimizadas:', error)
+        } finally {
+          setOptimizedSchedulesLoading(false)
+          isLoadingRef.current = false
+        }
+      }
+      loadData()
+    } else {
+      // Carregar escalas normais
+      loadSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+      setSchedulesPage(1)
+      isLoadingRef.current = false
+    }
+  }, [scheduledAreaId, viewMode, selectedGroupId, displayMode, filterStartDate, filterEndDate, schedulesLimit, loadSchedules])
 
   // Handlers
   const handleGroupClick = (group: ScheduleGroupDto) => {
@@ -898,7 +942,7 @@ export default function EscalaTabPanel() {
                           const newPage = optimizedSchedulesPage - 1
                           if (newPage >= 1) {
                             setOptimizedSchedulesPage(newPage)
-                            loadOptimizedSchedules(newPage, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+                            loadOptimizedSchedulesData(newPage, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
                           }
                         }}
                         disabled={optimizedSchedulesPage === 1 || optimizedSchedulesLoading}
@@ -915,7 +959,7 @@ export default function EscalaTabPanel() {
                           const newPage = optimizedSchedulesPage + 1
                           if (newPage <= optimizedSchedulesTotalPages) {
                             setOptimizedSchedulesPage(newPage)
-                            loadOptimizedSchedules(newPage, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+                            loadOptimizedSchedulesData(newPage, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
                           }
                         }}
                         disabled={optimizedSchedulesPage === optimizedSchedulesTotalPages || optimizedSchedulesLoading}
@@ -1130,7 +1174,7 @@ export default function EscalaTabPanel() {
             onUpdate={() => {
               // Recarregar escalas se necessário
               if (displayMode === 'table') {
-                loadOptimizedSchedules(optimizedSchedulesPage, selectedGroupId || undefined)
+                loadOptimizedSchedulesData(optimizedSchedulesPage, selectedGroupId || undefined)
               } else {
                 loadSchedules(schedulesPage, selectedGroupId || undefined)
               }
