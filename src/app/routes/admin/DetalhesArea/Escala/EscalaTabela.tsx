@@ -133,15 +133,19 @@ export default function EscalaTabela() {
   }, [navigate, scheduledAreaId])
 
   // Funções auxiliares
-  const formatDateTime = (dateString: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleString('pt-BR', {
+    return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     })
+  }
+
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const start = formatDate(startDate)
+    const end = formatDate(endDate)
+    return `${start} - ${end}`
   }
 
   return (
@@ -244,8 +248,7 @@ export default function EscalaTabela() {
                 <table className="schedules-table">
                   <thead>
                     <tr>
-                      <th>Data Início</th>
-                      <th>Data Fim</th>
+                      <th>Data</th>
                       <th>Participantes</th>
                     </tr>
                   </thead>
@@ -263,16 +266,7 @@ export default function EscalaTabela() {
                             handleTableRowClick(schedule, e)
                           }}
                         >
-                          {formatDateTime(schedule.startDatetime)}
-                        </td>
-                        <td 
-                          className="schedule-table-date"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleTableRowClick(schedule, e)
-                          }}
-                        >
-                          {formatDateTime(schedule.endDatetime)}
+                          {formatDateRange(schedule.startDatetime, schedule.endDatetime)}
                         </td>
                         <td className="schedule-table-participants">
                           <div className="table-participants-avatars">
