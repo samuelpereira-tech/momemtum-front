@@ -4246,6 +4246,91 @@
         ]
       }
     },
+    "/api/scheduled-areas/{scheduledAreaId}/schedules/optimized": {
+      "get": {
+        "description": "Retrieves a paginated, optimized list of schedules for a scheduled area with people information. Supports filtering by date range. Ordered by start date.",
+        "operationId": "ScheduleController_findAllOptimized",
+        "parameters": [
+          {
+            "name": "scheduledAreaId",
+            "required": true,
+            "in": "path",
+            "description": "Scheduled area unique identifier",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1, default: 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100, default: 10)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Filter by start date (inclusive, format: YYYY-MM-DD or ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "Filter by end date (inclusive, format: YYYY-MM-DD or ISO 8601)",
+            "schema": {
+              "example": "2024-01-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of optimized schedules retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScheduleOptimizedResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List schedules optimized",
+        "tags": [
+          "schedules"
+        ]
+      }
+    },
     "/api/scheduled-areas/{scheduledAreaId}/schedules/{scheduleId}": {
       "get": {
         "description": "Retrieves a specific schedule with all its details including members, assignments, and comments.",
@@ -7906,6 +7991,106 @@
           "meta": {
             "type": "object",
             "description": "Pagination metadata"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PersonInScheduleDto": {
+        "type": "object",
+        "properties": {
+          "nome": {
+            "type": "string",
+            "description": "Nome completo da pessoa",
+            "example": "João Silva"
+          },
+          "url": {
+            "type": "object",
+            "description": "URL da foto da pessoa",
+            "example": "https://example.com/photos/person-123.jpg",
+            "nullable": true
+          },
+          "função": {
+            "type": "string",
+            "description": "Nome da função/responsabilidade da pessoa",
+            "example": "Médico"
+          },
+          "present": {
+            "type": "object",
+            "description": "Indica se a pessoa esteve presente",
+            "example": true,
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "Status do membro na escala",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected"
+            ],
+            "example": "accepted"
+          }
+        },
+        "required": [
+          "nome",
+          "url",
+          "função",
+          "present",
+          "status"
+        ]
+      },
+      "ScheduleOptimizedResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID único da escala",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "format": "uuid"
+          },
+          "startDatetime": {
+            "type": "string",
+            "description": "Data e hora de início da escala",
+            "example": "2024-01-01T08:00:00.000Z",
+            "format": "date-time"
+          },
+          "endDatetime": {
+            "type": "string",
+            "description": "Data e hora de fim da escala",
+            "example": "2024-01-01T17:00:00.000Z",
+            "format": "date-time"
+          },
+          "pessoas": {
+            "description": "Lista de pessoas na escala",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonInScheduleDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "startDatetime",
+          "endDatetime",
+          "pessoas"
+        ]
+      },
+      "PaginatedScheduleOptimizedResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Array de escalas otimizadas",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleOptimizedResponseDto"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "description": "Metadados de paginação"
           }
         },
         "required": [

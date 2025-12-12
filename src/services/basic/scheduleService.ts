@@ -163,6 +163,34 @@ export interface PaginatedScheduleResponseDto {
   }
 }
 
+// Interface para pessoa na escala otimizada (estrutura da API)
+export interface PersonInScheduleDto {
+  nome: string
+  url: string | null
+  função: string
+  present: boolean | null
+  status: 'pending' | 'accepted' | 'rejected'
+}
+
+// Interface para escala otimizada
+export interface ScheduleOptimizedResponseDto {
+  id: string
+  startDatetime: string
+  endDatetime: string
+  pessoas: PersonInScheduleDto[]
+}
+
+// Interface para resposta paginada de escalas otimizadas
+export interface PaginatedScheduleOptimizedResponseDto {
+  data: ScheduleOptimizedResponseDto[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
 export interface ScheduleFilters {
   page?: number
   limit?: number
@@ -203,6 +231,32 @@ export class ScheduleService {
     const url = `${this.baseEndpoint}/${scheduledAreaId}/schedules${queryString ? `?${queryString}` : ''}`
 
     return apiClient<PaginatedScheduleResponseDto>(url, {
+      method: 'GET',
+    })
+  }
+
+  /**
+   * Lista escalas otimizadas de uma área com participantes incluindo status e responsabilidade
+   */
+  async getSchedulesOptimized(
+    scheduledAreaId: string,
+    filters: ScheduleFilters = {}
+  ): Promise<PaginatedScheduleOptimizedResponseDto> {
+    const params = new URLSearchParams()
+    if (filters.page) params.append('page', filters.page.toString())
+    if (filters.limit) params.append('limit', filters.limit.toString())
+    if (filters.scheduleGenerationId) params.append('scheduleGenerationId', filters.scheduleGenerationId)
+    if (filters.startDate) params.append('startDate', filters.startDate)
+    if (filters.endDate) params.append('endDate', filters.endDate)
+    if (filters.personId) params.append('personId', filters.personId)
+    if (filters.groupId) params.append('groupId', filters.groupId)
+    if (filters.teamId) params.append('teamId', filters.teamId)
+    if (filters.status) params.append('status', filters.status)
+
+    const queryString = params.toString()
+    const url = `${this.baseEndpoint}/${scheduledAreaId}/schedules/optimized${queryString ? `?${queryString}` : ''}`
+
+    return apiClient<PaginatedScheduleOptimizedResponseDto>(url, {
       method: 'GET',
     })
   }

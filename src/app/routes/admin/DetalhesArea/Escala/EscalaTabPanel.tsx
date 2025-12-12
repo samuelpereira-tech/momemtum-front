@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import '../shared/TabPanel.css'
 import './EscalaTabPanel.css'
 import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
-import { scheduleService, type ScheduleResponseDto } from '../../../../../services/basic/scheduleService'
+import { scheduleService, type ScheduleResponseDto, type ScheduleOptimizedResponseDto } from '../../../../../services/basic/scheduleService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
 import ScheduleDetailsView from './ScheduleDetailsView'
 import ScheduleGroupDetailsView from './ScheduleGroupDetailsView'
@@ -62,7 +62,7 @@ export type ScheduleDto = ScheduleResponseDto
 
 export default function EscalaTabPanel() {
   const { id: scheduledAreaId } = useParams<{ id: string }>()
-  const [viewMode, setViewMode] = useState<'groups' | 'all-schedules' | 'group-schedules' | 'schedule-details' | 'group-details'>('groups')
+  const [viewMode, setViewMode] = useState<'groups' | 'all-schedules' | 'group-schedules' | 'schedule-details' | 'group-details'>('all-schedules')
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
   const [selectedGroupName, setSelectedGroupName] = useState<string>('')
 
@@ -80,6 +80,19 @@ export default function EscalaTabPanel() {
   const [schedulesLoading, setSchedulesLoading] = useState(false)
   const schedulesLimit = 10
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
+
+  // Estados para visualização (cards ou tabela)
+  const [displayMode, setDisplayMode] = useState<'cards' | 'table'>('cards')
+  
+  // Estados para escalas otimizadas (modo tabela)
+  const [optimizedSchedules, setOptimizedSchedules] = useState<ScheduleOptimizedResponseDto[]>([])
+  const [optimizedSchedulesPage, setOptimizedSchedulesPage] = useState(1)
+  const [optimizedSchedulesTotalPages, setOptimizedSchedulesTotalPages] = useState(1)
+  const [optimizedSchedulesLoading, setOptimizedSchedulesLoading] = useState(false)
+  
+  // Estados para filtros de data (modo tabela)
+  const [filterStartDate, setFilterStartDate] = useState<string>('')
+  const [filterEndDate, setFilterEndDate] = useState<string>('')
 
   // Função para mapear a configuração aninhada da API para a estrutura plana esperada
   const mapConfiguration = (config: any, generationType: string, periodType: string, periodStartDate: string, periodEndDate: string): ScheduleGroupConfiguration => {
@@ -209,6 +222,65 @@ export default function EscalaTabPanel() {
     }
   }, [scheduledAreaId, schedulesLimit])
 
+  // Carregar escalas otimizadas (para modo tabela)
+  const loadOptimizedSchedules = useCallback(async (page: number, groupId?: string) => {
+    if (!scheduledAreaId) return
+
+    setOptimizedSchedulesLoading(true)
+    try {
+      const filters: any = {
+        page,
+        limit: schedulesLimit,
+      }
+      
+      if (groupId) {
+        filters.scheduleGenerationId = groupId
+      }
+      
+      if (filterStartDate) {
+        filters.startDate = filterStartDate
+      }
+      
+      if (filterEndDate) {
+        filters.endDate = filterEndDate
+      }
+      
+      const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
+      setOptimizedSchedules(response.data)
+      setOptimizedSchedulesTotalPages(response.meta.totalPages)
+    } catch (error) {
+      console.error('Erro ao carregar escalas otimizadas:', error)
+    } finally {
+      setOptimizedSchedulesLoading(false)
+    }
+  }, [scheduledAreaId, schedulesLimit, filterStartDate, filterEndDate])
+  
+  // Handlers
+  const handleScheduleClick = (scheduleId: string) => {
+    setSelectedScheduleId(scheduleId)
+    setViewMode('schedule-details')
+  }
+  
+  // Handler para clicar na linha da tabela
+  const handleTableRowClick = useCallback((schedule: ScheduleOptimizedResponseDto, e?: React.MouseEvent) => {
+    // Prevenir propagação se clicou em um elemento interativo dentro da célula
+    if (e) {
+      const target = e.target as HTMLElement
+      // Se clicou em um avatar ou tooltip, não fazer nada
+      if (target.closest('.table-participant-avatar') || target.closest('.table-participant-tooltip')) {
+        return
+      }
+    }
+    
+    // A API otimizada retorna o ID diretamente
+    if (schedule.id) {
+      setSelectedScheduleId(schedule.id)
+      setViewMode('schedule-details')
+    } else {
+      console.warn('ID da escala não encontrado na resposta otimizada:', schedule)
+    }
+  }, [])
+
   // Carregar grupos na montagem
   useEffect(() => {
     if (scheduledAreaId && viewMode === 'groups') {
@@ -220,10 +292,23 @@ export default function EscalaTabPanel() {
   // Carregar escalas quando mudar modo ou grupo
   useEffect(() => {
     if (scheduledAreaId && (viewMode === 'all-schedules' || viewMode === 'group-schedules')) {
-      loadSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
-      setSchedulesPage(1)
+      if (displayMode === 'table') {
+        loadOptimizedSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+        setOptimizedSchedulesPage(1)
+      } else {
+        loadSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+        setSchedulesPage(1)
+      }
     }
-  }, [scheduledAreaId, viewMode, selectedGroupId, loadSchedules])
+  }, [scheduledAreaId, viewMode, selectedGroupId, displayMode, loadSchedules, loadOptimizedSchedules])
+  
+  // Recarregar quando filtros de data mudarem
+  useEffect(() => {
+    if (scheduledAreaId && displayMode === 'table' && (viewMode === 'all-schedules' || viewMode === 'group-schedules')) {
+      loadOptimizedSchedules(1, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+      setOptimizedSchedulesPage(1)
+    }
+  }, [filterStartDate, filterEndDate, scheduledAreaId, displayMode, viewMode, selectedGroupId, loadOptimizedSchedules])
 
   // Handlers
   const handleGroupClick = (group: ScheduleGroupDto) => {
@@ -251,11 +336,6 @@ export default function EscalaTabPanel() {
     setSelectedGroupId(null)
     setSelectedGroupName('')
     setGroupsPage(1)
-  }
-
-  const handleScheduleClick = (scheduleId: string) => {
-    setSelectedScheduleId(scheduleId)
-    setViewMode('schedule-details')
   }
 
   const handleBackFromDetails = () => {
@@ -330,11 +410,44 @@ export default function EscalaTabPanel() {
     }
   }
 
+  const getTitle = () => {
+    switch (viewMode) {
+      case 'groups':
+        return 'Grupos de Escalas'
+      case 'all-schedules':
+        return 'Todas as Escalas'
+      case 'group-schedules':
+        return `Escalas do Grupo: ${selectedGroupName}`
+      case 'schedule-details':
+        return 'Detalhes da Escala'
+      case 'group-details':
+        return 'Detalhes do Grupo'
+      default:
+        return 'Escalas'
+    }
+  }
+
+  const getTitleIcon = () => {
+    switch (viewMode) {
+      case 'groups':
+        return 'fa-users'
+      case 'all-schedules':
+      case 'group-schedules':
+        return 'fa-calendar-check'
+      case 'schedule-details':
+        return 'fa-calendar-alt'
+      case 'group-details':
+        return 'fa-users-gear'
+      default:
+        return 'fa-calendar'
+    }
+  }
+
   return (
     <div className="tab-panel">
       <div className="tab-panel-header">
         <h3 className="tab-panel-title">
-          <i className="fa-solid fa-users"></i> Grupos de Escalas
+          <i className={`fa-solid ${getTitleIcon()}`}></i> {getTitle()}
         </h3>
         <div className="tab-panel-actions">
           {viewMode === 'groups' && (
@@ -347,13 +460,37 @@ export default function EscalaTabPanel() {
             </button>
           )}
           {(viewMode === 'all-schedules' || viewMode === 'group-schedules') && (
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              onClick={handleBackToGroups}
-            >
-              <i className="fa-solid fa-arrow-left"></i> Voltar para Grupos
-            </button>
+            <>
+              <button
+                type="button"
+                className={`btn-secondary btn-sm ${displayMode === 'cards' ? 'active' : ''}`}
+                onClick={() => {
+                  setDisplayMode('cards')
+                  setSchedulesPage(1)
+                }}
+                title="Visualização em Cards"
+              >
+                <i className="fa-solid fa-th-large"></i> Cards
+              </button>
+              <button
+                type="button"
+                className={`btn-secondary btn-sm ${displayMode === 'table' ? 'active' : ''}`}
+                onClick={() => {
+                  setDisplayMode('table')
+                  setOptimizedSchedulesPage(1)
+                }}
+                title="Visualização em Tabela"
+              >
+                <i className="fa-solid fa-table"></i> Tabela
+              </button>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                onClick={handleBackToGroups}
+              >
+                <i className="fa-solid fa-arrow-left"></i> Voltar para Grupos
+              </button>
+            </>
           )}
           {viewMode === 'schedule-details' && (
             <button
@@ -600,26 +737,211 @@ export default function EscalaTabPanel() {
 
         {(viewMode === 'all-schedules' || viewMode === 'group-schedules') && (
           <div className="schedules-container">
-            <div className="schedules-header">
-              <h4 className="section-title">
-                <i className="fa-solid fa-calendar-check"></i>
-                {viewMode === 'group-schedules' ? `Escalas do Grupo: ${selectedGroupName}` : 'Todas as Escalas'}
-              </h4>
-            </div>
-
-            {schedulesLoading ? (
-              <div className="loading-container">
-                <i className="fa-solid fa-spinner fa-spin"></i>
-                <p>Carregando escalas...</p>
-              </div>
-            ) : schedules.length === 0 ? (
-              <div className="empty-container">
-                <i className="fa-solid fa-inbox"></i>
-                <p>Nenhuma escala encontrada</p>
-              </div>
-            ) : (
+            {displayMode === 'table' ? (
+              // Visualização em Tabela
               <>
-                <div className="schedules-list">
+                {/* Filtros de Data */}
+                <div className="table-filters">
+                  <div className="filter-group">
+                    <label htmlFor="filter-start-date" className="filter-label">
+                      <i className="fa-solid fa-calendar-alt"></i> Data Início
+                    </label>
+                    <input
+                      type="date"
+                      id="filter-start-date"
+                      className="filter-input"
+                      value={filterStartDate}
+                      onChange={(e) => {
+                        setFilterStartDate(e.target.value)
+                        setOptimizedSchedulesPage(1)
+                      }}
+                    />
+                  </div>
+                  <div className="filter-group">
+                    <label htmlFor="filter-end-date" className="filter-label">
+                      <i className="fa-solid fa-calendar-check"></i> Data Fim
+                    </label>
+                    <input
+                      type="date"
+                      id="filter-end-date"
+                      className="filter-input"
+                      value={filterEndDate}
+                      onChange={(e) => {
+                        setFilterEndDate(e.target.value)
+                        setOptimizedSchedulesPage(1)
+                      }}
+                    />
+                  </div>
+                  {(filterStartDate || filterEndDate) && (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => {
+                        setFilterStartDate('')
+                        setFilterEndDate('')
+                        setOptimizedSchedulesPage(1)
+                      }}
+                      title="Limpar filtros"
+                    >
+                      <i className="fa-solid fa-times"></i> Limpar Filtros
+                    </button>
+                  )}
+                </div>
+
+                {optimizedSchedulesLoading ? (
+                  <div className="loading-container">
+                    <i className="fa-solid fa-spinner fa-spin"></i>
+                    <p>Carregando escalas...</p>
+                  </div>
+                ) : optimizedSchedules.length === 0 ? (
+                  <div className="empty-container">
+                    <i className="fa-solid fa-inbox"></i>
+                    <p>Nenhuma escala encontrada</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="schedules-table-container">
+                    <table className="schedules-table">
+                      <thead>
+                        <tr>
+                          <th>Data Início</th>
+                          <th>Data Fim</th>
+                          <th>Participantes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {optimizedSchedules.map((schedule) => (
+                          <tr
+                            key={schedule.id}
+                            className="schedule-table-row"
+                            onClick={(e) => handleTableRowClick(schedule, e)}
+                          >
+                            <td 
+                              className="schedule-table-date"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleTableRowClick(schedule, e)
+                              }}
+                            >
+                              {formatDateTime(schedule.startDatetime)}
+                            </td>
+                            <td 
+                              className="schedule-table-date"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleTableRowClick(schedule, e)
+                              }}
+                            >
+                              {formatDateTime(schedule.endDatetime)}
+                            </td>
+                            <td className="schedule-table-participants">
+                              <div className="table-participants-avatars">
+                                {schedule.pessoas.map((pessoa, index) => {
+                                  const isRejected = pessoa.status === 'rejected'
+                                  
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="table-participant-avatar-wrapper"
+                                      style={{ zIndex: schedule.pessoas.length - index }}
+                                    >
+                                      <div
+                                        className="table-participant-avatar"
+                                        title={`${pessoa.nome}${pessoa.função ? ` - ${pessoa.função}` : ''}`}
+                                      >
+                                        <div className="table-participant-avatar-content">
+                                          {pessoa.url ? (
+                                            <img
+                                              src={addCacheBusting(pessoa.url)}
+                                              alt={pessoa.nome}
+                                              className="table-participant-avatar-image"
+                                              loading="lazy"
+                                              decoding="async"
+                                            />
+                                          ) : (
+                                            <div className="table-participant-avatar-placeholder">
+                                              {pessoa.nome && pessoa.nome.length > 0
+                                                ? pessoa.nome.charAt(0).toUpperCase()
+                                                : '?'}
+                                            </div>
+                                          )}
+                                        </div>
+                                        {isRejected && (
+                                          <div className="table-participant-alert" title="Participante rejeitado">
+                                            <i className="fa-solid fa-exclamation-triangle"></i>
+                                          </div>
+                                        )}
+                                        <div className="table-participant-tooltip">
+                                          <div className="tooltip-name">{pessoa.nome}</div>
+                                          {pessoa.função && (
+                                            <div className="tooltip-role">{pessoa.função}</div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {optimizedSchedulesTotalPages > 1 && (
+                    <div className="pagination">
+                      <button
+                        type="button"
+                        className="btn-pagination"
+                        onClick={() => {
+                          const newPage = optimizedSchedulesPage - 1
+                          if (newPage >= 1) {
+                            setOptimizedSchedulesPage(newPage)
+                            loadOptimizedSchedules(newPage, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+                          }
+                        }}
+                        disabled={optimizedSchedulesPage === 1 || optimizedSchedulesLoading}
+                      >
+                        <i className="fa-solid fa-chevron-left"></i> Anterior
+                      </button>
+                      <span className="pagination-info">
+                        Página {optimizedSchedulesPage} de {optimizedSchedulesTotalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn-pagination"
+                        onClick={() => {
+                          const newPage = optimizedSchedulesPage + 1
+                          if (newPage <= optimizedSchedulesTotalPages) {
+                            setOptimizedSchedulesPage(newPage)
+                            loadOptimizedSchedules(newPage, viewMode === 'group-schedules' ? selectedGroupId || undefined : undefined)
+                          }
+                        }}
+                        disabled={optimizedSchedulesPage === optimizedSchedulesTotalPages || optimizedSchedulesLoading}
+                      >
+                        Próxima <i className="fa-solid fa-chevron-right"></i>
+                      </button>
+                    </div>
+                  )}
+                  </>
+                )}
+              </>
+            ) : (
+              // Visualização em Cards
+              schedulesLoading ? (
+                <div className="loading-container">
+                  <i className="fa-solid fa-spinner fa-spin"></i>
+                  <p>Carregando escalas...</p>
+                </div>
+              ) : schedules.length === 0 ? (
+                <div className="empty-container">
+                  <i className="fa-solid fa-inbox"></i>
+                  <p>Nenhuma escala encontrada</p>
+                </div>
+              ) : (
+                <>
+                  <div className="schedules-list">
                   {schedules.map((schedule) => {
                     const scheduleDate = new Date(schedule.startDatetime)
                     return (
@@ -784,6 +1106,7 @@ export default function EscalaTabPanel() {
                   </div>
                 )}
               </>
+            )
             )}
           </div>
         )}
@@ -806,7 +1129,11 @@ export default function EscalaTabPanel() {
             onBack={handleBackFromDetails}
             onUpdate={() => {
               // Recarregar escalas se necessário
-              loadSchedules(schedulesPage, selectedGroupId || undefined)
+              if (displayMode === 'table') {
+                loadOptimizedSchedules(optimizedSchedulesPage, selectedGroupId || undefined)
+              } else {
+                loadSchedules(schedulesPage, selectedGroupId || undefined)
+              }
             }}
           />
         )}
