@@ -82,7 +82,7 @@ export default function EscalaTabPanel() {
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
 
   // Estados para visualização (cards ou tabela)
-  const [displayMode, setDisplayMode] = useState<'cards' | 'table'>('cards')
+  const [displayMode, setDisplayMode] = useState<'cards' | 'table'>('table')
   
   // Estados para escalas otimizadas (modo tabela)
   const [optimizedSchedules, setOptimizedSchedules] = useState<ScheduleOptimizedResponseDto[]>([])
