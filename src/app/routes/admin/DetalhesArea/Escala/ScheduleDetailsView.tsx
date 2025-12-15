@@ -123,7 +123,12 @@ export default function ScheduleDetailsView({ scheduleId, onBack: _onBack, onUpd
 
       // Filtrar pessoas que já estão na escala
       if (schedule) {
-        const memberPersonIds = new Set(schedule.members.map(m => m.personId))
+        let memberPersonIds = new Set<string>()
+        if (schedule.scheduleType === 'team' && schedule.assignments) {
+          memberPersonIds = new Set(schedule.assignments.map(a => a.personId))
+        } else if (schedule.members) {
+          memberPersonIds = new Set(schedule.members.map(m => m.personId))
+        }
         allPersons = allPersons.filter(p => !memberPersonIds.has(p.personId))
       }
 
@@ -280,7 +285,12 @@ export default function ScheduleDetailsView({ scheduleId, onBack: _onBack, onUpd
     setCheckingPerson(true)
     try {
       // Verificar se a pessoa já está escalada
-      const isAlreadyScheduled = schedule.members.some(m => m.personId === personId)
+      let isAlreadyScheduled = false
+      if (schedule.scheduleType === 'team' && schedule.assignments) {
+        isAlreadyScheduled = schedule.assignments.some(a => a.personId === personId)
+      } else if (schedule.members) {
+        isAlreadyScheduled = schedule.members.some(m => m.personId === personId)
+      }
 
       // Verificar se a pessoa está ausente no período da escala
       let isAbsent = false
@@ -664,7 +674,17 @@ export default function ScheduleDetailsView({ scheduleId, onBack: _onBack, onUpd
             <div className="detail-card">
               <div className="info-card-header">
                 <h4 className="info-card-title">
-                  <i className="fa-solid fa-users"></i> Equipe Escalada ({schedule.members.length})
+                  <i className="fa-solid fa-users"></i> Equipe Escalada ({
+                    schedule.scheduleType === 'team'
+                      ? (() => {
+                          // Para team, contar assignments + members únicos
+                          const assignmentPersonIds = new Set((schedule.assignments || []).map(a => a.personId))
+                          const memberPersonIds = new Set((schedule.members || []).map(m => m.personId))
+                          const uniquePersonIds = new Set([...assignmentPersonIds, ...memberPersonIds])
+                          return uniquePersonIds.size
+                        })()
+                      : schedule.members?.length || 0
+                  })
                 </h4>
                 <button
                   type="button"
@@ -676,146 +696,196 @@ export default function ScheduleDetailsView({ scheduleId, onBack: _onBack, onUpd
                 </button>
               </div>
 
-              {schedule.members.length === 0 ? (
-                <div className="empty-members">
-                  <i className="fa-solid fa-user-slash"></i>
-                  <p>Nenhum membro nesta escala</p>
-                </div>
-              ) : (
-                <div className="members-grid">
-                  {[...schedule.members]
-                    .sort((a, b) => (a.person?.fullName || "").localeCompare(b.person?.fullName || ""))
-                    .map((member) => (
-                      <div key={member.id} className="member-card">
-                        <div className="member-photo-wrapper">
-                          {member.person?.photoUrl ? (
-                            <img
-                              src={addCacheBusting(member.person.photoUrl)}
-                              alt={member.person.fullName}
-                              className="member-card-photo"
-                            />
-                          ) : (
-                            <div className="member-card-placeholder">
-                              {member.person?.fullName?.charAt(0).toUpperCase() || member.personId.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
+              {(() => {
+                // Determinar qual fonte de dados usar
+                let displayItems: any[] = []
+                
+                if (schedule.scheduleType === 'team') {
+                  // Para team, usar assignments e também members se houver
+                  const assignmentItems = (schedule.assignments || []).map(assignment => ({
+                    id: assignment.id,
+                    personId: assignment.personId,
+                    person: assignment.person,
+                    responsibilityId: assignment.teamRole?.responsibilityId || '',
+                    responsibility: assignment.teamRole ? {
+                      id: assignment.teamRole.responsibilityId,
+                      name: assignment.teamRole.responsibilityName,
+                      imageUrl: null,
+                      description: null
+                    } : null,
+                    status: 'pending' as const,
+                    present: null,
+                    createdAt: assignment.createdAt
+                  }))
+                  
+                  // Adicionar members também (podem ser adicionados manualmente)
+                  const memberItems = schedule.members || []
+                  
+                  // Combinar assignments e members, evitando duplicatas por personId
+                  const allPersonIds = new Set<string>()
+                  displayItems = []
+                  
+                  // Primeiro adicionar assignments
+                  assignmentItems.forEach(item => {
+                    if (!allPersonIds.has(item.personId)) {
+                      displayItems.push(item)
+                      allPersonIds.add(item.personId)
+                    }
+                  })
+                  
+                  // Depois adicionar members que não estão nos assignments
+                  memberItems.forEach(member => {
+                    if (!allPersonIds.has(member.personId)) {
+                      displayItems.push(member)
+                      allPersonIds.add(member.personId)
+                    }
+                  })
+                } else if (schedule.members && schedule.members.length > 0) {
+                  // Para individual ou group, usar members
+                  displayItems = schedule.members
+                }
 
-                        <div className="member-card-name">{member.person?.fullName || member.personId}</div>
-
-                        {editingMemberId === member.id ? (
-                          <div className="member-edit-mode">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <label className="edit-label">Editar Membro</label>
-                              <button
-                                className="btn-card-action"
-                                style={{ width: '24px', height: '24px', fontSize: '0.8rem' }}
-                                onClick={() => setEditingMemberId(null)}
-                                title="Fechar edição"
-                              >
-                                <i className="fa-solid fa-xmark"></i>
-                              </button>
-                            </div>
-
-                            <label className="edit-label">Função:</label>
-                            <select
-                              value={member.responsibilityId}
-                              onChange={(e) => {
-                                const selected = responsibilities.find(r => r.id === e.target.value)
-                                if (selected) {
-                                  handleUpdateMemberResponsibility(member.id, selected.id, selected.name)
-                                }
-                              }}
-                              className="member-edit-select"
-                            >
-                              {responsibilities.map((resp) => (
-                                <option key={resp.id} value={resp.id}>
-                                  {resp.name}
-                                </option>
-                              ))}
-                            </select>
-
-                            <label className="edit-label" style={{ marginTop: '6px' }}>Status:</label>
-                            <select
-                              value={member.status}
-                              onChange={(e) => handleUpdateMemberStatus(member.id, e.target.value as any)}
-                              className="member-edit-select"
-                            >
-                              <option value="pending">Pendente</option>
-                              <option value="accepted">Confirmado</option>
-                              <option value="rejected">Rejeitado</option>
-                            </select>
+                return displayItems.length === 0 ? (
+                  <div className="empty-members">
+                    <i className="fa-solid fa-user-slash"></i>
+                    <p>Nenhum membro nesta escala</p>
+                  </div>
+                ) : (
+                  <div className="members-grid">
+                    {[...displayItems]
+                      .sort((a, b) => (a.person?.fullName || "").localeCompare(b.person?.fullName || ""))
+                      .map((member) => (
+                        <div key={member.id} className="member-card">
+                          <div className="member-photo-wrapper">
+                            {member.person?.photoUrl ? (
+                              <img
+                                src={addCacheBusting(member.person.photoUrl)}
+                                alt={member.person.fullName}
+                                className="member-card-photo"
+                              />
+                            ) : (
+                              <div className="member-card-placeholder">
+                                {member.person?.fullName?.charAt(0).toUpperCase() || member.personId.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <>
-                            <div className="member-card-role">
-                              {member.responsibility?.imageUrl && (
-                                <img
-                                  src={addCacheBusting(member.responsibility.imageUrl)}
-                                  alt={member.responsibility.name}
-                                  style={{ width: '16px', height: '16px', borderRadius: '4px' }}
-                                />
-                              )}
-                              <span>{member.responsibility?.name || 'Sem função'}</span>
-                            </div>
 
-                            <div className={`member-status-badge status-${member.status}`}>
-                              {member.status === 'accepted' && <i className="fa-solid fa-check"></i>}
-                              {member.status === 'rejected' && <i className="fa-solid fa-xmark"></i>}
-                              {member.status === 'pending' && <i className="fa-solid fa-clock"></i>}
-                              {getStatusLabel(member.status)}
-                            </div>
+                          <div className="member-card-name">{member.person?.fullName || member.personId}</div>
 
-                            <div className="member-presence-section">
-                              <label className={`presence-label ${member.present === true ? 'presence-checked' : ''}`}>
-                                <input
-                                  type="checkbox"
-                                  checked={member.present === true}
-                                  onChange={(e) => handleUpdateMemberPresence(member.id, e.target.checked ? true : null)}
-                                  className="presence-checkbox"
-                                />
-                                <span className="presence-text">
-                                  {member.present === true ? (
-                                    <>
-                                      <i className="fa-solid fa-check-circle"></i> Presente
-                                    </>
-                                  ) : (
-                                    <>
-                                      <i className="fa-regular fa-circle"></i> Marcar presença
-                                    </>
-                                  )}
-                                </span>
-                              </label>
-                            </div>
-                          </>
-                        )}
+                          {editingMemberId === member.id ? (
+                            <div className="member-edit-mode">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <label className="edit-label">Editar Membro</label>
+                                <button
+                                  className="btn-card-action"
+                                  style={{ width: '24px', height: '24px', fontSize: '0.8rem' }}
+                                  onClick={() => setEditingMemberId(null)}
+                                  title="Fechar edição"
+                                >
+                                  <i className="fa-solid fa-xmark"></i>
+                                </button>
+                              </div>
 
-                        <div className="member-card-actions">
-                          {editingMemberId !== member.id && (
+                              <label className="edit-label">Função:</label>
+                              <select
+                                value={member.responsibilityId}
+                                onChange={(e) => {
+                                  const selected = responsibilities.find(r => r.id === e.target.value)
+                                  if (selected) {
+                                    handleUpdateMemberResponsibility(member.id, selected.id, selected.name)
+                                  }
+                                }}
+                                className="member-edit-select"
+                              >
+                                {responsibilities.map((resp) => (
+                                  <option key={resp.id} value={resp.id}>
+                                    {resp.name}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <label className="edit-label" style={{ marginTop: '6px' }}>Status:</label>
+                              <select
+                                value={member.status}
+                                onChange={(e) => handleUpdateMemberStatus(member.id, e.target.value as any)}
+                                className="member-edit-select"
+                              >
+                                <option value="pending">Pendente</option>
+                                <option value="accepted">Confirmado</option>
+                                <option value="rejected">Rejeitado</option>
+                              </select>
+                            </div>
+                          ) : (
                             <>
-                              <button
-                                type="button"
-                                className="btn-card-action"
-                                onClick={() => setEditingMemberId(member.id)}
-                                title="Editar função"
-                              >
-                                <i className="fa-solid fa-pen"></i>
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-card-action danger"
-                                onClick={() => setShowDeleteMemberModal(member.id)}
-                                title="Remover membro"
-                              >
-                                <i className="fa-solid fa-trash"></i>
-                              </button>
+                              <div className="member-card-role">
+                                {member.responsibility?.imageUrl && (
+                                  <img
+                                    src={addCacheBusting(member.responsibility.imageUrl)}
+                                    alt={member.responsibility.name}
+                                    style={{ width: '16px', height: '16px', borderRadius: '4px' }}
+                                  />
+                                )}
+                                <span>{member.responsibility?.name || 'Sem função'}</span>
+                              </div>
+
+                              <div className={`member-status-badge status-${member.status}`}>
+                                {member.status === 'accepted' && <i className="fa-solid fa-check"></i>}
+                                {member.status === 'rejected' && <i className="fa-solid fa-xmark"></i>}
+                                {member.status === 'pending' && <i className="fa-solid fa-clock"></i>}
+                                {getStatusLabel(member.status)}
+                              </div>
+
+                              <div className="member-presence-section">
+                                <label className={`presence-label ${member.present === true ? 'presence-checked' : ''}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={member.present === true}
+                                    onChange={(e) => handleUpdateMemberPresence(member.id, e.target.checked ? true : null)}
+                                    className="presence-checkbox"
+                                  />
+                                  <span className="presence-text">
+                                    {member.present === true ? (
+                                      <>
+                                        <i className="fa-solid fa-check-circle"></i> Presente
+                                      </>
+                                    ) : (
+                                      <>
+                                        <i className="fa-regular fa-circle"></i> Marcar presença
+                                      </>
+                                    )}
+                                  </span>
+                                </label>
+                              </div>
                             </>
                           )}
+
+                          <div className="member-card-actions">
+                            {editingMemberId !== member.id && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="btn-card-action"
+                                  onClick={() => setEditingMemberId(member.id)}
+                                  title="Editar função"
+                                >
+                                  <i className="fa-solid fa-pen"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-card-action danger"
+                                  onClick={() => setShowDeleteMemberModal(member.id)}
+                                  title="Remover membro"
+                                >
+                                  <i className="fa-solid fa-trash"></i>
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                </div>
-              )}
+                      ))}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Seção de Logs */}
