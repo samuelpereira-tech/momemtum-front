@@ -1244,6 +1244,73 @@
   opacity: 0.9;
 }
 
+/* Danger button */
+.btn-danger {
+  background: rgba(242, 156, 148, 0.1);
+  color: var(--color-pink);
+  border: 1px solid rgba(242, 156, 148, 0.3);
+}
+
+.btn-danger:hover {
+  background: var(--color-pink);
+  color: var(--white);
+  border-color: var(--color-pink);
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Selected row */
+.schedule-table-row.row-selected {
+  background: rgba(173, 130, 216, 0.1);
+}
+
+.schedule-table-row.row-selected:hover {
+  background: rgba(173, 130, 216, 0.15);
+}
+
+/* Table action buttons */
+.schedules-table .btn-action {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  font-size: 0.85rem;
+  background: rgba(242, 156, 148, 0.1);
+  color: var(--color-pink);
+}
+
+.schedules-table .btn-action:hover {
+  background: var(--color-pink);
+  color: var(--white);
+}
+
+.schedules-table .btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Checkbox styling */
+.schedules-table th input[type="checkbox"],
+.schedules-table td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 20px;
+  accent-color: var(--color-purple);
+}
+
+.schedules-table th input[type="checkbox"] {
+  margin: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .schedule-groups-list {

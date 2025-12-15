@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { scheduleService, type ScheduleOptimizedResponseDto } from '../../../../../services/basic/scheduleService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
+import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
+import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
 import './EscalaTabPanel.css'
 
 export default function EscalaTabela() {
@@ -9,6 +11,7 @@ export default function EscalaTabela() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const grupoId = searchParams.get('grupo')
+  const toast = useToast()
 
   // Estados para escalas otimizadas (modo tabela)
   const [optimizedSchedules, setOptimizedSchedules] = useState<ScheduleOptimizedResponseDto[]>([])
@@ -24,6 +27,13 @@ export default function EscalaTabela() {
   // Estados para agrupamento por data
   const [groupByDate, setGroupByDate] = useState(false)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+
+  // Estados para seleção múltipla e remoção
+  const [selectedSchedules, setSelectedSchedules] = useState<Set<string>>(new Set())
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
+  const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Ref para evitar execuções duplicadas
   const isLoadingRef = useRef(false)
@@ -108,6 +118,9 @@ export default function EscalaTabela() {
         const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
         setOptimizedSchedules(response.data)
         setOptimizedSchedulesTotalPages(response.meta.totalPages)
+        
+        // Limpar seleção quando os dados mudarem
+        setSelectedSchedules(new Set())
       } catch (error) {
         console.error('Erro ao carregar escalas otimizadas:', error)
       } finally {
@@ -204,6 +217,167 @@ export default function EscalaTabela() {
     }
   }
 
+  // Funções de seleção
+  const handleSelectSchedule = (scheduleId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedSchedules(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(scheduleId)) {
+        newSet.delete(scheduleId)
+      } else {
+        newSet.add(scheduleId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const allVisibleIds = new Set(optimizedSchedules.map(s => s.id))
+    const allSelected = allVisibleIds.size > 0 && Array.from(allVisibleIds).every(id => selectedSchedules.has(id))
+    
+    if (allSelected) {
+      // Deselecionar todas as visíveis
+      setSelectedSchedules(prev => {
+        const newSet = new Set(prev)
+        allVisibleIds.forEach(id => newSet.delete(id))
+        return newSet
+      })
+    } else {
+      // Selecionar todas as visíveis
+      setSelectedSchedules(prev => {
+        const newSet = new Set(prev)
+        allVisibleIds.forEach(id => newSet.add(id))
+        return newSet
+      })
+    }
+  }
+
+  // Funções de remoção
+  const handleDeleteClick = (scheduleId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setScheduleToDelete(scheduleId)
+    setShowDeleteModal(true)
+  }
+
+  const handleBulkDeleteClick = () => {
+    if (selectedSchedules.size > 0) {
+      setShowBulkDeleteModal(true)
+    }
+  }
+
+  const confirmDeleteSchedule = async () => {
+    if (!scheduleToDelete || !scheduledAreaId || isDeleting) return
+
+    setIsDeleting(true)
+    try {
+      await scheduleService.deleteSchedule(scheduledAreaId, scheduleToDelete)
+      setSelectedSchedules(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(scheduleToDelete)
+        return newSet
+      })
+      setShowDeleteModal(false)
+      setScheduleToDelete(null)
+      toast.showSuccess('Escala removida com sucesso!')
+      
+      // Recarregar escalas
+      await reloadSchedules()
+    } catch (err: any) {
+      console.error('Erro ao remover escala:', err)
+      toast.showError(err.message || 'Erro ao remover escala')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const confirmBulkDeleteSchedules = async () => {
+    if (selectedSchedules.size === 0 || !scheduledAreaId || isDeleting) return
+
+    setIsDeleting(true)
+    const scheduleIds = Array.from(selectedSchedules)
+    let successCount = 0
+    let errorCount = 0
+
+    try {
+      // Usar Promise.allSettled para processar todas as remoções mesmo se algumas falharem
+      const results = await Promise.allSettled(
+        scheduleIds.map(id => scheduleService.deleteSchedule(scheduledAreaId, id))
+      )
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          successCount++
+        } else {
+          errorCount++
+          console.error(`Erro ao remover escala ${scheduleIds[index]}:`, result.reason)
+        }
+      })
+
+      setSelectedSchedules(new Set())
+      setShowBulkDeleteModal(false)
+
+      if (errorCount === 0) {
+        toast.showSuccess(`${successCount} escala(s) removida(s) com sucesso!`)
+      } else if (successCount > 0) {
+        toast.showWarning(`${successCount} escala(s) removida(s), ${errorCount} falharam`)
+      } else {
+        toast.showError('Erro ao remover escalas')
+      }
+
+      // Recarregar escalas
+      await reloadSchedules()
+    } catch (err: any) {
+      console.error('Erro ao remover escalas:', err)
+      toast.showError('Erro ao remover escalas')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Função auxiliar para recarregar escalas
+  const reloadSchedules = useCallback(async () => {
+    if (!scheduledAreaId) return
+
+    setOptimizedSchedulesLoading(true)
+    try {
+      const filters: any = {
+        page: optimizedSchedulesPage,
+        limit: schedulesLimit,
+      }
+      
+      if (grupoId) {
+        filters.scheduleGenerationId = grupoId
+      }
+      
+      if (filterStartDate) {
+        filters.startDate = filterStartDate
+      }
+      
+      if (filterEndDate) {
+        filters.endDate = filterEndDate
+      }
+      
+      const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
+      setOptimizedSchedules(response.data)
+      setOptimizedSchedulesTotalPages(response.meta.totalPages)
+      
+      // Ajustar página se necessário
+      if (response.data.length === 0 && optimizedSchedulesPage > 1) {
+        setOptimizedSchedulesPage(prev => Math.max(1, prev - 1))
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar escalas:', error)
+    } finally {
+      setOptimizedSchedulesLoading(false)
+    }
+  }, [scheduledAreaId, grupoId, filterStartDate, filterEndDate, optimizedSchedulesPage, schedulesLimit])
+
+  // Calcular estado do checkbox "selecionar todos"
+  const allVisibleIds = new Set(optimizedSchedules.map(s => s.id))
+  const allSelected = allVisibleIds.size > 0 && Array.from(allVisibleIds).every(id => selectedSchedules.has(id))
+  const someSelected = Array.from(allVisibleIds).some(id => selectedSchedules.has(id))
+
   return (
     <div className="escala-tab-panel">
       <div className="tab-content">
@@ -288,9 +462,19 @@ export default function EscalaTabela() {
             )}
           </div>
 
-          {/* Botão de Agrupamento */}
+          {/* Controles de Ação */}
           {!optimizedSchedulesLoading && optimizedSchedules.length > 0 && (
             <div className="table-group-controls">
+              {selectedSchedules.size > 0 && (
+                <button
+                  type="button"
+                  className="btn-danger btn-sm"
+                  onClick={handleBulkDeleteClick}
+                  disabled={isDeleting}
+                >
+                  <i className="fa-solid fa-trash"></i> Remover {selectedSchedules.size} selecionado(s)
+                </button>
+              )}
               <button
                 type="button"
                 className={`btn-secondary btn-sm ${groupByDate ? 'active' : ''}`}
@@ -350,9 +534,22 @@ export default function EscalaTabela() {
                           <table className="schedules-table">
                             <thead>
                               <tr>
+                                <th style={{ width: '40px' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={allSelected}
+                                    ref={(input) => {
+                                      if (input) input.indeterminate = someSelected && !allSelected
+                                    }}
+                                    onChange={(e) => handleSelectAll(e)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    title={allSelected ? 'Deselecionar todas' : 'Selecionar todas'}
+                                  />
+                                </th>
                                 <th>Horário</th>
                                 <th>Grupos</th>
                                 <th>Participantes</th>
+                                <th style={{ width: '60px' }}>Ações</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -365,13 +562,22 @@ export default function EscalaTabela() {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })
+                                const isSelected = selectedSchedules.has(schedule.id)
                                 
                                 return (
                                   <tr
                                     key={schedule.id}
-                                    className="schedule-table-row"
+                                    className={`schedule-table-row ${isSelected ? 'row-selected' : ''}`}
                                     onClick={(e) => handleTableRowClick(schedule, e)}
                                   >
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => handleSelectSchedule(schedule.id, e)}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </td>
                                     <td 
                                       className="schedule-table-date"
                                       onClick={(e) => {
@@ -447,6 +653,17 @@ export default function EscalaTabela() {
                                         })}
                                       </div>
                                     </td>
+                                    <td onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        className="btn-action btn-delete"
+                                        onClick={(e) => handleDeleteClick(schedule.id, e)}
+                                        title="Remover escala"
+                                        disabled={isDeleting}
+                                      >
+                                        <i className="fa-solid fa-trash"></i>
+                                      </button>
+                                    </td>
                                   </tr>
                                 )
                               })}
@@ -463,27 +680,50 @@ export default function EscalaTabela() {
                   <table className="schedules-table">
                     <thead>
                       <tr>
+                        <th style={{ width: '40px' }}>
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(input) => {
+                              if (input) input.indeterminate = someSelected && !allSelected
+                            }}
+                            onChange={(e) => handleSelectAll(e)}
+                            onClick={(e) => e.stopPropagation()}
+                            title={allSelected ? 'Deselecionar todas' : 'Selecionar todas'}
+                          />
+                        </th>
                         <th>Data</th>
                         <th>Grupos</th>
                         <th>Participantes</th>
+                        <th style={{ width: '60px' }}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {optimizedSchedules.map((schedule) => (
-                        <tr
-                          key={schedule.id}
-                          className="schedule-table-row"
-                          onClick={(e) => handleTableRowClick(schedule, e)}
-                        >
-                          <td 
-                            className="schedule-table-date"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleTableRowClick(schedule, e)
-                            }}
+                      {optimizedSchedules.map((schedule) => {
+                        const isSelected = selectedSchedules.has(schedule.id)
+                        return (
+                          <tr
+                            key={schedule.id}
+                            className={`schedule-table-row ${isSelected ? 'row-selected' : ''}`}
+                            onClick={(e) => handleTableRowClick(schedule, e)}
                           >
-                            {formatDateRange(schedule.startDatetime, schedule.endDatetime)}
-                          </td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => handleSelectSchedule(schedule.id, e)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </td>
+                            <td 
+                              className="schedule-table-date"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleTableRowClick(schedule, e)
+                              }}
+                            >
+                              {formatDateRange(schedule.startDatetime, schedule.endDatetime)}
+                            </td>
                           <td className="schedule-table-groups">
                             {schedule.groups && schedule.groups.length > 0 ? (
                               <div className="table-groups-list">
@@ -501,57 +741,69 @@ export default function EscalaTabela() {
                               <span className="table-group-empty">-</span>
                             )}
                           </td>
-                          <td className="schedule-table-participants">
-                            <div className="table-participants-avatars">
-                              {schedule.people.map((person, index) => {
-                                const isRejected = person.status === 'rejected'
-                                
-                                return (
-                                  <div
-                                    key={index}
-                                    className="table-participant-avatar-wrapper"
-                                    style={{ zIndex: schedule.people.length - index }}
-                                  >
+                            <td className="schedule-table-participants">
+                              <div className="table-participants-avatars">
+                                {schedule.people.map((person, index) => {
+                                  const isRejected = person.status === 'rejected'
+                                  
+                                  return (
                                     <div
-                                      className="table-participant-avatar"
-                                      title={`${person.name}${person.role ? ` - ${person.role}` : ''}`}
+                                      key={index}
+                                      className="table-participant-avatar-wrapper"
+                                      style={{ zIndex: schedule.people.length - index }}
                                     >
-                                      <div className="table-participant-avatar-content">
-                                        {person.url ? (
-                                          <img
-                                            src={addCacheBusting(person.url)}
-                                            alt={person.name}
-                                            className="table-participant-avatar-image"
-                                            loading="lazy"
-                                            decoding="async"
-                                          />
-                                        ) : (
-                                          <div className="table-participant-avatar-placeholder">
-                                            {person.name && person.name.length > 0
-                                              ? person.name.charAt(0).toUpperCase()
-                                              : '?'}
+                                      <div
+                                        className="table-participant-avatar"
+                                        title={`${person.name}${person.role ? ` - ${person.role}` : ''}`}
+                                      >
+                                        <div className="table-participant-avatar-content">
+                                          {person.url ? (
+                                            <img
+                                              src={addCacheBusting(person.url)}
+                                              alt={person.name}
+                                              className="table-participant-avatar-image"
+                                              loading="lazy"
+                                              decoding="async"
+                                            />
+                                          ) : (
+                                            <div className="table-participant-avatar-placeholder">
+                                              {person.name && person.name.length > 0
+                                                ? person.name.charAt(0).toUpperCase()
+                                                : '?'}
+                                            </div>
+                                          )}
+                                        </div>
+                                        {isRejected && (
+                                          <div className="table-participant-alert" title="Participante rejeitado">
+                                            <i className="fa-solid fa-exclamation-triangle"></i>
                                           </div>
                                         )}
-                                      </div>
-                                      {isRejected && (
-                                        <div className="table-participant-alert" title="Participante rejeitado">
-                                          <i className="fa-solid fa-exclamation-triangle"></i>
+                                        <div className="table-participant-tooltip">
+                                          <div className="tooltip-name">{person.name}</div>
+                                          {person.role && (
+                                            <div className="tooltip-role">{person.role}</div>
+                                          )}
                                         </div>
-                                      )}
-                                      <div className="table-participant-tooltip">
-                                        <div className="tooltip-name">{person.name}</div>
-                                        {person.role && (
-                                          <div className="tooltip-role">{person.role}</div>
-                                        )}
                                       </div>
                                     </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                                  )
+                                })}
+                              </div>
+                            </td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                className="btn-action btn-delete"
+                                onClick={(e) => handleDeleteClick(schedule.id, e)}
+                                title="Remover escala"
+                                disabled={isDeleting}
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -594,6 +846,33 @@ export default function EscalaTabela() {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmação para remoção individual */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Remover Escala"
+        message="Tem certeza que deseja remover esta escala? Esta ação não pode ser desfeita."
+        confirmText="Remover"
+        cancelText="Cancelar"
+        type="danger"
+        onConfirm={confirmDeleteSchedule}
+        onCancel={() => {
+          setShowDeleteModal(false)
+          setScheduleToDelete(null)
+        }}
+      />
+
+      {/* Modal de confirmação para remoção em massa */}
+      <ConfirmModal
+        isOpen={showBulkDeleteModal}
+        title="Remover Escalas Selecionadas"
+        message={`Tem certeza que deseja remover ${selectedSchedules.size} escala(s) selecionada(s)? Esta ação não pode ser desfeita.`}
+        confirmText="Remover"
+        cancelText="Cancelar"
+        type="danger"
+        onConfirm={confirmBulkDeleteSchedules}
+        onCancel={() => setShowBulkDeleteModal(false)}
+      />
     </div>
   )
 }
