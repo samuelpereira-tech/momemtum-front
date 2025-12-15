@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode, memo } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode, memo } from 'react'
 import ToastComponent from './Toast'
 import type { Toast, ToastType } from './Toast'
 import './Toast.css'
@@ -27,8 +27,8 @@ interface ToastProviderProps {
 
 // Ref global para armazenar a função de adicionar toast sem causar re-renders
 const toastStateRef = {
-  addToast: (toast: Toast) => {},
-  removeToast: (id: string) => {},
+  addToast: (_toast: Toast) => {},
+  removeToast: (_id: string) => {},
 }
 
 export function ToastProvider({ children }: ToastProviderProps) {

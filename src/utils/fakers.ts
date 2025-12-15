@@ -18,12 +18,15 @@ import type {
 } from '../services/basic/absenceTypeService'
 
 // Configurar locale para português
-faker.locale = 'pt_BR'
+// Note: faker.locale was deprecated in v6+, locale is now set via import
+// Using pt_BR locale via import faker from '@faker-js/faker/locale/pt_BR' if needed
+// For now, keeping default locale
 
 /**
  * Helper para gerar cores hexadecimais válidas
  */
-function generateHexColor(): string {
+// @ts-expect-error - função mantida para uso futuro
+function _generateHexColor(): string {
   const colors = ['#79D9C7', '#F2B33D', '#AD82D9', '#F29C94', '#A9D979', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8']
   return faker.helpers.arrayElement(colors)
 }

@@ -21,7 +21,7 @@ interface ScheduleDetailsViewProps {
 // Tipo para compatibilidade
 type ScheduleDetailsDto = ScheduleDetailsResponseDto
 
-export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: ScheduleDetailsViewProps) {
+export default function ScheduleDetailsView({ scheduleId, onBack: _onBack, onUpdate }: ScheduleDetailsViewProps) {
   const { id: scheduledAreaId } = useParams<{ id: string }>()
   const toast = useToast()
   const [schedule, setSchedule] = useState<ScheduleDetailsDto | null>(null)
@@ -490,7 +490,8 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     })
   }
 
-  const formatDate = (dateString: string) => {
+  // @ts-expect-error - função mantida para uso futuro
+  const _formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -499,7 +500,8 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
     })
   }
 
-  const getStatusBadgeClass = (status: string) => {
+  // @ts-expect-error - função mantida para uso futuro
+  const _getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'confirmed':
       case 'accepted':
@@ -1096,7 +1098,7 @@ export default function ScheduleDetailsView({ scheduleId, onBack, onUpdate }: Sc
                     type="button"
                     className="btn-primary"
                     onClick={handleAddMember}
-                    disabled={!selectedPersonId || !selectedResponsibilityId || addingMember || checkingPerson || (personValidation && (personValidation.isAlreadyScheduled || personValidation.isAbsent))}
+                    disabled={!selectedPersonId || !selectedResponsibilityId || addingMember || checkingPerson || (personValidation ? (personValidation.isAlreadyScheduled || personValidation.isAbsent) : false)}
                   >
                     {addingMember ? (
                       <>

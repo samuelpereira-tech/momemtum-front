@@ -4,7 +4,7 @@ import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import { scheduleGenerationService } from '../../../../../services/basic/scheduleGenerationService'
 import { groupService, type GroupResponseDto } from '../../../../../services/basic/groupService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
-import type { ScheduleGroupDto, ScheduleGroupConfiguration } from './types'
+import type { ScheduleGroupDto } from './types'
 import { mapConfiguration } from './utils'
 import './ScheduleGroupDetailsView.css'
 

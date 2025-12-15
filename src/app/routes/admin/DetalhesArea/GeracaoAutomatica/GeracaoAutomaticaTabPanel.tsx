@@ -9,7 +9,6 @@ import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal
 import { groupService, type GroupResponseDto } from '../../../../../services/basic/groupService'
 import { teamService, type TeamResponseDto } from '../../../../../services/basic/teamService'
 import { personAreaService, type PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
-import { groupMemberService } from '../../../../../services/basic/groupMemberService'
 import { scheduledAbsenceService, type ScheduledAbsenceResponseDto } from '../../../../../services/basic/scheduledAbsenceService'
 import { responsibilityService, type ResponsibilityResponseDto } from '../../../../../services/basic/responsibilityService'
 import { addCacheBusting } from '../../../../../utils/fileUtils'
@@ -30,7 +29,7 @@ export default function GeracaoAutomaticaTabPanel() {
   const [groups, setGroups] = useState<GroupResponseDto[]>([])
   const [teams, setTeams] = useState<TeamResponseDto[]>([])
   const [persons, setPersons] = useState<PersonAreaResponseDto[]>([])
-  const [absences, setAbsences] = useState<ScheduledAbsenceResponseDto[]>([])
+  const [_absences, setAbsences] = useState<ScheduledAbsenceResponseDto[]>([])
   const [responsibilities, setResponsibilities] = useState<ResponsibilityResponseDto[]>([])
   const [isLoadingData, setIsLoadingData] = useState(true)
   
@@ -450,7 +449,7 @@ function Step1TypeSelection({ config, onUpdate }: { config: GenerationConfigurat
     const updates: Partial<GenerationConfiguration> = { generationType: type }
     
     // Se selecionar "Por Equipe (Com Restrição)", marcar "Validar responsabilidades obrigatoriamente" por padrão
-    if (type === 'team_with_restriction') {
+    if (type === 'team_with_restriction' && config.teamConfig) {
       updates.teamConfig = {
         ...config.teamConfig,
         requireResponsibilities: true,

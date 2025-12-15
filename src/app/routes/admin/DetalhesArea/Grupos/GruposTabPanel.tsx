@@ -333,7 +333,8 @@ export default function GruposTabPanel() {
   }
 
   // Funções auxiliares
-  const getResponsibilityName = (responsibilityId: string): string => {
+  // @ts-expect-error - função mantida para uso futuro
+  const _getResponsibilityName = (responsibilityId: string): string => {
     const responsibility = availableFunctions.find(f => f.id === responsibilityId)
     return responsibility?.name || `Função ${responsibilityId}`
   }

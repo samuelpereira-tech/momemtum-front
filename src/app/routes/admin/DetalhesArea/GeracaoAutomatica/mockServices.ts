@@ -1,6 +1,6 @@
 // Serviços para geração automática de escalas
 
-import type { GenerationConfiguration, GenerationPreview, SchedulePreview } from './types'
+import type { GenerationConfiguration, GenerationPreview, SchedulePreview, DistributionOrder } from './types'
 import type { GroupResponseDto } from '../../../../../services/basic/groupService'
 import type { TeamResponseDto } from '../../../../../services/basic/teamService'
 import type { PersonAreaResponseDto } from '../../../../../services/basic/personAreaService'
@@ -269,8 +269,10 @@ export async function generatePreview(
       scheduleEnd.setDate(scheduleEnd.getDate() + (config.periodConfig?.duration || 7) - 1)
       
       // Verificar se alguma data do período está excluída
-      const scheduleStartString = scheduleStart.toISOString().split('T')[0]
-      const scheduleEndString = scheduleEnd.toISOString().split('T')[0]
+      // @ts-expect-error - variáveis mantidas para uso futuro
+      const _scheduleStartString = scheduleStart.toISOString().split('T')[0]
+      // @ts-expect-error - variáveis mantidas para uso futuro
+      const _scheduleEndString = scheduleEnd.toISOString().split('T')[0]
       const hasExcludedDate = config.periodConfig?.excludedDates?.some(excludedDate => {
         const excluded = new Date(excludedDate)
         return excluded >= scheduleStart && excluded <= scheduleEnd

@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import ScheduleDetailsView from './ScheduleDetailsView'
 
 export default function EscalaScheduleDetails() {
-  const { id: scheduledAreaId, scheduleId } = useParams<{ id: string; scheduleId: string }>()
+  const { id: _scheduledAreaId, scheduleId } = useParams<{ id: string; scheduleId: string }>()
   const navigate = useNavigate()
 
   const handleBack = () => {

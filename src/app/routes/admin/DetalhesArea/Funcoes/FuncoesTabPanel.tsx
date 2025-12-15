@@ -507,7 +507,7 @@ function CloneFuncoesModal({
       for (const funcao of sourceFunctions.data) {
         try {
           // Criar nova função na área atual
-          const newFuncao = await responsibilityService.createResponsibility({
+          await responsibilityService.createResponsibility({
             name: funcao.name,
             description: funcao.description || undefined,
             scheduledAreaId: currentAreaId

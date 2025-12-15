@@ -165,11 +165,11 @@ const mockPersonNames = [
 ]
 
 export const mockResponsibilities = [
-  { id: 'resp-1', name: 'Enfermeiro', imageUrl: null },
-  { id: 'resp-2', name: 'Médico', imageUrl: null },
-  { id: 'resp-3', name: 'Técnico', imageUrl: null },
-  { id: 'resp-4', name: 'Auxiliar', imageUrl: null },
-  { id: 'resp-5', name: 'Supervisor', imageUrl: null },
+  { id: 'resp-1', name: 'Enfermeiro', imageUrl: undefined },
+  { id: 'resp-2', name: 'Médico', imageUrl: undefined },
+  { id: 'resp-3', name: 'Técnico', imageUrl: undefined },
+  { id: 'resp-4', name: 'Auxiliar', imageUrl: undefined },
+  { id: 'resp-5', name: 'Supervisor', imageUrl: undefined },
 ]
 
 const generateMockMembers = (scheduleId: string, count: number): ScheduleMemberDto[] => {
@@ -185,7 +185,7 @@ const generateMockMembers = (scheduleId: string, count: number): ScheduleMemberD
       personPhotoUrl: i % 3 === 0 ? `https://i.pravatar.cc/150?img=${personIndex + 1}` : undefined,
       responsibilityId: responsibility.id,
       responsibilityName: responsibility.name,
-      responsibilityImageUrl: responsibility.imageUrl,
+      responsibilityImageUrl: responsibility.imageUrl ?? undefined,
       status: ['pending', 'accepted', 'rejected'][Math.floor(Math.random() * 3)] as 'pending' | 'accepted' | 'rejected',
     }
   })
@@ -554,7 +554,7 @@ export async function updateScheduleMember(
   const responsibility = mockResponsibilities.find(r => r.id === responsibilityId)
   member.responsibilityId = responsibilityId
   member.responsibilityName = responsibilityName
-  member.responsibilityImageUrl = responsibility?.imageUrl
+  member.responsibilityImageUrl = responsibility?.imageUrl ?? undefined
 
   scheduleDetailsCache.set(scheduleId, details)
 
@@ -610,7 +610,8 @@ export async function addScheduleMember(
     personPhotoUrl,
     responsibilityId,
     responsibilityName,
-    responsibilityImageUrl: responsibility?.imageUrl,
+    responsibilityImageUrl: responsibility?.imageUrl ?? undefined,
+    status: 'pending',
   }
 
   details.members.push(newMember)

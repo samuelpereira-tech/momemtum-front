@@ -11,9 +11,9 @@ export async function apiClient<T>(
 ): Promise<T> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY)
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   }
 
   // Adicionar token de autorização se disponível
@@ -72,10 +72,13 @@ export async function apiClient<T>(
               localStorage.setItem('refreshToken', result.refreshToken)
             }
             // Tentar novamente a requisição original
-            headers['Authorization'] = `Bearer ${result.accessToken}`
+            const retryHeaders: Record<string, string> = {
+              ...headers,
+              'Authorization': `Bearer ${result.accessToken}`
+            }
             const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
               ...options,
-              headers,
+              headers: retryHeaders,
             })
             if (!retryResponse.ok) {
               // Tentar extrair mensagem de erro do retry

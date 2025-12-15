@@ -74,7 +74,7 @@ export default function TipoAusencia() {
       if (isAdding) {
         await absenceTypeService.createAbsenceType({
           name: formData.name!,
-          description: formData.description,
+          description: formData.description ?? undefined,
           color: formData.color || '#AD82D9',
           active: formData.active ?? true
         })
@@ -82,7 +82,7 @@ export default function TipoAusencia() {
       } else if (isEditing) {
         await absenceTypeService.updateAbsenceType(isEditing, {
           name: formData.name!,
-          description: formData.description,
+          description: formData.description ?? undefined,
           color: formData.color || '#AD82D9',
           active: formData.active ?? true
         })

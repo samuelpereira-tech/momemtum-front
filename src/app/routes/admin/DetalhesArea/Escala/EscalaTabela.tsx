@@ -29,8 +29,9 @@ export default function EscalaTabela() {
   const isLoadingRef = useRef(false)
   const lastLoadParamsRef = useRef<string>('')
 
-  // Função auxiliar para carregar escalas otimizadas
-  const loadOptimizedSchedulesData = useCallback(async (page: number, groupId?: string) => {
+  // Função auxiliar para carregar escalas otimizadas (mantida para uso futuro)
+  // @ts-expect-error - função mantida para uso futuro
+  const _loadOptimizedSchedulesData = useCallback(async (page: number, groupId?: string) => {
     if (!scheduledAreaId) return
 
     setOptimizedSchedulesLoading(true)
@@ -190,8 +191,9 @@ export default function EscalaTabela() {
     })
   }
 
-  // Expandir/colapsar todos os grupos
-  const toggleAllGroups = () => {
+  // Expandir/colapsar todos os grupos (mantida para uso futuro)
+  // @ts-expect-error - função mantida para uso futuro
+  const _toggleAllGroups = () => {
     if (expandedDates.size === 0) {
       // Expandir todos
       const allDates = new Set(groupSchedulesByDate(optimizedSchedules).map(g => g.date))

@@ -8,7 +8,7 @@ import { personService } from '../../../../services/basic/personService'
 import type { PersonResponseDto } from '../../../../services/basic/personService'
 import { useToast } from '../../../../components/ui/Toast/ToastProvider'
 import { formatCPF, formatPhone, formatarCPF, formatarTelefone, formatarData, removeMask } from '../../../../utils/formatters'
-import { validateImageFile, createImagePreview, addCacheBusting } from '../../../../utils/fileUtils'
+import { validateImageFile, createImagePreview } from '../../../../utils/fileUtils'
 import '../../../../components/admin/admin.css'
 import './ListarPessoas.css'
 
@@ -21,7 +21,7 @@ export default function ListarPessoas() {
   const [filtroEmail, setFiltroEmail] = useState('')
   const [filtroCPF, setFiltroCPF] = useState('')
   const [paginaAtual, setPaginaAtual] = useState(1)
-  const [totalPaginas, setTotalPaginas] = useState(1)
+  const [_totalPaginas, setTotalPaginas] = useState(1)
   const [total, setTotal] = useState(0)
   const itensPorPagina = 10 // Itens por página na exibição
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -193,7 +193,7 @@ export default function ListarPessoas() {
     setEditPhotoPreview(null)
   }
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>, pessoaId: string) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>, _pessoaId: string) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validar arquivo
