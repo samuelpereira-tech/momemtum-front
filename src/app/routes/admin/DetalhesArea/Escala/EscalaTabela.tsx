@@ -218,7 +218,7 @@ export default function EscalaTabela() {
   }
 
   // Funções de seleção
-  const handleSelectSchedule = (scheduleId: string, e: React.MouseEvent) => {
+  const handleSelectSchedule = (scheduleId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation()
     setSelectedSchedules(prev => {
       const newSet = new Set(prev)
@@ -231,7 +231,7 @@ export default function EscalaTabela() {
     })
   }
 
-  const handleSelectAll = (e: React.MouseEvent) => {
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.stopPropagation()
     const allVisibleIds = new Set(optimizedSchedules.map(s => s.id))
     const allSelected = allVisibleIds.size > 0 && Array.from(allVisibleIds).every(id => selectedSchedules.has(id))
