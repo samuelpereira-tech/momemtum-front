@@ -96,6 +96,11 @@ const EscalaPublica: React.FC = () => {
     }, [data]);
 
     const getWeekday = (dateString: string) => {
+
+        if (id === '61cb0c68-cc38-4356-b8c2-c032fe2745a3') {
+            return 'Semana';
+        }
+
         const date = new Date(data.find(s =>
             new Date(s.start_datetime).toLocaleDateString('pt-BR', {
                 day: '2-digit',
