@@ -45,11 +45,15 @@ interface PaginatedResponse {
 }
 
 const EscalaPublica: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    let { id } = useParams<{ id: string }>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<Schedule[]>([]);
     // const [meta, setMeta] = useState<any>(null);
+
+    if (id === 'midia') {
+        id = '61cb0c68-cc38-4356-b8c2-c032fe2745a3';
+    }
 
     useEffect(() => {
         const fetchData = async () => {
