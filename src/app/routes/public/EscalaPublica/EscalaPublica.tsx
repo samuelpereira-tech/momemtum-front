@@ -71,6 +71,10 @@ const EscalaPublica: React.FC = () => {
         }
     }, [id]);
 
+    useEffect(() => {
+        document.title = 'Escala de Equipe';
+    }, [id]);
+
     const groupedSchedules = useMemo(() => {
         const groups: { [key: string]: Schedule[] } = {};
 
@@ -140,7 +144,7 @@ const EscalaPublica: React.FC = () => {
         <div className="public-escala-page">
             <header className="public-escala-header">
                 <div className="header-content">
-                    <h1>Equipe Mídia</h1>
+                    <h1>{id === '61cb0c68-cc38-4356-b8c2-c032fe2745a3' ? 'Equipe Mídia' : 'Escala de Equipe'}</h1>
                 </div>
             </header>
 
