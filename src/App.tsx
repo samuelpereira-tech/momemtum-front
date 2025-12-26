@@ -12,6 +12,7 @@ import AdicionarAusencia from './app/routes/admin/AdicionarAusencia/AdicionarAus
 import ListarAreas from './app/routes/admin/ListarAreas/ListarAreas'
 import CadastrarArea from './app/routes/admin/CadastrarArea/CadastrarArea'
 import DetalhesArea from './app/routes/admin/DetalhesArea/DetalhesArea'
+import EscalaPublica from './app/routes/public/EscalaPublica/EscalaPublica'
 import ProtectedRoute from './components/ProtectedRoute'
 import './App.css'
 
@@ -22,184 +23,186 @@ function App() {
         <SidebarProvider>
           <BrowserRouter>
             <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route 
-            path="/Dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/cadastrar-pessoa" 
-            element={
-              <ProtectedRoute>
-                <CadastrarPessoa />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/editar-pessoa/:id" 
-            element={
-              <ProtectedRoute>
-                <CadastrarPessoa />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/listar-pessoas" 
-            element={
-              <ProtectedRoute>
-                <ListarPessoas />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/listar-ausencias" 
-            element={
-              <ProtectedRoute>
-                <ListarAusencias />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/adicionar-ausencia" 
-            element={
-              <ProtectedRoute>
-                <AdicionarAusencia />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/editar-ausencia/:id" 
-            element={
-              <ProtectedRoute>
-                <AdicionarAusencia />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas" 
-            element={
-              <ProtectedRoute>
-                <ListarAreas />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/adicionar" 
-            element={
-              <ProtectedRoute>
-                <CadastrarArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/pessoas" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/grupos" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/funcoes" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/equipes" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/geracao-automatica" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/escala" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/escala/grupos" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/escala/cards" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/escala/tabela" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/escala/schedule/:scheduleId" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/:id/escala/grupo/:groupId" 
-            element={
-              <ProtectedRoute>
-                <DetalhesArea />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/Dashboard/escala/areas/editar/:id" 
-            element={
-              <ProtectedRoute>
-                <CadastrarArea />
-              </ProtectedRoute>
-            } 
-          />
+              <Route path="/" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/escala/:id" element={<EscalaPublica />} />
+
+              <Route
+                path="/Dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/cadastrar-pessoa"
+                element={
+                  <ProtectedRoute>
+                    <CadastrarPessoa />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/editar-pessoa/:id"
+                element={
+                  <ProtectedRoute>
+                    <CadastrarPessoa />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/listar-pessoas"
+                element={
+                  <ProtectedRoute>
+                    <ListarPessoas />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/listar-ausencias"
+                element={
+                  <ProtectedRoute>
+                    <ListarAusencias />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/adicionar-ausencia"
+                element={
+                  <ProtectedRoute>
+                    <AdicionarAusencia />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/editar-ausencia/:id"
+                element={
+                  <ProtectedRoute>
+                    <AdicionarAusencia />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas"
+                element={
+                  <ProtectedRoute>
+                    <ListarAreas />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/adicionar"
+                element={
+                  <ProtectedRoute>
+                    <CadastrarArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/pessoas"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/grupos"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/funcoes"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/equipes"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/geracao-automatica"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/escala"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/escala/grupos"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/escala/cards"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/escala/tabela"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/escala/schedule/:scheduleId"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/:id/escala/grupo/:groupId"
+                element={
+                  <ProtectedRoute>
+                    <DetalhesArea />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/Dashboard/escala/areas/editar/:id"
+                element={
+                  <ProtectedRoute>
+                    <CadastrarArea />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </BrowserRouter>
         </SidebarProvider>
