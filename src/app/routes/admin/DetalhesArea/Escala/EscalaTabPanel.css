@@ -1018,21 +1018,84 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: rgba(121, 217, 199, 0.1);
-  border: 1px solid rgba(121, 217, 199, 0.2);
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #5abcb0;
+  font-weight: 600;
   white-space: nowrap;
   transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .table-group-badge:hover {
-  background: rgba(121, 217, 199, 0.15);
-  border-color: rgba(121, 217, 199, 0.3);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 1. Purple (Default Theme) */
+.table-group-badge:nth-of-type(6n+1) {
+  background: rgba(173, 130, 217, 0.12);
+  border-color: rgba(173, 130, 217, 0.3);
+  color: var(--color-purple);
+}
+
+.table-group-badge:nth-of-type(6n+1):hover {
+  background: rgba(173, 130, 217, 0.22);
+}
+
+/* 2. Vivid Blue */
+.table-group-badge:nth-of-type(6n+2) {
+  background: rgba(33, 150, 243, 0.12);
+  border-color: rgba(33, 150, 243, 0.3);
+  color: #1565c0;
+}
+
+.table-group-badge:nth-of-type(6n+2):hover {
+  background: rgba(33, 150, 243, 0.22);
+}
+
+/* 3. Vivid Pink */
+.table-group-badge:nth-of-type(6n+3) {
+  background: rgba(233, 30, 99, 0.12);
+  border-color: rgba(233, 30, 99, 0.3);
+  color: #c2185b;
+}
+
+.table-group-badge:nth-of-type(6n+3):hover {
+  background: rgba(233, 30, 99, 0.22);
+}
+
+/* 4. Vivid Orange */
+.table-group-badge:nth-of-type(6n+4) {
+  background: rgba(255, 152, 0, 0.12);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ef6c00;
+}
+
+.table-group-badge:nth-of-type(6n+4):hover {
+  background: rgba(255, 152, 0, 0.22);
+}
+
+/* 5. Vivid Green */
+.table-group-badge:nth-of-type(6n+5) {
+  background: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.3);
+  color: #2e7d32;
+}
+
+.table-group-badge:nth-of-type(6n+5):hover {
+  background: rgba(76, 175, 80, 0.22);
+}
+
+/* 6. Vivid Teal/Cyan */
+.table-group-badge:nth-of-type(6n+6) {
+  background: rgba(0, 188, 212, 0.12);
+  border-color: rgba(0, 188, 212, 0.3);
+  color: #00838f;
+}
+
+.table-group-badge:nth-of-type(6n+6):hover {
+  background: rgba(0, 188, 212, 0.22);
 }
 
 .table-group-empty {
@@ -1275,7 +1338,7 @@
 
 /* Table action buttons */
 .schedules-table .btn-action {
-  width: 32px;
+  width: 100%;
   height: 32px;
   border: none;
   border-radius: 0;

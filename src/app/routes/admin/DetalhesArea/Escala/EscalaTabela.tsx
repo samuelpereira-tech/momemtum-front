@@ -19,7 +19,7 @@ export default function EscalaTabela() {
   const [optimizedSchedulesTotalPages, setOptimizedSchedulesTotalPages] = useState(1)
   const [optimizedSchedulesLoading, setOptimizedSchedulesLoading] = useState(false)
   const schedulesLimit = 10
-  
+
   // Estados para filtros de data (modo tabela)
   const [filterStartDate, setFilterStartDate] = useState<string>('')
   const [filterEndDate, setFilterEndDate] = useState<string>('')
@@ -50,21 +50,21 @@ export default function EscalaTabela() {
         page,
         limit: schedulesLimit,
       }
-      
+
       if (groupId) {
         filters.scheduleGenerationId = groupId
       }
-      
+
       if (filterStartDate) {
         // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
         filters.startDate = filterStartDate
       }
-      
+
       if (filterEndDate) {
         // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
         filters.endDate = filterEndDate
       }
-      
+
       const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
       setOptimizedSchedules(response.data)
       setOptimizedSchedulesTotalPages(response.meta.totalPages)
@@ -100,25 +100,25 @@ export default function EscalaTabela() {
           page: optimizedSchedulesPage,
           limit: schedulesLimit,
         }
-        
+
         if (grupoId) {
           filters.scheduleGenerationId = grupoId
         }
-        
+
         if (filterStartDate) {
           // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
           filters.startDate = filterStartDate
         }
-        
+
         if (filterEndDate) {
           // Enviar apenas a data no formato YYYY-MM-DD para "Todas as Escalas"
           filters.endDate = filterEndDate
         }
-        
+
         const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
         setOptimizedSchedules(response.data)
         setOptimizedSchedulesTotalPages(response.meta.totalPages)
-        
+
         // Limpar seleção quando os dados mudarem
         setSelectedSchedules(new Set())
       } catch (error) {
@@ -141,7 +141,7 @@ export default function EscalaTabela() {
         return
       }
     }
-    
+
     // A API otimizada retorna o ID diretamente
     if (schedule.id) {
       navigate(`/Dashboard/escala/areas/${scheduledAreaId}/escala/schedule/${schedule.id}`)
@@ -175,7 +175,7 @@ export default function EscalaTabela() {
   // Função para agrupar escalas por data
   const groupSchedulesByDate = (schedules: ScheduleOptimizedResponseDto[]) => {
     const grouped = new Map<string, ScheduleOptimizedResponseDto[]>()
-    
+
     schedules.forEach(schedule => {
       const dateKey = getDateOnly(schedule.startDatetime)
       if (!grouped.has(dateKey)) {
@@ -183,7 +183,7 @@ export default function EscalaTabela() {
       }
       grouped.get(dateKey)!.push(schedule)
     })
-    
+
     return Array.from(grouped.entries()).map(([date, schedules]) => ({
       date,
       schedules,
@@ -213,7 +213,7 @@ export default function EscalaTabela() {
     const roles = schedule.people
       .map(p => p.role)
       .filter((role): role is string => !!role)
-    
+
     const distinctRoles = Array.from(new Set(roles)).sort()
 
     if (distinctRoles.length > 0) {
@@ -275,7 +275,7 @@ export default function EscalaTabela() {
     e.stopPropagation()
     const allVisibleIds = new Set(optimizedSchedules.map(s => s.id))
     const allSelected = allVisibleIds.size > 0 && Array.from(allVisibleIds).every(id => selectedSchedules.has(id))
-    
+
     if (allSelected) {
       // Deselecionar todas as visíveis
       setSelectedSchedules(prev => {
@@ -320,7 +320,7 @@ export default function EscalaTabela() {
       setShowDeleteModal(false)
       setScheduleToDelete(null)
       toast.showSuccess('Escala removida com sucesso!')
-      
+
       // Recarregar escalas
       await reloadSchedules()
     } catch (err: any) {
@@ -385,23 +385,23 @@ export default function EscalaTabela() {
         page: optimizedSchedulesPage,
         limit: schedulesLimit,
       }
-      
+
       if (grupoId) {
         filters.scheduleGenerationId = grupoId
       }
-      
+
       if (filterStartDate) {
         filters.startDate = filterStartDate
       }
-      
+
       if (filterEndDate) {
         filters.endDate = filterEndDate
       }
-      
+
       const response = await scheduleService.getSchedulesOptimized(scheduledAreaId, filters)
       setOptimizedSchedules(response.data)
       setOptimizedSchedulesTotalPages(response.meta.totalPages)
-      
+
       // Ajustar página se necessário
       if (response.data.length === 0 && optimizedSchedulesPage > 1) {
         setOptimizedSchedulesPage(prev => Math.max(1, prev - 1))
@@ -555,10 +555,10 @@ export default function EscalaTabela() {
                   {groupSchedulesByDate(optimizedSchedules).map((dateGroup) => {
                     const isExpanded = expandedDates.has(dateGroup.date)
                     const schedulesCount = dateGroup.schedules.length
-                    
+
                     return (
                       <div key={dateGroup.date} className="date-group-container">
-                        <div 
+                        <div
                           className="date-group-header"
                           onClick={() => toggleDateGroup(dateGroup.date)}
                         >
@@ -586,8 +586,7 @@ export default function EscalaTabela() {
                                     title={allSelected ? 'Deselecionar todas' : 'Selecionar todas'}
                                   />
                                 </th>
-                                <th>Horário</th>
-                                <th>Grupos</th>
+                                <th>Grupos / Funções</th>
                                 <th>Participantes</th>
                                 <th style={{ width: '60px' }}>Ações</th>
                               </tr>
@@ -603,7 +602,7 @@ export default function EscalaTabela() {
                                   minute: '2-digit'
                                 })
                                 const isSelected = selectedSchedules.has(schedule.id)
-                                
+
                                 return (
                                   <tr
                                     key={schedule.id}
@@ -618,15 +617,7 @@ export default function EscalaTabela() {
                                         onClick={(e) => e.stopPropagation()}
                                       />
                                     </td>
-                                    <td 
-                                      className="schedule-table-date"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleTableRowClick(schedule, e)
-                                      }}
-                                    >
-                                      {startTime} - {endTime}
-                                    </td>
+
                                     <td className="schedule-table-groups">
                                       {renderGroupsOrRoles(schedule)}
                                     </td>
@@ -634,7 +625,7 @@ export default function EscalaTabela() {
                                       <div className="table-participants-avatars">
                                         {schedule.people.map((person, index) => {
                                           const isRejected = person.status === 'rejected'
-                                          
+
                                           return (
                                             <div
                                               key={index}
@@ -719,7 +710,7 @@ export default function EscalaTabela() {
                           />
                         </th>
                         <th>Data</th>
-                        <th>Grupos</th>
+                        <th>Grupos / Funções</th>
                         <th>Participantes</th>
                         <th style={{ width: '60px' }}>Ações</th>
                       </tr>
@@ -741,7 +732,7 @@ export default function EscalaTabela() {
                                 onClick={(e) => e.stopPropagation()}
                               />
                             </td>
-                            <td 
+                            <td
                               className="schedule-table-date"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -750,14 +741,14 @@ export default function EscalaTabela() {
                             >
                               {formatDateRange(schedule.startDatetime, schedule.endDatetime)}
                             </td>
-                          <td className="schedule-table-groups">
-                            {renderGroupsOrRoles(schedule)}
-                          </td>
+                            <td className="schedule-table-groups">
+                              {renderGroupsOrRoles(schedule)}
+                            </td>
                             <td className="schedule-table-participants">
                               <div className="table-participants-avatars">
                                 {schedule.people.map((person, index) => {
                                   const isRejected = person.status === 'rejected'
-                                  
+
                                   return (
                                     <div
                                       key={index}
