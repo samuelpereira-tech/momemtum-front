@@ -149,7 +149,7 @@ const EscalaPublica: React.FC = () => {
                         <section key={dateKey} className="date-group">
                             <div className="date-header">
                                 <div className="date-info">
-                                    <span className="weekday">{getWeekday(dateKey)}</span>
+                                    <span className="weekday">{"Semana" || getWeekday(dateKey)}</span>
                                     <h2 className="date-title">{dateKey}</h2>
                                 </div>
                                 <div className="date-divider"></div>
