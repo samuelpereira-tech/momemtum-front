@@ -191,6 +191,46 @@ export default function EscalaTabela() {
     }))
   }
 
+  // Renderizar grupos ou roles (se sem grupo)
+  const renderGroupsOrRoles = (schedule: ScheduleOptimizedResponseDto) => {
+    if (schedule.groups && schedule.groups.length > 0) {
+      return (
+        <div className="table-groups-list">
+          {schedule.groups.map((group, index) => {
+            const groupName = typeof group === 'string' ? group : group.name
+            const groupId = typeof group === 'string' ? index.toString() : group.id
+            return (
+              <span key={groupId} className="table-group-badge">
+                {groupName}
+              </span>
+            )
+          })}
+        </div>
+      )
+    }
+
+    // Se não tiver grupo, exibe roles distintos
+    const roles = schedule.people
+      .map(p => p.role)
+      .filter((role): role is string => !!role)
+    
+    const distinctRoles = Array.from(new Set(roles)).sort()
+
+    if (distinctRoles.length > 0) {
+      return (
+        <div className="table-groups-list">
+          {distinctRoles.map((role, index) => (
+            <span key={`role-${index}`} className="table-group-badge" style={{ opacity: 0.8 }}>
+              {role}
+            </span>
+          ))}
+        </div>
+      )
+    }
+
+    return <span className="table-group-empty">-</span>
+  }
+
   // Toggle para expandir/colapsar grupo de data
   const toggleDateGroup = (dateKey: string) => {
     setExpandedDates(prev => {
@@ -588,21 +628,7 @@ export default function EscalaTabela() {
                                       {startTime} - {endTime}
                                     </td>
                                     <td className="schedule-table-groups">
-                                      {schedule.groups && schedule.groups.length > 0 ? (
-                                        <div className="table-groups-list">
-                                          {schedule.groups.map((group, index) => {
-                                            const groupName = typeof group === 'string' ? group : group.name
-                                            const groupId = typeof group === 'string' ? index.toString() : group.id
-                                            return (
-                                              <span key={groupId} className="table-group-badge">
-                                                {groupName}
-                                              </span>
-                                            )
-                                          })}
-                                        </div>
-                                      ) : (
-                                        <span className="table-group-empty">-</span>
-                                      )}
+                                      {renderGroupsOrRoles(schedule)}
                                     </td>
                                     <td className="schedule-table-participants">
                                       <div className="table-participants-avatars">
@@ -725,21 +751,7 @@ export default function EscalaTabela() {
                               {formatDateRange(schedule.startDatetime, schedule.endDatetime)}
                             </td>
                           <td className="schedule-table-groups">
-                            {schedule.groups && schedule.groups.length > 0 ? (
-                              <div className="table-groups-list">
-                                {schedule.groups.map((group, index) => {
-                                  const groupName = typeof group === 'string' ? group : group.name
-                                  const groupId = typeof group === 'string' ? index.toString() : group.id
-                                  return (
-                                    <span key={groupId} className="table-group-badge">
-                                      {groupName}
-                                    </span>
-                                  )
-                                })}
-                              </div>
-                            ) : (
-                              <span className="table-group-empty">-</span>
-                            )}
+                            {renderGroupsOrRoles(schedule)}
                           </td>
                             <td className="schedule-table-participants">
                               <div className="table-participants-avatars">
