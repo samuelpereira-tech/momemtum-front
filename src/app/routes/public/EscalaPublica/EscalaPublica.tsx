@@ -49,7 +49,7 @@ const EscalaPublica: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<Schedule[]>([]);
-    const [meta, setMeta] = useState<any>(null);
+    // const [meta, setMeta] = useState<any>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -57,7 +57,7 @@ const EscalaPublica: React.FC = () => {
                 setLoading(true);
                 const response = await apiClient<PaginatedResponse>(`/api/scheduled-areas/${id}/schedules/optimized?page=1&limit=50`);
                 setData(response.data);
-                setMeta(response.meta);
+                // setMeta(response.meta);
             } catch (err: any) {
                 console.error('Erro ao buscar escala:', err);
                 setError(err.message || 'Não foi possível carregar a escala.');
@@ -149,7 +149,7 @@ const EscalaPublica: React.FC = () => {
                         <section key={dateKey} className="date-group">
                             <div className="date-header">
                                 <div className="date-info">
-                                    <span className="weekday">{"Semana" || getWeekday(dateKey)}</span>
+                                    <span className="weekday">{getWeekday(dateKey)}</span>
                                     <h2 className="date-title">{dateKey}</h2>
                                 </div>
                                 <div className="date-divider"></div>

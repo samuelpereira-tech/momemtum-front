@@ -593,14 +593,7 @@ export default function EscalaTabela() {
                             </thead>
                             <tbody>
                               {dateGroup.schedules.map((schedule) => {
-                                const startTime = new Date(schedule.startDatetime).toLocaleTimeString('pt-BR', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                                const endTime = new Date(schedule.endDatetime).toLocaleTimeString('pt-BR', {
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
+
                                 const isSelected = selectedSchedules.has(schedule.id)
 
                                 return (
