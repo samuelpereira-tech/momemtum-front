@@ -1696,6 +1696,59 @@
         ]
       }
     },
+    "/api/scheduled-areas/{id}/schedules/optimized": {
+      "get": {
+        "description": "Retrieves a list of schedules for a specific area. This endpoint is public.",
+        "operationId": "ScheduledAreaController_getOptimizedSchedules",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page (max 100)",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedules retrieved successfully"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get optimized schedules for an area",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
     "/api/scheduled-areas/{id}": {
       "get": {
         "description": "Retrieves a specific scheduled area by its ID",
@@ -1975,6 +2028,141 @@
           }
         ],
         "summary": "Toggle favorite status",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{id}/notifications": {
+      "post": {
+        "description": "Adds a new notification configuration for a scheduled area",
+        "operationId": "ScheduledAreaController_addNotificationConfig",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNotificationConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notification configuration added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationConfigResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data"
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add notification configuration",
+        "tags": [
+          "scheduled-areas"
+        ]
+      },
+      "get": {
+        "description": "Retrieves all notification configurations for a scheduled area",
+        "operationId": "ScheduledAreaController_getNotificationConfigs",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of notification configurations retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationConfigResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scheduled area not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get notification configurations",
+        "tags": [
+          "scheduled-areas"
+        ]
+      }
+    },
+    "/api/scheduled-areas/{id}/notifications/{configId}": {
+      "delete": {
+        "description": "Removes a specific notification configuration",
+        "operationId": "ScheduledAreaController_removeNotificationConfig",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "configId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Notification configuration removed successfully"
+          },
+          "404": {
+            "description": "Scheduled area or configuration not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Remove notification configuration",
         "tags": [
           "scheduled-areas"
         ]
@@ -4452,7 +4640,7 @@
         ]
       },
       "delete": {
-        "description": "Deletes a schedule. Only manual schedules can be deleted. Automatically generated schedules should be deleted through their schedule generation.",
+        "description": "Deletes a schedule. Both manual and automatically generated schedules can be deleted.",
         "operationId": "ScheduleController_remove",
         "parameters": [
           {
@@ -4479,9 +4667,6 @@
         "responses": {
           "204": {
             "description": "Schedule deleted successfully"
-          },
-          "400": {
-            "description": "Cannot delete automatically generated schedule"
           },
           "401": {
             "description": "Unauthorized - Authentication required"
@@ -6362,6 +6547,77 @@
         },
         "required": [
           "favorite"
+        ]
+      },
+      "CreateNotificationConfigDto": {
+        "type": "object",
+        "properties": {
+          "timeAmount": {
+            "type": "number",
+            "example": 1,
+            "description": "Amount of time before the event"
+          },
+          "timeUnit": {
+            "type": "string",
+            "enum": [
+              "hours",
+              "days",
+              "weeks"
+            ],
+            "example": "days",
+            "description": "Unit of time"
+          },
+          "messageTemplate": {
+            "type": "string",
+            "example": "Hello {name}, you have a schedule on {date}.",
+            "description": "Message template"
+          }
+        },
+        "required": [
+          "timeAmount",
+          "timeUnit"
+        ]
+      },
+      "NotificationConfigResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "description": "Unique identifier"
+          },
+          "scheduled_area_id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "description": "Scheduled Area ID"
+          },
+          "time_amount": {
+            "type": "number",
+            "example": 1,
+            "description": "Amount of time before the event"
+          },
+          "time_unit": {
+            "type": "string",
+            "example": "days",
+            "description": "Unit of time"
+          },
+          "message_template": {
+            "type": "string",
+            "example": "Hello {name}, you have a schedule on {date}.",
+            "description": "Message template"
+          },
+          "created_at": {
+            "type": "string",
+            "example": "2023-01-01T00:00:00Z",
+            "description": "Creation date"
+          }
+        },
+        "required": [
+          "id",
+          "scheduled_area_id",
+          "time_amount",
+          "time_unit",
+          "created_at"
         ]
       },
       "CreateResponsibilityDto": {

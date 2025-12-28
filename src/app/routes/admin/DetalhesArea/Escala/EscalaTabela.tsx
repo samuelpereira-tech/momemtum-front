@@ -4,6 +4,7 @@ import { scheduleService, type ScheduleOptimizedResponseDto } from '../../../../
 import { addCacheBusting } from '../../../../../utils/fileUtils'
 import { useToast } from '../../../../../components/ui/Toast/ToastProvider'
 import ConfirmModal from '../../../../../components/ui/ConfirmModal/ConfirmModal'
+import WhatsAppNotificationModal, { type NotificationConfig } from './WhatsAppNotificationModal'
 import './EscalaTabPanel.css'
 
 export default function EscalaTabela() {
@@ -34,6 +35,11 @@ export default function EscalaTabela() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
   const [scheduleToDelete, setScheduleToDelete] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Estados para notificação WhatsApp
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
+  const [scheduleNotifications, setScheduleNotifications] = useState<Map<string, NotificationConfig[]>>(new Map())
+
 
   // Ref para evitar execuções duplicadas
   const isLoadingRef = useRef(false)
@@ -210,7 +216,7 @@ export default function EscalaTabela() {
     }
 
     // Se não tiver grupo, exibe roles distintos
-    const roles = schedule.people
+    const roles = (schedule.people || [])
       .map(p => p.role)
       .filter((role): role is string => !!role)
 
@@ -375,6 +381,30 @@ export default function EscalaTabela() {
     }
   }
 
+  // Handler para configurar notificações WhatsApp
+  const handleOpenWhatsAppModal = () => {
+    if (selectedSchedules.size > 0) {
+      setShowWhatsAppModal(true)
+    }
+  }
+
+  const handleSaveWhatsAppConfig = (configs: NotificationConfig[]) => {
+    // Atualizar estado local para demonstração
+    setScheduleNotifications(prev => {
+      const newMap = new Map(prev)
+      selectedSchedules.forEach(scheduleId => {
+        // Em um cenário real, enviaríamos para a API aqui
+        // scheduleService.updateNotificationConfig(scheduledAreaId, scheduleId, configs)
+        newMap.set(scheduleId, configs)
+      })
+      return newMap
+    })
+
+    toast.showSuccess(`Notificações configuradas para ${selectedSchedules.size} escala(s)!`)
+    setSelectedSchedules(new Set()) // Limpar seleção após configurar
+  }
+
+
   // Função auxiliar para recarregar escalas
   const reloadSchedules = useCallback(async () => {
     if (!scheduledAreaId) return
@@ -420,6 +450,12 @@ export default function EscalaTabela() {
 
   return (
     <div className="escala-tab-panel">
+      <WhatsAppNotificationModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        onSave={handleSaveWhatsAppConfig}
+        selectedCount={selectedSchedules.size}
+      />
       <div className="tab-content">
         {/* Header com navegação */}
         <div className="schedules-header">
@@ -439,6 +475,7 @@ export default function EscalaTabela() {
           </div>
           <div className="header-right">
             <Link
+
               to={`/Dashboard/escala/areas/${scheduledAreaId}/escala/grupos`}
               className="btn-secondary btn-sm"
             >
@@ -506,15 +543,25 @@ export default function EscalaTabela() {
           {!optimizedSchedulesLoading && optimizedSchedules.length > 0 && (
             <div className="table-group-controls">
               {selectedSchedules.size > 0 && (
-                <button
-                  type="button"
-                  className="btn-danger btn-sm"
-                  onClick={handleBulkDeleteClick}
-                  disabled={isDeleting}
-                >
-                  <i className="fa-solid fa-trash"></i> Remover {selectedSchedules.size} selecionado(s)
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="btn-success btn-sm"
+                    onClick={handleOpenWhatsAppModal}
+                  >
+                    <i className="fa-brands fa-whatsapp"></i> Configurar Notificação ({selectedSchedules.size})
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger btn-sm"
+                    onClick={handleBulkDeleteClick}
+                    disabled={isDeleting}
+                  >
+                    <i className="fa-solid fa-trash"></i> Remover ({selectedSchedules.size})
+                  </button>
+                </>
               )}
+
               <button
                 type="button"
                 className={`btn-secondary btn-sm ${groupByDate ? 'active' : ''}`}
@@ -595,6 +642,7 @@ export default function EscalaTabela() {
                               {dateGroup.schedules.map((schedule) => {
 
                                 const isSelected = selectedSchedules.has(schedule.id)
+                                const hasNotification = scheduleNotifications.has(schedule.id) || (schedule.notifications && schedule.notifications.rulesCount > 0)
 
                                 return (
                                   <tr
@@ -613,17 +661,22 @@ export default function EscalaTabela() {
 
                                     <td className="schedule-table-groups">
                                       {renderGroupsOrRoles(schedule)}
+                                      {hasNotification && (
+                                        <span className="notification-icon" title="Notificações WhatsApp configuradas">
+                                          <i className="fa-brands fa-whatsapp text-success" style={{ marginLeft: '8px' }}></i>
+                                        </span>
+                                      )}
                                     </td>
                                     <td className="schedule-table-participants">
                                       <div className="table-participants-avatars">
-                                        {schedule.people.map((person, index) => {
+                                        {(schedule.people || []).map((person, index) => {
                                           const isRejected = person.status === 'rejected'
 
                                           return (
                                             <div
                                               key={index}
                                               className="table-participant-avatar-wrapper"
-                                              style={{ zIndex: schedule.people.length - index }}
+                                              style={{ zIndex: (schedule.people || []).length - index }}
                                             >
                                               <div
                                                 className="table-participant-avatar"
@@ -711,6 +764,8 @@ export default function EscalaTabela() {
                     <tbody>
                       {optimizedSchedules.map((schedule) => {
                         const isSelected = selectedSchedules.has(schedule.id)
+                        const hasNotification = scheduleNotifications.has(schedule.id) || (schedule.notifications && schedule.notifications.rulesCount > 0)
+
                         return (
                           <tr
                             key={schedule.id}
@@ -736,17 +791,22 @@ export default function EscalaTabela() {
                             </td>
                             <td className="schedule-table-groups">
                               {renderGroupsOrRoles(schedule)}
+                              {hasNotification && (
+                                <span className="notification-icon" title="Notificações WhatsApp configuradas">
+                                  <i className="fa-brands fa-whatsapp text-success" style={{ marginLeft: '8px' }}></i>
+                                </span>
+                              )}
                             </td>
                             <td className="schedule-table-participants">
                               <div className="table-participants-avatars">
-                                {schedule.people.map((person, index) => {
+                                {(schedule.people || []).map((person, index) => {
                                   const isRejected = person.status === 'rejected'
 
                                   return (
                                     <div
                                       key={index}
                                       className="table-participant-avatar-wrapper"
-                                      style={{ zIndex: schedule.people.length - index }}
+                                      style={{ zIndex: (schedule.people || []).length - index }}
                                     >
                                       <div
                                         className="table-participant-avatar"

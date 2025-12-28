@@ -1,0 +1,144 @@
+
+.whatsapp-modal {
+  max-width: 600px;
+  width: 100%;
+}
+
+.whatsapp-modal h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #25D366; /* WhatsApp Green */
+}
+
+.whatsapp-modal h3 i {
+  font-size: 1.2em;
+}
+
+.modal-description {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.config-form-section {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.config-form-section h4 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  color: #495057;
+}
+
+.time-config-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.time-config-row .form-group {
+  margin-bottom: 0;
+}
+
+.time-input {
+  width: 80px;
+}
+
+.unit-select {
+  width: 120px;
+}
+
+.static-text {
+  padding-bottom: 10px;
+  color: #495057;
+}
+
+.helper-text {
+  font-size: 0.85rem;
+  color: #868e96;
+  margin-top: 4px;
+}
+
+.helper-text code {
+  background: #e9ecef;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #e03131;
+}
+
+.add-rule-btn {
+  width: 100%;
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.configured-list-section h4 {
+  font-size: 0.95rem;
+  color: #495057;
+  margin-bottom: 12px;
+}
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.rule-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+}
+
+.rule-info {
+  flex: 1;
+}
+
+.rule-time {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #212529;
+  margin-bottom: 4px;
+}
+
+.rule-message-preview {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #868e96;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 400px;
+}
+
+.btn-icon-danger {
+  background: none;
+  border: none;
+  color: #adb5bd;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-icon-danger:hover {
+  color: #e03131;
+  background: #fff5f5;
+}

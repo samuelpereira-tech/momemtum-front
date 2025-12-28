@@ -185,6 +185,10 @@ export interface ScheduleOptimizedResponseDto {
   endDatetime: string
   people: PersonInScheduleDto[]
   groups: GroupInScheduleDto[] | string[]
+  notifications?: {
+    configId: string
+    rulesCount: number
+  }
 }
 
 // Interface para resposta paginada de escalas otimizadas
@@ -388,7 +392,7 @@ export class ScheduleService {
       // Usar message da API se disponível, caso contrário gerar descrição baseada no tipo de mudança
       const userName = log.changedByPerson || 'Sistema'
       let description = log.message || ''
-      
+
       // Se não houver message da API, gerar descrição baseada no tipo de mudança (fallback)
       if (!description) {
         if (log.changeType === 'schedule_status_changed') {
