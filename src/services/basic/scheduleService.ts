@@ -183,7 +183,9 @@ export interface ScheduleOptimizedResponseDto {
   id: string
   startDatetime: string
   endDatetime: string
+  description?: string
   people: PersonInScheduleDto[]
+  participants?: PersonInScheduleDto[] // Fallback para people
   groups: GroupInScheduleDto[] | string[]
   notifications?: {
     configId: string
@@ -194,6 +196,50 @@ export interface ScheduleOptimizedResponseDto {
 // Interface para resposta paginada de escalas otimizadas
 export interface PaginatedScheduleOptimizedResponseDto {
   data: ScheduleOptimizedResponseDto[]
+  meta: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+}
+
+// Interfaces raw para mapeamento (baseado no retorno JSON da API)
+interface RawPersonDto {
+  id: string
+  full_name: string
+  photo_url: string | null
+}
+
+interface RawResponsibilityDto {
+  id: string
+  name: string
+  image_url: string | null
+}
+
+interface RawScheduleMemberDto {
+  id: string
+  person: RawPersonDto
+  status: 'pending' | 'accepted' | 'rejected'
+  present: boolean | null
+  responsibility: RawResponsibilityDto
+}
+
+interface RawScheduleDto {
+  id: string
+  schedule_generation_id: string
+  scheduled_area_id: string
+  start_datetime: string
+  end_datetime: string
+  schedule_type: string
+  status: string
+  created_at: string
+  updated_at: string
+  schedule_members: RawScheduleMemberDto[]
+}
+
+interface PaginatedRawScheduleResponse {
+  data: RawScheduleDto[]
   meta: {
     page: number
     limit: number
@@ -267,9 +313,46 @@ export class ScheduleService {
     const queryString = params.toString()
     const url = `${this.baseEndpoint}/${scheduledAreaId}/schedules/optimized${queryString ? `?${queryString}` : ''}`
 
-    return apiClient<PaginatedScheduleOptimizedResponseDto>(url, {
+    // Usar a resposta raw para garantir que mapeamos corretamente os campos
+    const response = await apiClient<PaginatedRawScheduleResponse | PaginatedScheduleOptimizedResponseDto>(url, {
       method: 'GET',
     })
+
+    // Função de verificação de tipo para saber se é Snake Case (Raw)
+    const isRawResponse = (data: any): data is PaginatedRawScheduleResponse => {
+      return data.data && data.data.length > 0 && 'start_datetime' in data.data[0]
+    }
+
+    if (isRawResponse(response)) {
+      // Mapear de Snake Case para Camel Case
+      const mappedData: ScheduleOptimizedResponseDto[] = response.data.map((rawSchedule) => {
+        const people: PersonInScheduleDto[] = rawSchedule.schedule_members.map((member) => ({
+          name: member.person.full_name,
+          url: member.person.photo_url,
+          role: member.responsibility?.name || '',
+          present: member.present,
+          status: member.status,
+        }))
+
+        return {
+          id: rawSchedule.id,
+          startDatetime: rawSchedule.start_datetime,
+          endDatetime: rawSchedule.end_datetime,
+          description: '', // Descrição não presente no raw response atual
+          people: people,
+          participants: people, // Fallback
+          groups: [], // Groups não presente no raw response atual, pode precisar de ajuste se a API enviar
+        }
+      })
+
+      return {
+        data: mappedData,
+        meta: response.meta
+      }
+    }
+
+    // Se já vier no formato esperado (Camel Case), retornar direto
+    return response as PaginatedScheduleOptimizedResponseDto
   }
 
   /**
@@ -475,6 +558,7 @@ export class ScheduleService {
 }
 
 export const scheduleService = new ScheduleService()
+
 
 
 

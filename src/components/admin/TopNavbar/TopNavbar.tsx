@@ -21,7 +21,7 @@ export default function TopNavbar() {
     <header className="top-navbar">
       <div className="navbar-left">
         <h1 className="company-name">Momentum</h1>
-        <button 
+        <button
           className="sidebar-toggle-button"
           onClick={togglePin}
           title={isPinned ? 'Ocultar menu lateral' : 'Mostrar menu lateral'}
@@ -30,30 +30,30 @@ export default function TopNavbar() {
         </button>
       </div>
       <div className="navbar-right">
-        <div 
-          className="nav-icon" 
+        <div
+          className="nav-icon"
           title="Configurações"
           onClick={() => setIsSettingsOpen(true)}
         >
           <i className="fa-solid fa-gear"></i>
         </div>
-        <div className="nav-icon" title="Notificações">
+        {/* <div className="nav-icon" title="Notificações">
           <i className="fa-solid fa-bell"></i>
           <span className="notification-badge">3</span>
-        </div>
-        <div className="nav-icon" title="Mensagens">
+        </div> */}
+        {/* <div className="nav-icon" title="Mensagens">
           <i className="fa-solid fa-envelope"></i>
           <span className="notification-badge">2</span>
-        </div>
-        <div className="nav-icon" title="Alerta">
+        </div> */}
+        {/* <div className="nav-icon" title="Alerta">
           <i className="fa-solid fa-triangle-exclamation"></i>
-        </div>
+        </div> */}
         <div className="user-profile">
           <img src="https://ui-avatars.com/api/?name=Admin+User&background=AD82D9&color=fff&size=128" alt="Usuário" className="user-avatar" />
           <span className="user-name">Admin</span>
           <i className="fa-solid fa-chevron-down"></i>
         </div>
-        <button 
+        <button
           onClick={handleLogout}
           className="logout-button"
           title="Sair"
@@ -82,9 +82,9 @@ export default function TopNavbar() {
           Sair
         </button>
       </div>
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </header>
   )

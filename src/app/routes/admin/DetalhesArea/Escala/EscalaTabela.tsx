@@ -216,7 +216,7 @@ export default function EscalaTabela() {
     }
 
     // Se não tiver grupo, exibe roles distintos
-    const roles = (schedule.people || [])
+    const roles = (schedule.people || schedule.participants || [])
       .map(p => p.role)
       .filter((role): role is string => !!role)
 
@@ -634,6 +634,7 @@ export default function EscalaTabela() {
                                   />
                                 </th>
                                 <th>Grupos / Funções</th>
+                                <th>Descrição</th>
                                 <th>Participantes</th>
                                 <th style={{ width: '60px' }}>Ações</th>
                               </tr>
@@ -667,16 +668,21 @@ export default function EscalaTabela() {
                                         </span>
                                       )}
                                     </td>
+                                    <td className="schedule-table-description">
+                                      {schedule.description || '-'}
+                                    </td>
                                     <td className="schedule-table-participants">
                                       <div className="table-participants-avatars">
-                                        {(schedule.people || []).map((person, index) => {
+
+                                        {(schedule.people || schedule.participants || []).map((person, index) => {
                                           const isRejected = person.status === 'rejected'
 
                                           return (
                                             <div
                                               key={index}
                                               className="table-participant-avatar-wrapper"
-                                              style={{ zIndex: (schedule.people || []).length - index }}
+
+                                              style={{ zIndex: (schedule.people || schedule.participants || []).length - index }}
                                             >
                                               <div
                                                 className="table-participant-avatar"
@@ -713,9 +719,10 @@ export default function EscalaTabela() {
                                               </div>
                                             </div>
                                           )
-                                        })}
-                                      </div>
-                                    </td>
+                                        })
+                                        }
+                                      </div >
+                                    </td >
                                     <td onClick={(e) => e.stopPropagation()}>
                                       <button
                                         type="button"
@@ -727,16 +734,16 @@ export default function EscalaTabela() {
                                         <i className="fa-solid fa-trash"></i>
                                       </button>
                                     </td>
-                                  </tr>
+                                  </tr >
                                 )
                               })}
-                            </tbody>
-                          </table>
+                            </tbody >
+                          </table >
                         )}
-                      </div>
+                      </div >
                     )
                   })}
-                </div>
+                </div >
               ) : (
                 // Visualização normal (não agrupada)
                 <div className="schedules-table-container">
@@ -757,6 +764,7 @@ export default function EscalaTabela() {
                         </th>
                         <th>Data</th>
                         <th>Grupos / Funções</th>
+                        <th>Descrição</th>
                         <th>Participantes</th>
                         <th style={{ width: '60px' }}>Ações</th>
                       </tr>
@@ -797,16 +805,19 @@ export default function EscalaTabela() {
                                 </span>
                               )}
                             </td>
+                            <td className="schedule-table-description">
+                              {schedule.description || '-'}
+                            </td>
                             <td className="schedule-table-participants">
                               <div className="table-participants-avatars">
-                                {(schedule.people || []).map((person, index) => {
+                                {(schedule.people || schedule.participants || []).map((person, index) => {
                                   const isRejected = person.status === 'rejected'
 
                                   return (
                                     <div
                                       key={index}
                                       className="table-participant-avatar-wrapper"
-                                      style={{ zIndex: (schedule.people || []).length - index }}
+                                      style={{ zIndex: (schedule.people || schedule.participants || []).length - index }}
                                     >
                                       <div
                                         className="table-participant-avatar"
@@ -843,9 +854,10 @@ export default function EscalaTabela() {
                                       </div>
                                     </div>
                                   )
-                                })}
-                              </div>
-                            </td>
+                                })
+                                }
+                              </div >
+                            </td >
                             <td onClick={(e) => e.stopPropagation()}>
                               <button
                                 type="button"
@@ -857,54 +869,56 @@ export default function EscalaTabela() {
                                 <i className="fa-solid fa-trash"></i>
                               </button>
                             </td>
-                          </tr>
+                          </tr >
                         )
                       })}
-                    </tbody>
-                  </table>
-                </div>
+                    </tbody >
+                  </table >
+                </div >
               )}
 
-              {optimizedSchedulesTotalPages > 1 && (
-                <div className="pagination">
-                  <button
-                    type="button"
-                    className="btn-pagination"
-                    onClick={() => {
-                      const newPage = optimizedSchedulesPage - 1
-                      if (newPage >= 1) {
-                        setOptimizedSchedulesPage(newPage)
-                      }
-                    }}
-                    disabled={optimizedSchedulesPage === 1 || optimizedSchedulesLoading}
-                  >
-                    <i className="fa-solid fa-chevron-left"></i> Anterior
-                  </button>
-                  <span className="pagination-info">
-                    Página {optimizedSchedulesPage} de {optimizedSchedulesTotalPages}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn-pagination"
-                    onClick={() => {
-                      const newPage = optimizedSchedulesPage + 1
-                      if (newPage <= optimizedSchedulesTotalPages) {
-                        setOptimizedSchedulesPage(newPage)
-                      }
-                    }}
-                    disabled={optimizedSchedulesPage === optimizedSchedulesTotalPages || optimizedSchedulesLoading}
-                  >
-                    Próxima <i className="fa-solid fa-chevron-right"></i>
-                  </button>
-                </div>
-              )}
+              {
+                optimizedSchedulesTotalPages > 1 && (
+                  <div className="pagination">
+                    <button
+                      type="button"
+                      className="btn-pagination"
+                      onClick={() => {
+                        const newPage = optimizedSchedulesPage - 1
+                        if (newPage >= 1) {
+                          setOptimizedSchedulesPage(newPage)
+                        }
+                      }}
+                      disabled={optimizedSchedulesPage === 1 || optimizedSchedulesLoading}
+                    >
+                      <i className="fa-solid fa-chevron-left"></i> Anterior
+                    </button>
+                    <span className="pagination-info">
+                      Página {optimizedSchedulesPage} de {optimizedSchedulesTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-pagination"
+                      onClick={() => {
+                        const newPage = optimizedSchedulesPage + 1
+                        if (newPage <= optimizedSchedulesTotalPages) {
+                          setOptimizedSchedulesPage(newPage)
+                        }
+                      }}
+                      disabled={optimizedSchedulesPage === optimizedSchedulesTotalPages || optimizedSchedulesLoading}
+                    >
+                      Próxima <i className="fa-solid fa-chevron-right"></i>
+                    </button>
+                  </div>
+                )
+              }
             </>
           )}
-        </div>
-      </div>
+        </div >
+      </div >
 
       {/* Modal de confirmação para remoção individual */}
-      <ConfirmModal
+      < ConfirmModal
         isOpen={showDeleteModal}
         title="Remover Escala"
         message="Tem certeza que deseja remover esta escala? Esta ação não pode ser desfeita."
@@ -929,7 +943,7 @@ export default function EscalaTabela() {
         onConfirm={confirmBulkDeleteSchedules}
         onCancel={() => setShowBulkDeleteModal(false)}
       />
-    </div>
+    </div >
   )
 }
 
