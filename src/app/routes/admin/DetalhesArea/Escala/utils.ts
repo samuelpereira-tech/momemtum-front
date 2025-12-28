@@ -29,7 +29,7 @@ export function mapConfiguration(
     mapped.considerAbsences = config.groupConfig.considerAbsences || false
     mapped.distributionOrder = config.groupConfig.distributionOrder
     mapped.groupsPerSchedule = config.groupConfig.groupsPerSchedule
-    
+
     // Verificar se groupIds é um array de objetos (com id, name, imageUrl) ou apenas strings
     // Também verificar se há um campo 'groups' separado com os objetos completos
     if (config.groupConfig.groups && Array.isArray(config.groupConfig.groups)) {
@@ -64,7 +64,7 @@ export function mapConfiguration(
     mapped.requireResponsibilities = config.teamConfig.requireResponsibilities
     mapped.participantSelection = config.teamConfig.participantSelection
     mapped.selectedTeamId = config.teamConfig.teamId
-    
+
     // Verificar se selectedGroupIds é um array de objetos ou apenas strings
     // Também verificar se há um campo 'selectedGroups' separado com os objetos completos
     if (config.teamConfig.selectedGroups && Array.isArray(config.teamConfig.selectedGroups)) {
@@ -95,5 +95,43 @@ export function mapConfiguration(
   }
 
   return mapped
+}
+
+export const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+}
+
+export const formatDateRange = (startDate: string, endDate: string) => {
+  const start = formatDate(startDate)
+  const end = formatDate(endDate)
+  return `${start} - ${end}`
+}
+
+export const getDateOnly = (dateString: string): string => {
+  const date = new Date(dateString)
+  return date.toISOString().split('T')[0]
+}
+
+export const groupSchedulesByDate = (schedules: any[]) => {
+  const grouped = new Map<string, any[]>()
+
+  schedules.forEach(schedule => {
+    const dateKey = getDateOnly(schedule.startDatetime)
+    if (!grouped.has(dateKey)) {
+      grouped.set(dateKey, [])
+    }
+    grouped.get(dateKey)!.push(schedule)
+  })
+
+  return Array.from(grouped.entries()).map(([date, schedules]) => ({
+    date,
+    schedules,
+    dateFormatted: formatDate(schedules[0].startDatetime)
+  }))
 }
 
