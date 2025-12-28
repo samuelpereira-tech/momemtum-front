@@ -210,7 +210,7 @@ export default function EscalaTabela() {
     }
 
     // Se não tiver grupo, exibe roles distintos
-    const roles = schedule.people
+    const roles = (schedule.people || schedule.participants || [])
       .map(p => p.role)
       .filter((role): role is string => !!role)
 
@@ -587,6 +587,7 @@ export default function EscalaTabela() {
                                   />
                                 </th>
                                 <th>Grupos / Funções</th>
+                                <th>Descrição</th>
                                 <th>Participantes</th>
                                 <th style={{ width: '60px' }}>Ações</th>
                               </tr>
@@ -614,16 +615,19 @@ export default function EscalaTabela() {
                                     <td className="schedule-table-groups">
                                       {renderGroupsOrRoles(schedule)}
                                     </td>
+                                    <td className="schedule-table-description">
+                                      {schedule.description || '-'}
+                                    </td>
                                     <td className="schedule-table-participants">
                                       <div className="table-participants-avatars">
-                                        {schedule.people.map((person, index) => {
+                                        {(schedule.people || schedule.participants || []).map((person, index) => {
                                           const isRejected = person.status === 'rejected'
 
                                           return (
                                             <div
                                               key={index}
                                               className="table-participant-avatar-wrapper"
-                                              style={{ zIndex: schedule.people.length - index }}
+                                              style={{ zIndex: (schedule.people || schedule.participants || []).length - index }}
                                             >
                                               <div
                                                 className="table-participant-avatar"
@@ -704,6 +708,7 @@ export default function EscalaTabela() {
                         </th>
                         <th>Data</th>
                         <th>Grupos / Funções</th>
+                        <th>Descrição</th>
                         <th>Participantes</th>
                         <th style={{ width: '60px' }}>Ações</th>
                       </tr>
@@ -737,16 +742,19 @@ export default function EscalaTabela() {
                             <td className="schedule-table-groups">
                               {renderGroupsOrRoles(schedule)}
                             </td>
+                            <td className="schedule-table-description">
+                              {schedule.description || '-'}
+                            </td>
                             <td className="schedule-table-participants">
                               <div className="table-participants-avatars">
-                                {schedule.people.map((person, index) => {
+                                {(schedule.people || schedule.participants || []).map((person, index) => {
                                   const isRejected = person.status === 'rejected'
 
                                   return (
                                     <div
                                       key={index}
                                       className="table-participant-avatar-wrapper"
-                                      style={{ zIndex: schedule.people.length - index }}
+                                      style={{ zIndex: (schedule.people || schedule.participants || []).length - index }}
                                     >
                                       <div
                                         className="table-participant-avatar"
