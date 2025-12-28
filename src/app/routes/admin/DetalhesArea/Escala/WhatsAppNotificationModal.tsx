@@ -1,18 +1,11 @@
-
 import { useState } from 'react'
+import { type NotificationConfigDto } from '../../../../../services/basic/scheduleService'
 import './WhatsAppNotificationModal.css'
-
-export interface NotificationConfig {
-    id: string
-    time: number
-    unit: 'hours' | 'days' | 'weeks'
-    message: string
-}
 
 interface WhatsAppNotificationModalProps {
     isOpen: boolean
     onClose: () => void
-    onSave: (configs: NotificationConfig[]) => void
+    onSave: (configs: NotificationConfigDto[]) => void
     selectedCount: number
 }
 
@@ -22,7 +15,7 @@ export default function WhatsAppNotificationModal({
     onSave,
     selectedCount
 }: WhatsAppNotificationModalProps) {
-    const [configs, setConfigs] = useState<NotificationConfig[]>([])
+    const [configs, setConfigs] = useState<NotificationConfigDto[]>([])
     const [time, setTime] = useState<number>(1)
     const [unit, setUnit] = useState<'hours' | 'days' | 'weeks'>('days')
     const [message, setMessage] = useState<string>('Olá {nome}, você está escalado para o dia {data} na função {funcao}.')
@@ -32,7 +25,7 @@ export default function WhatsAppNotificationModal({
     const handleAddConfig = () => {
         if (time <= 0) return
 
-        const newConfig: NotificationConfig = {
+        const newConfig: NotificationConfigDto = {
             id: crypto.randomUUID(),
             time,
             unit,

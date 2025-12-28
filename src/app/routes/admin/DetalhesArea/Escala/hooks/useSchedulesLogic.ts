@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { scheduleService, type ScheduleOptimizedResponseDto } from '../../../../../../services/basic/scheduleService'
 import { useToast } from '../../../../../../components/ui/Toast/ToastProvider'
-import { type NotificationConfig } from '../WhatsAppNotificationModal'
+import { type NotificationConfigDto } from '../../../../../../services/basic/scheduleService'
 
 export function useSchedulesLogic() {
     const { id: scheduledAreaId } = useParams<{ id: string }>()
@@ -35,7 +35,7 @@ export function useSchedulesLogic() {
 
     // Estados para notificação WhatsApp
     const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
-    const [scheduleNotifications, setScheduleNotifications] = useState<Map<string, NotificationConfig[]>>(new Map())
+    const [scheduleNotifications, setScheduleNotifications] = useState<Map<string, NotificationConfigDto[]>>(new Map())
 
     // Ref para evitar execuções duplicadas
     const isLoadingRef = useRef(false)
@@ -226,17 +226,37 @@ export function useSchedulesLogic() {
         }
     }
 
-    const handleSaveWhatsAppConfig = (configs: NotificationConfig[]) => {
-        setScheduleNotifications(prev => {
-            const newMap = new Map(prev)
-            selectedSchedules.forEach(scheduleId => {
-                newMap.set(scheduleId, configs)
-            })
-            return newMap
-        })
+    const handleSaveWhatsAppConfig = async (configs: NotificationConfigDto[]) => {
+        if (selectedSchedules.size === 0) return
 
-        toast.showSuccess(`Notificações configuradas para ${selectedSchedules.size} escala(s)!`)
-        setSelectedSchedules(new Set())
+        setOptimizedSchedulesLoading(true)
+        try {
+            const promises = Array.from(selectedSchedules).map(scheduleId =>
+                scheduleService.saveScheduleNotifications(scheduledAreaId!, scheduleId, configs)
+            )
+
+            await Promise.all(promises)
+
+            setScheduleNotifications(prev => {
+                const newMap = new Map(prev)
+                selectedSchedules.forEach(scheduleId => {
+                    newMap.set(scheduleId, configs)
+                })
+                return newMap
+            })
+
+            toast.showSuccess(`Notificações configuradas para ${selectedSchedules.size} escala(s)!`)
+            setSelectedSchedules(new Set())
+            setShowWhatsAppModal(false)
+
+            // Recarregar para garantir consistência
+            await reloadSchedules()
+        } catch (error) {
+            console.error('Erro ao salvar notificações:', error)
+            toast.showError('Erro ao salvar configurações de notificação')
+        } finally {
+            setOptimizedSchedulesLoading(false)
+        }
     }
 
     return {

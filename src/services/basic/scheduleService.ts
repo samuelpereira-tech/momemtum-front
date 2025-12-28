@@ -193,6 +193,14 @@ export interface ScheduleOptimizedResponseDto {
   }
 }
 
+// DTO para configuração de notificações
+export interface NotificationConfigDto {
+  id: string
+  time: number
+  unit: 'hours' | 'days' | 'weeks'
+  message: string
+}
+
 // Interface para resposta paginada de escalas otimizadas
 export interface PaginatedScheduleOptimizedResponseDto {
   data: ScheduleOptimizedResponseDto[]
@@ -259,6 +267,7 @@ export interface ScheduleFilters {
   teamId?: string
   status?: 'pending' | 'confirmed' | 'cancelled'
 }
+
 
 /**
  * Serviço para gerenciar escalas
@@ -416,6 +425,36 @@ export class ScheduleService {
         method: 'DELETE',
       }
     )
+  }
+
+  async saveScheduleNotifications(
+    scheduledAreaId: string,
+    scheduleId: string,
+    configs: NotificationConfigDto[]
+  ): Promise<void> {
+    // Nota: A API documentada suporta apenas configuração por área (/api/scheduled-areas/{id}/notifications)
+    // Estamos enviando as configs para a área. 
+    // TODO: Verificar se backend suporta scheduleId em query params ou body no futuro.
+    // Por enquanto, seguimos a documentação estrita.
+
+    // Como a API espera UMA config por vez (CreateNotificationConfigDto), e o frontend permite várias,
+    // precisamos iterar.
+
+    const promises = configs.map(config =>
+      apiClient<void>(
+        `${this.baseEndpoint}/${scheduledAreaId}/notifications`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            timeAmount: config.time,
+            timeUnit: config.unit,
+            messageTemplate: config.message
+          }),
+        }
+      )
+    )
+
+    await Promise.all(promises)
   }
 
   /**
